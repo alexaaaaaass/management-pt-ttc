@@ -33,22 +33,44 @@ class AdminPanelProvider extends PanelProvider
 
             // ✅ TAMBAHKAN INI
         ->navigationGroups([
-        NavigationGroup::make()
-            ->label('HRD')
-            ->collapsed(),
+       
         NavigationGroup::make()
             ->label('Marketing')
             ->collapsed(),
-
         NavigationGroup::make()
             ->label('Purchase')
+            ->collapsed(),
+             NavigationGroup::make()
+            ->label('Subcount')
+            ->collapsed(),
+             NavigationGroup::make()
+            ->label('Ppic')
             ->collapsed(),
         NavigationGroup::make()
             ->label('Printing')
             ->collapsed(),
+             NavigationGroup::make()
+            ->label('Diemaking')
+            ->collapsed(),
+            NavigationGroup::make()
+            ->label('Warehouse')
+            ->collapsed(),
         NavigationGroup::make()
             ->label('Finishing')
             ->collapsed(),
+            NavigationGroup::make()
+            ->label('Dispatch')
+            ->collapsed(),
+            NavigationGroup::make()
+            ->label('Finance')
+            ->collapsed(),
+             NavigationGroup::make()
+            ->label('HRD')
+            ->collapsed(),
+            NavigationGroup::make()
+            ->label('Report')
+            ->collapsed(),
+       
 ])
 
         
