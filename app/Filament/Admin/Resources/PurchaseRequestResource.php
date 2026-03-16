@@ -55,20 +55,22 @@ class PurchaseRequestResource extends Resource
     ->reactive()
                                     ->afterStateUpdated(function ($state, callable $set) {
 
-                                        $item = MasterItem::find($state);
+    $item = MasterItem::with('satuan')->find($state);
 
-                                        if ($item) {
+    if ($item) {
 
-                                            $set('satuan', $item->satuan->nama_satuan ?? null);
+        $set('satuan', $item->satuan->nama_satuan ?? null);
 
-                                            $set('qty', $item->qty ?? 1);
-                                        }
-                                    })
+        $set('qty', $item->qty ?? 1);
+    }
+})
                                     ->required(),
 
-                                Forms\Components\TextInput::make('satuan')
-                                    ->label('Satuan')
-                                    ->disabled(),
+                              Forms\Components\TextInput::make('satuan')
+    ->label('Satuan')
+    ->disabled()
+    ->dehydrated()
+    ->reactive(),
 
                                 Forms\Components\TextInput::make('qty')
                                     ->numeric()
@@ -94,9 +96,10 @@ class PurchaseRequestResource extends Resource
         return $table
             ->columns([
 
-                Tables\Columns\TextColumn::make('id')
-                    ->label('No PR')
-                    ->sortable(),
+             Tables\Columns\TextColumn::make('nomor_pr')
+    ->label('No PR')
+    ->searchable()
+    ->sortable(),
 
                 Tables\Columns\TextColumn::make('departemen.nama_departemen')
                     ->label('Departemen')
