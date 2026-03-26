@@ -11,22 +11,22 @@ return new class extends Migration
      */
     public function up(): void
     {
-       Schema::create('purchase_order_items', function (Blueprint $table) {
-    $table->id();
+        Schema::create('purchase_order_items', function (Blueprint $table) {
+            $table->id();
 
-   $table->foreignId('purchase_order_id')
+            $table->foreignId('purchase_order_id')
       ->references('id')
       ->on('purchase_orders')
       ->cascadeOnDelete();
     $table->foreignId('item_id')->constrained('master_items');
 
-    $table->integer('qty');
-    $table->string('satuan')->nullable();
-    $table->date('eta')->nullable();
-    $table->text('catatan')->nullable();
+            $table->integer('qty');
+            $table->string('satuan')->nullable();
+            $table->date('eta')->nullable();
+            $table->text('catatan')->nullable();
 
-    $table->timestamps();
-});
+            $table->timestamps();
+        });
     }
 
     /**

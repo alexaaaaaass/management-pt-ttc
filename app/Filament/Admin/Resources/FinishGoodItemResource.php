@@ -1,0 +1,205 @@
+<?php
+
+namespace App\Filament\Admin\Resources;
+
+use App\Filament\Admin\Resources\FinishGoodItemResource\Pages;
+use App\Models\FinishGoodItem;
+use Filament\Forms\Form;
+use Filament\Tables\Columns\TextColumn;
+use Filament\Resources\Resource;
+use Filament\Tables;
+use Filament\Tables\Table;
+use Filament\Forms\Components\{
+    Section, Grid, Select, TextInput, Textarea, Repeater
+};
+use App\Models\TypeItem;
+use Filament\Forms\Components\Hidden;
+
+
+
+class FinishGoodItemResource extends Resource
+{
+    protected static ?string $model = FinishGoodItem::class;
+    protected static ?string $navigationGroup = 'Marketing';
+
+    protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
+
+  
+
+public static function form(Form $form): Form
+{
+    return $form
+        ->schema([
+
+            // =============================
+            // 🔥 SECTION UTAMA
+            // =============================
+            Section::make('Create Finish Good Item')
+                ->schema([
+
+                    Grid::make(3)->schema([
+
+                        // hidden prefix
+                        Hidden::make('kode_prefix'),
+
+                        Select::make('customer_id')
+                            ->relationship('customer', 'nama_customer')
+                            ->searchable()
+                            ->preload()
+                            ->required(),
+
+                        Select::make('type_item_id')
+                            ->label('Type Item')
+                            ->relationship('typeItem', 'nama_type_item')
+                            ->searchable()
+                            ->preload()
+                            ->reactive()
+                            ->afterStateUpdated(function ($state, callable $set, callable $get) {
+                                $type = TypeItem::find($state);
+
+                                if ($type) {
+                                    $set('kode_prefix', $type->kode_type_item);
+
+                                    $suffix = $get('kode_suffix');
+
+                                    $set(
+                                        'kode_material_produk',
+                                        $suffix
+                                            ? $type->kode_type_item . '-' . $suffix
+                                            : $type->kode_type_item
+                                    );
+                                }
+                            })
+                            ->required(),
+
+                        TextInput::make('kode_suffix')
+                            ->label('Kode Tambahan')
+                            ->reactive()
+                            ->afterStateUpdated(function ($state, callable $set, callable $get) {
+                                $prefix = $get('kode_prefix');
+
+                                if ($prefix) {
+                                    $set('kode_material_produk', $prefix . '-' . $state);
+                                } else {
+                                    $set('kode_material_produk', $state);
+                                }
+                            }),
+
+                        TextInput::make('kode_material_produk')
+                            ->label('Kode Material Produk')
+                            ->readOnly()
+                            ->required(),
+
+                        TextInput::make('kode_barcode'),
+                        TextInput::make('pc_number'),
+                        TextInput::make('nama_barang'),
+
+                        Textarea::make('deskripsi')
+                            ->columnSpan(2),
+
+                        Textarea::make('spesifikasi_kertas')
+                            ->columnSpan(2),
+
+                        TextInput::make('up_satu'),
+                        TextInput::make('up_dua'),
+                        TextInput::make('up_tiga'),
+
+                        TextInput::make('ukuran_potong'),
+                        TextInput::make('ukuran_cetak'),
+
+                        TextInput::make('panjang')->numeric(),
+                        TextInput::make('lebar')->numeric(),
+                        TextInput::make('tinggi')->numeric(),
+
+                        TextInput::make('berat_kotor'),
+                        TextInput::make('berat_bersih'),
+
+                        Select::make('satuan_id')
+                            ->relationship('satuan', 'nama_satuan')
+                            ->searchable()
+                            ->preload()
+                            ->required(),
+                    ]),
+                ]),
+
+            // =============================
+            // 🔥 BILL OF MATERIAL
+            // =============================
+            Section::make('Bill of Materials')
+                ->collapsible()
+                ->schema([
+
+                    Repeater::make('materials')
+                        ->relationship()
+                        ->schema([
+
+                            Grid::make(3)->schema([
+
+                                Select::make('master_item_id')
+                                    ->label('Material')
+                                    ->relationship('item', 'nama_master_item')
+                                    ->searchable()
+                                    ->preload()
+                                    ->required(),
+
+                                Select::make('departemen_id')
+                                    ->label('Departemen')
+                                    ->relationship('departemen', 'nama_departemen')
+                                    ->searchable()
+                                    ->preload(),
+
+                                TextInput::make('qty')
+                                    ->numeric()
+                                    ->required(),
+
+                                TextInput::make('waste')
+                                    ->numeric()
+                                    ->default(0),
+
+                                Textarea::make('keterangan')
+                                    ->columnSpan(2),
+                            ]),
+                        ])
+                        ->addActionLabel('Tambah Material')
+                        ->columns(1)
+                        ->defaultItems(0),
+
+                ]),
+        ]);
+}
+   public static function table(Table $table): Table
+{
+    return $table
+        ->columns([
+            TextColumn::make('nama_barang')->searchable(),
+            TextColumn::make('customer.nama_customer')->label('Customer'),
+            TextColumn::make('typeItem.nama_type_item')->label('Type'),
+            TextColumn::make('kode_material_produk'),
+            TextColumn::make('satuan.nama_satuan')->label('Satuan'),
+            TextColumn::make('created_at')->dateTime(),
+        ])
+        ->actions([
+            Tables\Actions\EditAction::make(),
+            // Tables\Actions\DeleteAction::make(),
+        ])
+        ->bulkActions([
+            Tables\Actions\DeleteBulkAction::make(),
+        ]);
+}
+
+    public static function getRelations(): array
+    {
+        return [
+            //
+        ];
+    }
+
+    public static function getPages(): array
+    {
+        return [
+            'index' => Pages\ListFinishGoodItems::route('/'),
+            'create' => Pages\CreateFinishGoodItem::route('/create'),
+            'edit' => Pages\EditFinishGoodItem::route('/{record}/edit'),
+        ];
+    }
+}
