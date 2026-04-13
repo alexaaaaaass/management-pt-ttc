@@ -28,6 +28,11 @@ class SubcountOutResource extends Resource
             ]);
     }
 
+    public static function getNavigationLabel(): string
+{
+    return 'Subcount Out';
+}
+
     public static function table(Table $table): Table
     {
         return $table

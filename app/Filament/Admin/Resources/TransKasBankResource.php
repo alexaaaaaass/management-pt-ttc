@@ -28,6 +28,11 @@ class TransKasBankResource extends Resource
             ]);
     }
 
+    public static function getNavigationLabel(): string
+{
+    return 'Trans Kas Bank';
+}
+
     public static function table(Table $table): Table
     {
         return $table

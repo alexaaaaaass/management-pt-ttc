@@ -28,6 +28,12 @@ class PaymentEntryGoodResource extends Resource
             ]);
     }
 
+    public static function getNavigationLabel(): string
+{
+    return 'Payment Entry Good';
+}
+    
+
     public static function table(Table $table): Table
     {
         return $table

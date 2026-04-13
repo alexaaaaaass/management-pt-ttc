@@ -28,6 +28,11 @@ class MesinFinisResource extends Resource
             ]);
     }
 
+    public static function getNavigationLabel(): string
+{
+    return 'Mesin Finish';
+}
+
     public static function table(Table $table): Table
     {
         return $table

@@ -28,6 +28,11 @@ class ReportPoVsPbResource extends Resource
             ]);
     }
 
+    public static function getNavigationLabel(): string
+{
+    return 'Report PO VS PB';
+}
+
     public static function table(Table $table): Table
     {
         return $table

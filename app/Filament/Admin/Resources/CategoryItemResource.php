@@ -37,6 +37,11 @@ class CategoryItemResource extends Resource
             ]);
     }
 
+public static function getNavigationLabel(): string
+{
+    return 'Category Item';
+}
+
     public static function table(Table $table): Table
     {
         return $table

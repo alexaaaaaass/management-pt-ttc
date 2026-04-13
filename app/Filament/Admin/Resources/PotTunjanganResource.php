@@ -28,6 +28,13 @@ class PotTunjanganResource extends Resource
             ]);
     }
 
+public static function getNavigationLabel(): string
+{
+    return 'Pot Tunjangan';
+}
+    
+
+
     public static function table(Table $table): Table
     {
         return $table

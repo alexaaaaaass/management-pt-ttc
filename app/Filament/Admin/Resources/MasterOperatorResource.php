@@ -29,6 +29,11 @@ class MasterOperatorResource extends Resource
         ]);
 }
 
+public static function getNavigationLabel(): string
+{
+    return 'Master Operator';
+}
+
    public static function table(Table $table): Table
 {
     return $table

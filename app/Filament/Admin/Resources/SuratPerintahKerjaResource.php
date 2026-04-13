@@ -142,6 +142,11 @@ public static function form(Form $form): Form
         ]);
 }
 
+public static function getNavigationLabel(): string
+{
+    return 'Master Spk';
+}
+
    public static function table(Table $table): Table
 {
     return $table

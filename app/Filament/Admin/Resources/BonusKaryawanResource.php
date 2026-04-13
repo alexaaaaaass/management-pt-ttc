@@ -28,6 +28,12 @@ class BonusKaryawanResource extends Resource
             ]);
     }
 
+    public static function getNavigationLabel(): string
+{
+    return 'Bonus karyawan';
+}
+    
+
     public static function table(Table $table): Table
     {
         return $table

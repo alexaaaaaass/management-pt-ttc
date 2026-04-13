@@ -130,6 +130,11 @@ Forms\Components\TextInput::make('harga_kirim')
         ]);
     }
 
+    public static function getNavigationLabel(): string
+{
+    return 'Sales Order';
+}
+
     public static function table(Table $table): Table
     {
         return $table

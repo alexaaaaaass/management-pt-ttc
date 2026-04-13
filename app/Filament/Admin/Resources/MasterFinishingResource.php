@@ -47,6 +47,11 @@ class MasterFinishingResource extends Resource
             ->columns(2);
     }
 
+    public static function getNavigationLabel(): string
+{
+    return 'Master Finishing';
+}
+
    public static function table(Table $table): Table
     {
         return $table

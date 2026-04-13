@@ -28,6 +28,11 @@ class PackagingResource extends Resource
             ]);
     }
 
+public static function getNavigationLabel(): string
+{
+    return 'Packaging';
+}
+
     public static function table(Table $table): Table
     {
         return $table

@@ -28,6 +28,12 @@ class IzinResource extends Resource
             ]);
     }
 
+public static function getNavigationLabel(): string
+{
+    return 'Izin';
+}
+    
+
     public static function table(Table $table): Table
     {
         return $table

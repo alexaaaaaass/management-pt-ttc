@@ -28,6 +28,12 @@ class MetodeBayarResource extends Resource
             ]);
     }
 
+    public static function getNavigationLabel(): string
+{
+    return 'Metode Bayar';
+}
+    
+
     public static function table(Table $table): Table
     {
         return $table

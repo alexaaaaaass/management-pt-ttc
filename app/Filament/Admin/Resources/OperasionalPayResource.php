@@ -28,6 +28,12 @@ class OperasionalPayResource extends Resource
             ]);
     }
 
+    public static function getNavigationLabel(): string
+{
+    return 'Operasional Pay';
+}
+    
+
     public static function table(Table $table): Table
     {
         return $table

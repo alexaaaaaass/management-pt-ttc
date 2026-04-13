@@ -28,6 +28,11 @@ class ImrFinishResource extends Resource
             ]);
     }
 
+    public static function getNavigationLabel(): string
+{
+    return 'IMR Finish';
+}
+
     public static function table(Table $table): Table
     {
         return $table
