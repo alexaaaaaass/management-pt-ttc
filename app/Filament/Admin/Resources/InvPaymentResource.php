@@ -28,6 +28,12 @@ class InvPaymentResource extends Resource
             ]);
     }
 
+    public static function getNavigationLabel(): string
+{
+    return 'Inv Payment';
+}
+    
+
     public static function table(Table $table): Table
     {
         return $table

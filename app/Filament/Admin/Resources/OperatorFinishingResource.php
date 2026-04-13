@@ -29,6 +29,11 @@ class OperatorFinishingResource extends Resource
             ]);
     }
 
+public static function getNavigationLabel(): string
+{
+    return 'Operator Finishing';
+}
+
     public static function table(Table $table): Table
     {
         return $table

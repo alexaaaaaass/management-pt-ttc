@@ -27,6 +27,10 @@ class SubcountInResource extends Resource
                 //
             ]);
     }
+    public static function getNavigationLabel(): string
+{
+    return 'Subcount In';
+}
 
     public static function table(Table $table): Table
     {

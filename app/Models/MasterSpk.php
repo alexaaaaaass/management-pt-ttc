@@ -25,6 +25,8 @@ class MasterSpk extends Model
         return $this->belongsTo(SalesOrder::class);
     }
 
+
+
     // 🔥 AUTO GENERATE NO SPK
    protected static function booted()
 {

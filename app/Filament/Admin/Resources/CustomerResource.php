@@ -49,6 +49,10 @@ class CustomerResource extends Resource
         ->columns(2);
 }
 
+public static function getNavigationLabel(): string
+{
+    return 'Customer';
+}
    public static function table(Table $table): Table
 {
     return $table

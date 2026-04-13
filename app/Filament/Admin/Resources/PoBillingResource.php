@@ -28,6 +28,11 @@ class PoBillingResource extends Resource
             ]);
     }
 
+    public static function getNavigationLabel(): string
+{
+    return 'Po Billing';
+}
+
     public static function table(Table $table): Table
     {
         return $table

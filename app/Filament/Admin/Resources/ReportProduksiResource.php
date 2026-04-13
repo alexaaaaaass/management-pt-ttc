@@ -28,6 +28,11 @@ class ReportProduksiResource extends Resource
             ]);
     }
 
+    public static function getNavigationLabel(): string
+{
+    return 'Report Produksi';
+}
+
     public static function table(Table $table): Table
     {
         return $table

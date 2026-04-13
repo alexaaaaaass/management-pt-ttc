@@ -28,6 +28,12 @@ class LemburResource extends Resource
             ]);
     }
 
+public static function getNavigationLabel(): string
+{
+    return 'Lembur';
+}
+    
+
     public static function table(Table $table): Table
     {
         return $table

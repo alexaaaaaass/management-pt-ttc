@@ -47,6 +47,11 @@ class MasterSupplierResource extends Resource
         ]);
 }
 
+public static function getNavigationLabel(): string
+{
+    return 'Master Supplier';
+}
+
    public static function table(Table $table): Table
 {
     return $table

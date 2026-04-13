@@ -28,6 +28,11 @@ class SuratJalanResource extends Resource
             ]);
     }
 
+    public static function getNavigationLabel(): string
+{
+    return 'Surat Jalan';
+}
+
     public static function table(Table $table): Table
     {
         return $table

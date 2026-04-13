@@ -117,6 +117,11 @@ Forms\Components\Select::make('type_item_id')
         ->columns(2);
 }
 
+public static function getNavigationLabel(): string
+{
+    return 'Master Item';
+}
+
     public static function table(Table $table): Table
 {
     return $table

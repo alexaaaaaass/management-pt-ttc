@@ -50,6 +50,11 @@ class MasterPrintingResource extends Resource
         ->columns(2);
 }
 
+public static function getNavigationLabel(): string
+{
+    return 'Master Printing';
+}
+
   public static function table(Table $table): Table
 {
     return $table

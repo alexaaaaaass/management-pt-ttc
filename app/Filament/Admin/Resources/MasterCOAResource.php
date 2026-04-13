@@ -28,6 +28,12 @@ class MasterCOAResource extends Resource
             ]);
     }
 
+    public static function getNavigationLabel(): string
+{
+    return 'Master Coa';
+}
+    
+
     public static function table(Table $table): Table
     {
         return $table

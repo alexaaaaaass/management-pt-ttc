@@ -28,6 +28,11 @@ class BlokirResource extends Resource
             ]);
     }
 
+    public static function getNavigationLabel(): string
+{
+    return 'Blokir';
+}
+
     public static function table(Table $table): Table
     {
         return $table

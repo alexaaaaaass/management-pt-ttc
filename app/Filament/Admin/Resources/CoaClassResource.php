@@ -28,6 +28,13 @@ class CoaClassResource extends Resource
             ]);
     }
 
+
+    public static function getNavigationLabel(): string
+{
+    return 'Coa Class';
+}
+    
+
     public static function table(Table $table): Table
     {
         return $table

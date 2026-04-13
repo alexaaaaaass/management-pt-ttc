@@ -84,6 +84,11 @@ class PurchaseOrderResource extends Resource
     ]);
 }
 
+public static function getNavigationLabel(): string
+{
+    return 'Purchase Order';
+}
+
         public static function table(Table $table): Table
     {
         return $table

@@ -28,6 +28,11 @@ class TransFakturResource extends Resource
             ]);
     }
 
+    public static function getNavigationLabel(): string
+{
+    return 'Trans Faktur';
+}
+
     public static function table(Table $table): Table
     {
         return $table

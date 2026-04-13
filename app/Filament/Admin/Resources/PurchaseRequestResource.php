@@ -91,6 +91,11 @@ class PurchaseRequestResource extends Resource
             ]);
     }
 
+    public static function getNavigationLabel(): string
+{
+    return 'Purchase Request';
+}
+
     public static function table(Table $table): Table
     {
         return $table

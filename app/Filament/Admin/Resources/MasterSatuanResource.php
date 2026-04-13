@@ -35,6 +35,11 @@ class MasterSatuanResource extends Resource
         ]);
 }
 
+public static function getNavigationLabel(): string
+{
+    return 'Master Satuan';
+}
+
  public static function table(Table $table): Table
 {
     return $table

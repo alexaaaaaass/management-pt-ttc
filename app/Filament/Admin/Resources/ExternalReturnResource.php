@@ -28,6 +28,11 @@ class ExternalReturnResource extends Resource
             ]);
     }
 
+    public static function getNavigationLabel(): string
+{
+    return 'External Return';
+}
+
     public static function table(Table $table): Table
     {
         return $table

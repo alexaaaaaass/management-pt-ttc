@@ -28,6 +28,12 @@ class CutiResource extends Resource
             ]);
     }
 
+public static function getNavigationLabel(): string
+{
+    return 'Cuti';
+}
+    
+    
     public static function table(Table $table): Table
     {
         return $table
