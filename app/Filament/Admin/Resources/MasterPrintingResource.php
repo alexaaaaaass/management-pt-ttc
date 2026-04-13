@@ -16,6 +16,7 @@ class MasterPrintingResource extends Resource
     protected static ?string $model = MasterPrinting::class;
     protected static ?string $navigationGroup = 'Printing';
     protected static ?int $navigationSort = 1;
+    protected static ?string $navigationLabel = 'Mesin Printing';
     protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
 
    public static function form(Form $form): Form

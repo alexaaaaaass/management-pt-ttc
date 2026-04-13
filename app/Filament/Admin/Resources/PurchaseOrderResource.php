@@ -26,19 +26,18 @@ class PurchaseOrderResource extends Resource
             ->schema([
 
          Forms\Components\Select::make('purchase_request_id')
-    ->label('Purchase Request')
-    ->relationship('purchaseRequest','nomor_pr')
-    ->searchable()
-    ->preload()
-    ->required()
-    ->reactive()
-    ->afterStateUpdated(function ($state, $livewire) {
+        ->label('Purchase Request')
+        ->relationship('purchaseRequest','nomor_pr')
+        ->preload()
+        ->required()
+        ->reactive()
+        ->afterStateUpdated(function ($state, $livewire) {
 
-        if ($state) {
-            $livewire->getPRItems($state);
-        }
+            if ($state) {
+                $livewire->getPRItems($state);
+            }
 
-    }),
+        }),
 
                 Forms\Components\DatePicker::make('po_date')
                     ->required(),
@@ -46,7 +45,6 @@ class PurchaseOrderResource extends Resource
                 Forms\Components\Select::make('supplier_id')
                     ->label('Supplier')
                     ->relationship('supplier','nama_supplier')
-                    ->searchable()
                     ->preload()
                     ->required(),
 

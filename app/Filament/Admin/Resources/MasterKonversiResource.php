@@ -26,14 +26,12 @@ class MasterKonversiResource extends Resource
             Forms\Components\Select::make('type_item_id')
                 ->label('Type Item')
                 ->relationship('typeItem','nama_type_item')
-                ->searchable()
                 ->preload()
                 ->required(),
 
             Forms\Components\Select::make('satuan_satu_id')
                 ->label('Satuan Satu')
                 ->relationship('satuanSatu','nama_satuan')
-                ->searchable()
                 ->preload()
                 ->required(),
 
@@ -45,7 +43,6 @@ class MasterKonversiResource extends Resource
             Forms\Components\Select::make('satuan_dua_id')
                 ->label('Satuan Dua')
                 ->relationship('satuanDua','nama_satuan')
-                ->searchable()
                 ->preload()
                 ->required(),
 

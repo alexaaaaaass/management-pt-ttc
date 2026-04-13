@@ -39,4 +39,8 @@ class MasterItem extends Model
     {
         return $this->belongsTo(TypeItem::class, 'type_item_id');
     }
+    public function salesOrders()
+{
+    return $this->morphMany(SalesOrder::class, 'itemable');
+}
 }

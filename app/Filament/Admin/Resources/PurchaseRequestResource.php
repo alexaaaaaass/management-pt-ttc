@@ -27,12 +27,11 @@ class PurchaseRequestResource extends Resource
                 Forms\Components\Section::make('Informasi Purchase Request')
                     ->schema([
 
-                      Forms\Components\Select::make('departemen_id')
+                    Forms\Components\Select::make('departemen_id')
     ->label('Departemen')
     ->relationship('departemen', 'nama_departemen')
-    ->searchable()
     ->preload()
-    ->required(), 
+    ->required(),
 
                         Forms\Components\DatePicker::make('tanggal_pr')
                             ->label('Tanggal PR')
@@ -47,12 +46,13 @@ class PurchaseRequestResource extends Resource
                             ->relationship('items')
                             ->schema([
 
-                               Forms\Components\Select::make('item_id')
+                          Forms\Components\Select::make('item_id')
     ->label('Item')
     ->relationship('item', 'nama_master_item')
-    ->searchable()
+
     ->preload()
     ->reactive()
+    ->required()
                                     ->afterStateUpdated(function ($state, callable $set) {
 
     $item = MasterItem::with('satuan')->find($state);

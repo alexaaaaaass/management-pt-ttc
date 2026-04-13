@@ -49,6 +49,10 @@ class FinishGoodItem extends Model
     {
         return $this->hasMany(FinishGoodItemMaterial::class);
     }
+    public function salesOrders()
+{
+    return $this->morphMany(SalesOrder::class, 'itemable');
+}
     protected static function booted()
 {
     static::deleting(function ($model) {

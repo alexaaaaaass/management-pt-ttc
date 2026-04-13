@@ -9,14 +9,15 @@ class MasterSpk extends Model
 {
     protected $table = 'master_spk';
 
-    protected $fillable = [
-        'no_spk',
-        'kode_ik',
-        'sales_order_id',
-        'production_plan',
-        'tanggal_estimasi_selesai',
-        'tanggal_po',
-    ];
+   protected $fillable = [
+    'no_spk',
+    'kode_ik',
+    'sales_order_id',
+    'production_plan',
+    'status',
+    'tanggal_estimasi_selesai',
+    'tanggal_po',
+];
 
     // 🔥 RELASI
     public function salesOrder()

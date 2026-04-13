@@ -44,14 +44,12 @@ public static function form(Form $form): Form
 
                         Select::make('customer_id')
                             ->relationship('customer', 'nama_customer')
-                            ->searchable()
                             ->preload()
                             ->required(),
 
                         Select::make('type_item_id')
                             ->label('Type Item')
                             ->relationship('typeItem', 'nama_type_item')
-                            ->searchable()
                             ->preload()
                             ->reactive()
                             ->afterStateUpdated(function ($state, callable $set, callable $get) {
@@ -116,7 +114,6 @@ public static function form(Form $form): Form
 
                         Select::make('satuan_id')
                             ->relationship('satuan', 'nama_satuan')
-                            ->searchable()
                             ->preload()
                             ->required(),
                     ]),
@@ -138,14 +135,12 @@ public static function form(Form $form): Form
                                 Select::make('master_item_id')
                                     ->label('Material')
                                     ->relationship('item', 'nama_master_item')
-                                    ->searchable()
                                     ->preload()
                                     ->required(),
 
                                 Select::make('departemen_id')
                                     ->label('Departemen')
                                     ->relationship('departemen', 'nama_departemen')
-                                    ->searchable()
                                     ->preload(),
 
                                 TextInput::make('qty')
@@ -171,10 +166,10 @@ public static function form(Form $form): Form
 {
     return $table
         ->columns([
+             TextColumn::make('kode_material_produk'),
             TextColumn::make('nama_barang')->searchable(),
             TextColumn::make('customer.nama_customer')->label('Customer'),
             TextColumn::make('typeItem.nama_type_item')->label('Type'),
-            TextColumn::make('kode_material_produk'),
             TextColumn::make('satuan.nama_satuan')->label('Satuan'),
             TextColumn::make('created_at')->dateTime(),
         ])

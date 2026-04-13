@@ -65,6 +65,14 @@ public static function form(Form $form): Form
 
             Forms\Components\TextInput::make('production_plan'),
 
+            Forms\Components\Select::make('status')
+    ->options([
+        'ON PROCESS' => 'ON PROCESS',
+        'FINISH' => 'FINISH',
+    ])
+    ->default('ON PROCESS')
+    ->required(),
+
             Forms\Components\DatePicker::make('tanggal_estimasi_selesai'),
 
             // ===============================
@@ -155,6 +163,12 @@ public static function form(Form $form): Form
 
             Tables\Columns\TextColumn::make('production_plan'),
 
+            Tables\Columns\BadgeColumn::make('status')
+    ->colors([
+        'warning' => 'ON PROCESS',
+        'success' => 'FINISH',
+    ]),
+
             Tables\Columns\TextColumn::make('tanggal_estimasi_selesai')
                 ->date(),
 
@@ -164,6 +178,14 @@ public static function form(Form $form): Form
         ->actions([
             Tables\Actions\EditAction::make(),
             Tables\Actions\DeleteAction::make(),
+            Tables\Actions\Action::make('finish')
+        ->label('Finish')
+        ->icon('heroicon-o-check-circle')
+        ->color('success')
+        ->action(fn ($record) => $record->update([
+            'status' => 'FINISH'
+        ]))
+        ->visible(fn ($record) => $record->status !== 'FINISH'),
         ]);
 }
 

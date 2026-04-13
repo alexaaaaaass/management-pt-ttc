@@ -38,7 +38,6 @@ class SalesOrderResource extends Resource
     return $options;
 })
     ->afterStateUpdated(function ($state, callable $set) {
-
     if (!$state) return;
 
     [$type, $id] = explode('-', $state);
@@ -47,27 +46,36 @@ class SalesOrderResource extends Resource
         $item = \App\Models\FinishGoodItem::find($id);
 
         if ($item) {
-            $set('item_type', 'finish_good');
-            $set('item_id', $item->id);
+            $set('itemable_type', \App\Models\FinishGoodItem::class);
+            $set('itemable_id', $item->id);
             $set('customer_id', $item->customer_id);
-        }
 
-    } elseif ($type === 'mi') {
+            // 🔥 AUTO ISI KODE MATERIAL
+            $set('kode_material', $item->kode_material_produk);
+        }
+    }
+
+    if ($type === 'mi') {
         $item = \App\Models\MasterItem::find($id);
 
         if ($item) {
-            $set('item_type', 'master_item');
-            $set('item_id', $item->id);
-            $set('customer_id', null);
+            $set('itemable_type', \App\Models\MasterItem::class);
+            $set('itemable_id', $item->id);
+
+            // optional kosongkan
+            $set('kode_material', null);
         }
     }
 }),
-Forms\Components\Hidden::make('item_type'),
-Forms\Components\Hidden::make('item_id'),
+Forms\Components\Hidden::make('itemable_type'),
+Forms\Components\Hidden::make('itemable_id'),
+Forms\Components\Hidden::make('finish_good_item_id'),
+Forms\Components\Hidden::make('kode_material'),
 
-             Forms\Components\Select::make('customer_id')->label('Customer')
-    ->options(\App\Models\Customer::pluck('nama_customer', 'id')),
-    
+            Forms\Components\Select::make('customer_id')
+    ->label('Customer')
+    ->options(\App\Models\Customer::pluck('nama_customer', 'id'))
+    ->required(),
                 Forms\Components\TextInput::make('no_sales_order')
                     ->disabled(),
 
@@ -135,15 +143,12 @@ Forms\Components\TextInput::make('harga_kirim')
         return $table
             ->columns([
                 Tables\Columns\TextColumn::make('no_sales_order')->searchable(),
-              Tables\Columns\TextColumn::make('item_display')
+          Tables\Columns\TextColumn::make('item_display')
     ->label('Item')
     ->getStateUsing(function ($record) {
-
-        if ($record->item_type === 'finish_good') {
-            return $record->item?->nama_barang . ' (FG)';
-        }
-
-        return $record->item?->nama_master_item . ' (MI)';
+        return $record->itemable?->nama_barang
+            ?? $record->itemable?->nama_master_item
+            ?? '-';
     }),
                 Tables\Columns\TextColumn::make('customer.nama_customer')->label('Customer'),
                 Tables\Columns\TextColumn::make('qty'),
