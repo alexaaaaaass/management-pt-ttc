@@ -27,6 +27,14 @@ class AdminPanelProvider extends PanelProvider
         ->id('admin')
         ->login()
         ->path('admin')
+            // GANTI NAMA HEADER
+            ->brandName('Sistem ERP')
+
+            // GANTI DENGAN LOGO
+            ->brandLogo(asset('images/logo.png'))
+
+            // ukuran logo
+            ->brandLogoHeight('40px')
         ->colors([
             'primary' => Color::Amber,
         ])
