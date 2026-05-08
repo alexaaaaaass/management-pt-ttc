@@ -15,7 +15,7 @@ class MasterSupplierResource extends Resource
 {
     protected static ?string $model = MasterSupplier::class;
     protected static ?string $navigationGroup = 'Purchase';
-    protected static ?int $navigationSort = 3;
+    protected static ?int $navigationSort = 5;
     protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
 
     public static function form(Form $form): Form

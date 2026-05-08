@@ -14,7 +14,7 @@ use Filament\Forms\Components\{
 };
 use App\Models\TypeItem;
 use Filament\Forms\Components\Hidden;
-
+use Filament\Tables\Actions\ActionGroup;
 
 
 class FinishGoodItemResource extends Resource
@@ -123,6 +123,13 @@ public static function form(Form $form): Form
             // 🔥 BILL OF MATERIAL
             // =============================
             Section::make('Bill of Materials')
+             ->extraAttributes([
+        'style' => '
+            border-left: 5px solid #3b82f6;
+            border-radius: 10px;
+            padding: 12px;
+        ',
+    ])
                 ->collapsible()
                 ->schema([
 
@@ -170,20 +177,66 @@ public static function getNavigationLabel(): string
    public static function table(Table $table): Table
 {
     return $table
+        ->defaultSort('created_at', 'desc')
         ->columns([
-             TextColumn::make('kode_material_produk'),
-            TextColumn::make('nama_barang')->searchable(),
-            TextColumn::make('customer.nama_customer')->label('Customer'),
-            TextColumn::make('typeItem.nama_type_item')->label('Type'),
-            TextColumn::make('satuan.nama_satuan')->label('Satuan'),
-            TextColumn::make('created_at')->dateTime(),
+            TextColumn::make('kode_material_produk')
+                ->searchable()
+                ->sortable(),
+
+            TextColumn::make('nama_barang')
+                ->searchable()
+                ->sortable(),
+
+            TextColumn::make('customer.nama_customer')
+                ->label('Customer')
+                ->sortable(),
+
+            TextColumn::make('typeItem.nama_type_item')
+                ->label('Type'),
+
+            TextColumn::make('satuan.nama_satuan')
+                ->label('Satuan'),
+
+            TextColumn::make('created_at')
+                ->dateTime()
+                ->sortable(),
         ])
+
         ->actions([
-            Tables\Actions\EditAction::make(),
-            // Tables\Actions\DeleteAction::make(),
+            ActionGroup::make([
+
+                Tables\Actions\EditAction::make(),
+
+                Tables\Actions\DeleteAction::make()
+                    ->label('Cut Off')
+                    ->icon('heroicon-o-archive-box')
+                    ->color('warning')
+                    ->visible(fn ($record) => !$record->trashed()), // 🔥 hanya muncul kalau belum dihapus
+
+                Tables\Actions\RestoreAction::make()
+                    ->label('Restore')
+                    ->icon('heroicon-o-arrow-uturn-left')
+                    ->color('success')
+                    ->visible(fn ($record) => $record->trashed()), // 🔥 hanya muncul kalau sudah dihapus
+
+                // 🔥 OPTIONAL (biar lebih pro)
+                Tables\Actions\ViewAction::make(),
+
+            ])
+            ->icon('heroicon-m-ellipsis-vertical')
+            ->tooltip('Actions')
         ])
+
         ->bulkActions([
-            Tables\Actions\DeleteBulkAction::make(),
+            Tables\Actions\DeleteBulkAction::make()
+                ->label('Cut Off Selected'),
+
+            Tables\Actions\RestoreBulkAction::make()
+                ->label('Restore Selected'),
+        ])
+
+        ->filters([
+            Tables\Filters\TrashedFilter::make(), // 🔥 penting untuk lihat data terhapus
         ]);
 }
 

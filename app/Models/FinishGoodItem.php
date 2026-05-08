@@ -4,9 +4,11 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use App\Models\FinishGoodItemMaterial;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class FinishGoodItem extends Model
 {
+    use SoftDeletes;
     protected $fillable = [
         'customer_id',
         'type_item_id',

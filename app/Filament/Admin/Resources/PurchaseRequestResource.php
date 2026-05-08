@@ -18,7 +18,7 @@ class PurchaseRequestResource extends Resource
     protected static ?string $navigationIcon = 'heroicon-o-shopping-cart';
 
     protected static ?string $navigationGroup = 'Purchase';
-
+    protected static ?int $navigationSort = 1;
     public static function form(Form $form): Form
     {
         return $form
@@ -40,10 +40,27 @@ class PurchaseRequestResource extends Resource
                     ])->columns(2),
 
                 Forms\Components\Section::make('Item Request')
+                ->extraAttributes([
+        'style' => '
+            border-left: 5px solid #3b82f6;
+            border-radius: 10px;
+            padding: 12px;
+        ',
+    ])
                     ->schema([
 
                         Forms\Components\Repeater::make('items')
+                    
                             ->relationship('items')
+                            ->itemLabel(function ($state) {
+        if (!$state || !isset($state['item_id'])) {
+            return 'Item Baru';
+        }
+
+        $item = \App\Models\MasterItem::find($state['item_id']);
+
+        return $item?->nama_master_item ?? 'Item';
+    })
                             ->schema([
 
                           Forms\Components\Select::make('item_id')
@@ -96,39 +113,66 @@ class PurchaseRequestResource extends Resource
     return 'Purchase Request';
 }
 
-    public static function table(Table $table): Table
-    {
-        return $table
-            ->columns([
+   public static function table(Table $table): Table
+{
+    return $table
+     ->defaultSort('created_at', 'desc')
+        ->columns([
+            Tables\Columns\TextColumn::make('nomor_pr')
+                ->label('No PR')
+                ->searchable()
+                ->sortable(),
 
-             Tables\Columns\TextColumn::make('nomor_pr')
-    ->label('No PR')
-    ->searchable()
-    ->sortable(),
+            Tables\Columns\TextColumn::make('departemen.nama_departemen')
+                ->label('Departemen')
+                ->searchable(),
 
-                Tables\Columns\TextColumn::make('departemen.nama_departemen')
-                    ->label('Departemen')
-                    ->searchable(),
+            Tables\Columns\TextColumn::make('tanggal_pr')
+                ->date()
+                ->sortable(),
 
-                Tables\Columns\TextColumn::make('tanggal_pr')
-                    ->date()
-                    ->sortable(),
+            Tables\Columns\TextColumn::make('items_count')
+                ->counts('items')
+                ->label('Total Item'),
 
-                Tables\Columns\TextColumn::make('items_count')
-                    ->counts('items')
-                    ->label('Total Item'),
+            Tables\Columns\BadgeColumn::make('status')
+                ->colors([
+                    'success' => 'otorisasi',
+                    'danger' => 'deotorisasi',
+                ]),
 
-                Tables\Columns\TextColumn::make('created_at')
-                    ->dateTime(),
+            Tables\Columns\TextColumn::make('created_at')
+            ->label('Dibuat Pada')
+                ->dateTime(),
+        ])
+        ->actions([
+            Tables\Actions\EditAction::make(),
 
-            ])
-            ->actions([
-                Tables\Actions\EditAction::make(),
-            ])
-            ->bulkActions([
-                Tables\Actions\DeleteBulkAction::make(),
-            ]);
-    }
+            Tables\Actions\Action::make('toggle_status')
+                ->label(fn ($record) =>
+                    $record->status === 'otorisasi'
+                        ? 'Deotorisasi'
+                        : 'Otorisasi'
+                )
+                ->icon('heroicon-o-arrow-path')
+                ->color(fn ($record) =>
+                    $record->status === 'otorisasi'
+                        ? 'danger'
+                        : 'success'
+                )
+                ->requiresConfirmation()
+                ->action(function ($record) {
+                    $record->update([
+                        'status' => $record->status === 'otorisasi'
+                            ? 'deotorisasi'
+                            : 'otorisasi',
+                    ]);
+                }),
+        ])
+        ->bulkActions([
+            Tables\Actions\DeleteBulkAction::make(),
+        ]);
+}
 
     public static function getPages(): array
     {

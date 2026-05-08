@@ -18,33 +18,85 @@ class MasterFinishingResource extends Resource
     protected static ?int $navigationSort = 1;
     protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
 
-     public static function form(Form $form): Form
+      public static function form(Form $form): Form
     {
         return $form
             ->schema([
-                Forms\Components\TextInput::make('nama_mesin')
-                    ->label('Nama Mesin')
-                    ->required()
-                    ->maxLength(255),
 
-                Forms\Components\TextInput::make('jenis_mesin')
-                    ->label('Jenis Mesin')
+                Forms\Components\Select::make('spk_id')
+                    ->label('SPK')
+                    ->relationship('spk', 'no_spk')
+                    ->searchable()
+                    ->preload()
                     ->required(),
 
-                Forms\Components\TextInput::make('kapasitas')
+                Forms\Components\Select::make('mesin_finishing_id')
+                    ->label('Mesin Finishing')
+                    ->relationship('mesinFinishing', 'nama_mesin')
+                    ->searchable()
+                    ->preload()
+                    ->required(),
+
+                Forms\Components\Select::make('operator_finishing_id')
+                    ->label('Operator')
+                    ->relationship('operatorFinishing', 'nama_operator')
+                    ->searchable()
+                    ->preload()
+                    ->required(),
+
+                Forms\Components\DatePicker::make('tanggal_entri')
+                    ->required(),
+
+                Forms\Components\Select::make('proses_finishing')
+                    ->options([
+                        'protol' => 'Protol',
+                        'sorter' => 'Sorter',
+                        'lem' => 'Lem',
+                    ])
+                    ->required(),
+
+                Forms\Components\Select::make('tahap_finishing')
+                    ->options([
+                        'reguler' => 'Reguler',
+                        'blokir' => 'Blokir',
+                        'semi_waste' => 'Semi Waste',
+                        'retur' => 'Retur',
+                    ])
+                    ->required(),
+
+                Forms\Components\TextInput::make('hasil_baik')
                     ->numeric()
-                    ->label('Kapasitas'),
+                    ->default(0)
+                    ->required(),
 
-                Forms\Components\TextInput::make('proses')
-                    ->label('Proses'),
+                Forms\Components\TextInput::make('hasil_rusak')
+                    ->numeric()
+                    ->default(0)
+                    ->required(),
 
-                Forms\Components\Toggle::make('status')
-                    ->label('Status Mesin')
-                    ->onColor('success')
-                    ->offColor('danger')
-                    ->default(true),
-            ])
-            ->columns(2);
+                Forms\Components\TextInput::make('semi_waste')
+                    ->numeric()
+                    ->default(0),
+
+                Forms\Components\Select::make('note_waste')
+                    ->options([
+                        'CETAK KOTOR' => 'CETAK KOTOR',
+                        'CETAK LUNTUR' => 'CETAK LUNTUR',
+                        'CETAK BINTIK' => 'CETAK BINTIK',
+                    ]),
+
+                Forms\Components\Select::make('keterangan_spk')
+                    ->options([
+                        'reguler' => 'Reguler',
+                        'subcount' => 'Subcount',
+                    ])
+                    ->required(),
+
+                Forms\Components\Textarea::make('keterangan')
+                    ->rows(3)
+                    ->label('Keterangan Tambahan (opsional)')
+                    ->columnSpanFull(),
+            ]);
     }
 
     public static function getNavigationLabel(): string
@@ -53,30 +105,78 @@ class MasterFinishingResource extends Resource
 }
 
    public static function table(Table $table): Table
-    {
-        return $table
-            ->columns([
-                Tables\Columns\TextColumn::make('nama_mesin')
-                    ->searchable(),
+{
+    return $table
+        ->defaultSort('tanggal_entri', 'desc')
+        ->columns([
 
-                Tables\Columns\TextColumn::make('jenis_mesin')
-                    ->searchable(),
+            Tables\Columns\TextColumn::make('spk.no_spk')
+                ->label('No SPK')
+                ->searchable()
+                ->sortable(),
 
-                Tables\Columns\TextColumn::make('kapasitas'),
+            Tables\Columns\TextColumn::make('mesinFinishing.nama_mesin')
+                ->label('Mesin')
+                ->sortable(),
 
-                Tables\Columns\TextColumn::make('proses'),
+            Tables\Columns\TextColumn::make('operatorFinishing.nama_operator')
+                ->label('Operator'),
 
-                Tables\Columns\IconColumn::make('status')
-                    ->boolean()
-                    ->label('Status'),
-            ])
-            ->actions([
+            Tables\Columns\TextColumn::make('tanggal_entri')
+                ->date()
+                ->sortable(),
+
+            Tables\Columns\BadgeColumn::make('proses_finishing')
+                ->colors([
+                    'primary' => 'protol',
+                    'warning' => 'sorter',
+                    'success' => 'lem',
+                ]),
+
+            Tables\Columns\BadgeColumn::make('tahap_finishing')
+                ->colors([
+                    'primary' => 'reguler',
+                    'danger' => 'blokir',
+                    'warning' => 'semi_waste',
+                    'gray' => 'retur',
+                ]),
+
+            Tables\Columns\TextColumn::make('hasil_baik'),
+            Tables\Columns\TextColumn::make('hasil_rusak'),
+            Tables\Columns\TextColumn::make('semi_waste'),
+
+            Tables\Columns\TextColumn::make('note_waste')
+                ->toggleable(), // 🔥 bisa hide/show
+
+            Tables\Columns\BadgeColumn::make('keterangan_spk')
+                ->colors([
+                    'success' => 'reguler',
+                    'warning' => 'subcount',
+                ]),
+        ])
+
+        ->actions([
+            \Filament\Tables\Actions\ActionGroup::make([
+
                 Tables\Actions\EditAction::make(),
+
+                Tables\Actions\DeleteAction::make()
+                    ->requiresConfirmation() // 🔥 penting biar gak kehapus tanpa sengaja
+                    ->color('danger'),
+
+                // 🔥 OPTIONAL (biar lebih pro)
+                Tables\Actions\ViewAction::make(),
+
             ])
-            ->bulkActions([
-                Tables\Actions\DeleteBulkAction::make(),
-            ]);
-    }
+            ->icon('heroicon-m-ellipsis-vertical')
+            ->tooltip('Actions')
+        ])
+
+        ->bulkActions([
+            Tables\Actions\DeleteBulkAction::make()
+                ->requiresConfirmation(),
+        ]);
+}
 
 
     public static function getRelations(): array

@@ -3,21 +3,19 @@
 namespace App\Filament\Admin\Resources;
 
 use App\Filament\Admin\Resources\InternalreturnResource\Pages;
-use App\Filament\Admin\Resources\InternalreturnResource\RelationManagers;
 use App\Models\Internalreturn;
 use Filament\Forms;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
-use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Database\Eloquent\SoftDeletingScope;
+
 
 class InternalreturnResource extends Resource
 {
     protected static ?string $model = Internalreturn::class;
     protected static ?string $navigationGroup = 'Purchase';
-
+    protected static ?int $navigationSort = 9;
     protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
 
     public static function form(Form $form): Form

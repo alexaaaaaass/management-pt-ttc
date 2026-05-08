@@ -20,7 +20,7 @@ return new class extends Migration
       ->cascadeOnDelete();
     $table->foreignId('item_id')->constrained('master_items');
 
-            $table->integer('qty');
+            // $table->integer('qty');
             $table->string('satuan')->nullable();
             $table->date('eta')->nullable();
             $table->text('catatan')->nullable();

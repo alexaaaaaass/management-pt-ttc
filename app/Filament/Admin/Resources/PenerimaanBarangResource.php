@@ -39,53 +39,39 @@ class PenerimaanBarangResource extends Resource
     ->live()
     ->afterStateUpdated(function ($state, callable $set) {
 
-        if (!$state) {
-            $set('items', []);
-            return;
-        }
+    // 🔥 reset dulu
+    $set('items', []);
 
-        $po = \App\Models\PurchaseOrder::with([
-            'items.item.satuan',
-            'items'
-        ])->find($state);
+    if (!$state) return;
 
-        if (!$po) {
-            $set('items', []);
-            return;
-        }
+    $po = \App\Models\PurchaseOrder::with([
+        'items.item.satuan',
+    ])->find($state);
 
-        $items = $po->items->map(function ($item) {
+    if (!$po) return;
 
-            return [
-                'purchase_order_item_id' => $item->id,
+    $items = $po->items->map(function ($item) {
 
-                'nama_item_display' =>
-                    ($item->item->kode_material ?? '-') .
-                    ' - ' .
-                    ($item->item->nama_master_item ?? '-'),
+        return [
+            'purchase_order_item_id' => $item->id,
+            'nama_item_display' =>
+                ($item->item->kode_material ?? '-') . ' - ' .
+                ($item->item->nama_master_item ?? '-'),
 
-                'qty_po_display' =>
-                    number_format($item->qty, 2) .
-                    ' | ' .
-                    ($item->item->satuan->nama_satuan ?? '-'),
+            'qty_po_display' =>
+                number_format($item->qty_po ?? 0, 2) . ' | ' .
+                ($item->item->satuan->nama_satuan ?? '-'),
 
-                'qty_sebelumnya_display' =>
-                    '0 | ' .
-                    ($item->item->satuan->nama_satuan ?? '-'),
+            'qty_sebelumnya_display' =>
+                '0 | ' . ($item->item->satuan->nama_satuan ?? '-'),
 
-                'qty_terima' => 0,
+            'qty_terima' => 0,
+            'catatan_po_display' => $item->catatan ?? '-',
+        ];
+    })->toArray();
 
-                'catatan_po_display' =>
-                    $item->catatan ?? '-',
-
-                'catatan_item' => null,
-                'tgl_exp' => null,
-                'no_lot' => null,
-            ];
-        })->toArray();
-
-        $set('items', $items);
-    })
+    $set('items', $items);
+})
     ->required(),
 
                         Forms\Components\TextInput::make('no_surat_jalan')
@@ -110,10 +96,21 @@ class PenerimaanBarangResource extends Resource
                     ])->columns(3),
 
             Forms\Components\Section::make('Data Item Purchase Order')
+             ->extraAttributes([
+        'style' => '
+            border-left: 5px solid #3b82f6;
+            border-radius: 10px;
+            padding: 12px;
+        ',
+    ])
     ->schema([
 
       Forms\Components\Repeater::make('items')
-    ->relationship('items')
+      ->statePath('items')
+      ->itemLabel(function ($state) {
+    return $state['nama_item_display'] ?? 'Item';
+})
+      ->key('penerimaan_items')
     ->schema([
 
         Forms\Components\Hidden::make('purchase_order_item_id'),
@@ -128,7 +125,7 @@ class PenerimaanBarangResource extends Resource
             ->disabled()
             ->dehydrated(false),
 
-        Forms\Components\TextInput::make('qty_sebelumnya_display')
+        Forms\Components\TextInput::make('qty_po_display')
             ->label('Qty | Satuan Penerimaan Sebelumnya')
             ->disabled()
             ->dehydrated(false),

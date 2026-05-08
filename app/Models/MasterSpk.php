@@ -17,6 +17,14 @@ class MasterSpk extends Model
     'status',
     'tanggal_estimasi_selesai',
     'tanggal_po',
+
+    // 🔥 tambahan
+    'up_satu',
+    'up_dua',
+    'up_tiga',
+    'ukuran_potong',
+    'ukuran_cetak',
+    'spesifikasi_kertas',
 ];
 
     // 🔥 RELASI

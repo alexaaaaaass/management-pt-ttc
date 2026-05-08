@@ -1,56 +1,48 @@
 @if($this->prItems && $this->prItems->count())
 
-<div class="mt-4 overflow-x-auto rounded-xl border border-gray-200 dark:border-gray-700">
-
-    <table class="w-full text-sm">
-
-        <thead class="bg-gray-50 dark:bg-gray-800 text-gray-700 dark:text-gray-200">
+<div class="overflow-x-auto rounded-xl border border-gray-700">
+    <table class="w-full table-fixed text-sm text-left">
+        <thead class="bg-gray-800 text-white">
             <tr>
-                <th class="px-3 py-2">No</th>
-                <th class="px-3 py-2">Item</th>
-                <th class="px-3 py-2">Qty</th>
-                <th class="px-3 py-2">Satuan</th>
-                <th class="px-3 py-2">ETA</th>
-                <th class="px-3 py-2">Catatan</th>
+                <th class="w-16 px-4 py-3 text-center">No</th>
+                <th class="px-4 py-3">Item</th>
+                <th class="w-24 px-4 py-3 text-center">Qty</th>
+                <th class="w-32 px-4 py-3 text-center">Satuan</th>
+                <th class="w-40 px-4 py-3 text-center">ETA</th>
+                <th class="w-48 px-4 py-3">Catatan</th>
             </tr>
         </thead>
 
-        <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
-
-            @foreach($this->prItems as $i => $item)
-                <tr wire:key="pr-item-{{ $item->id }}" class="hover:bg-gray-50 dark:hover:bg-gray-800">
-
-                    <td class="px-3 py-2">
-                        {{ $i + 1 }}
+        <tbody>
+            @foreach ($this->prItems ?? [] as $index => $item)
+                <tr class="border-t border-gray-700">
+                    <td class="px-4 py-3 text-center">
+                        {{ $index + 1 }}
                     </td>
 
-                    <td class="px-3 py-2 font-medium">
+                    <td class="px-4 py-3 font-semibold">
                         {{ $item->item->nama_master_item ?? '-' }}
                     </td>
 
-                    <td class="px-3 py-2">
-                        {{ number_format($item->qty, 0) }}
+                    <td class="px-4 py-3 text-center">
+                        {{ $item->qty }}
                     </td>
 
-                    <td class="px-3 py-2">
+                    <td class="px-4 py-3 text-center">
                         {{ $item->satuan }}
                     </td>
 
-                    <td class="px-3 py-2">
+                    <td class="px-4 py-3 text-center">
                         {{ $item->eta }}
                     </td>
 
-                    <td class="px-3 py-2 text-gray-500">
-                        {{ $item->catatan }}
+                    <td class="px-4 py-3">
+                        {{ $item->catatan ?? '-' }}
                     </td>
-
                 </tr>
             @endforeach
-
         </tbody>
-
     </table>
-
 </div>
 
 @else

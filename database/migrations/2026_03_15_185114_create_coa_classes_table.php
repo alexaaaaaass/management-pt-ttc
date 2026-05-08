@@ -6,20 +6,23 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    /**
-     * Run the migrations.
-     */
     public function up(): void
     {
         Schema::create('coa_classes', function (Blueprint $table) {
             $table->id();
+
+            $table->foreignId('karyawan_id')
+                ->constrained('karyawans')
+                ->cascadeOnDelete();
+
+            $table->string('code', 50);
+            $table->string('name', 100);
+            $table->enum('status', ['aktif', 'nonaktif'])->default('aktif');
+
             $table->timestamps();
         });
     }
 
-    /**
-     * Reverse the migrations.
-     */
     public function down(): void
     {
         Schema::dropIfExists('coa_classes');

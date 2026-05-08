@@ -1,11 +1,17 @@
 <?php
 
 namespace App\Models;
-
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class MesinFinis extends Model
 {
-    use HasFactory;
+     protected $table = 'mesin_finishing';
+
+    protected $fillable = [
+        'nama_mesin',
+        'jenis_mesin',
+        'kapasitas',
+        'proses',
+        'status'
+    ];
 }

@@ -6,22 +6,34 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    /**
-     * Run the migrations.
-     */
     public function up(): void
     {
-        Schema::create('master_c_o_a_s', function (Blueprint $table) {
+        Schema::create('master_coas', function (Blueprint $table) {
             $table->id();
+
+            $table->foreignId('karyawan_id')->constrained('karyawans')->cascadeOnDelete();
+            $table->foreignId('coa_class_id')->constrained('coa_classes')->cascadeOnDelete();
+
+            $table->string('periode'); // contoh: 2026-04
+            $table->string('gudang')->nullable();
+
+            $table->string('kode_akun', 50);
+            $table->string('nama_akun', 100);
+
+            $table->decimal('saldo_debit', 15, 2)->default(0);
+            $table->decimal('saldo_kredit', 15, 2)->default(0);
+            $table->decimal('nominal_default', 15, 2)->default(0);
+
+            $table->text('keterangan')->nullable();
+
+            $table->enum('status', ['aktif', 'nonaktif'])->default('aktif');
+
             $table->timestamps();
         });
     }
 
-    /**
-     * Reverse the migrations.
-     */
     public function down(): void
     {
-        Schema::dropIfExists('master_c_o_a_s');
+        Schema::dropIfExists('master_coas');
     }
 };

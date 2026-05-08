@@ -12,14 +12,14 @@ use Filament\Forms\Get;
 use Filament\Forms\Set;
 use Filament\Tables\Table;
 use App\Models\SalesOrder;
-
+use Filament\Tables\Actions\ActionGroup;
 
 
 class SuratPerintahKerjaResource extends Resource
 {
     protected static ?string $model = MasterSpk::class;
     protected static ?string $navigationGroup = 'Ppic';
-
+    protected static ?string $navigationLabel = 'Master Spk';
     protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
 public static function form(Form $form): Form
 {
@@ -35,23 +35,44 @@ public static function form(Form $form): Form
                 ->required(),
 
             // 🔥 SELECT SALES ORDER
-            Forms\Components\Select::make('sales_order_id')
-                ->label('No Sales Order')
-                ->options(SalesOrder::pluck('no_sales_order', 'id'))
-                ->reactive()
-                ->afterStateUpdated(function ($state, Set $set) {
+           Forms\Components\Select::make('sales_order_id')
+           ->extraAttributes([
+    'class' => 'z-50'
+])
+    ->label('No Sales Order')
+    ->relationship('salesOrder', 'no_sales_order')
+    ->searchable()
+    ->preload()
+    ->native(false)
+    ->optionsLimit(20)
+    ->reactive()
+    ->required()
+   ->afterStateUpdated(function ($state, Set $set) {
 
-                    $so = SalesOrder::with('customer')->find($state);
+    $so = SalesOrder::with(['customer', 'itemable'])->find($state);
 
-                    if (!$so) return;
+    if (!$so) return;
 
-                    // 🔥 AUTO ISI FIELD
-                    $set('tanggal_po', $so->tanggal_po);
-                    $set('qty', $so->qty);
-                    $set('customer_name', $so->customer->nama_customer ?? '-');
-                    $set('no_po_customer', $so->no_po_customer);
-                    $set('tipe_pesanan', $so->tipe_pesanan);
-                }),
+    // 🔹 data SO
+    $set('tanggal_po', $so->tanggal_po);
+    $set('qty', $so->qty);
+    $set('customer_name', $so->customer->nama_customer ?? '-');
+    $set('no_po_customer', $so->no_po_customer);
+    $set('tipe_pesanan', $so->tipe_pesanan);
+
+    // 🔥 data Finish Good
+    $fg = $so->itemable;
+
+    if ($fg instanceof \App\Models\FinishGoodItem) {
+
+        $set('up_satu', $fg->up_satu);
+        $set('up_dua', $fg->up_dua);
+        $set('up_tiga', $fg->up_tiga);
+        $set('ukuran_potong', $fg->ukuran_potong);
+        $set('ukuran_cetak', $fg->ukuran_cetak);
+        $set('spesifikasi_kertas', $fg->spesifikasi_kertas);
+    }
+}),
 
             // 🔥 AUTO FIELD (HIDDEN / DISPLAY ONLY)
             Forms\Components\Hidden::make('customer_name'),
@@ -75,10 +96,44 @@ public static function form(Form $form): Form
 
             Forms\Components\DatePicker::make('tanggal_estimasi_selesai'),
 
+            Forms\Components\Section::make('Spesifikasi Produk')
+    ->schema([
+
+        Forms\Components\TextInput::make('up_satu')
+            ->label('UP 1')
+            ->numeric(),
+
+        Forms\Components\TextInput::make('up_dua')
+            ->label('UP 2')
+            ->numeric(),
+
+        Forms\Components\TextInput::make('up_tiga')
+            ->label('UP 3')
+            ->numeric(),
+
+        Forms\Components\TextInput::make('ukuran_potong')
+            ->label('Ukuran Potong'),
+
+        Forms\Components\TextInput::make('ukuran_cetak')
+            ->label('Ukuran Cetak'),
+
+        Forms\Components\Textarea::make('spesifikasi_kertas')
+            ->label('Spesifikasi Kertas')
+            ->rows(3),
+    ])
+    ->columns(2),
+
             // ===============================
             // 🔥 DETAIL SALES ORDER (KAYAK UI KAMU)
             // ===============================
             Forms\Components\Section::make('Detail Sales Order')
+              ->extraAttributes([
+        'style' => '
+            border-left: 5px solid #3b82f6;
+            border-radius: 10px;
+            padding: 12px;
+        ',
+    ])
                 ->schema([
 
                     Forms\Components\Grid::make(2)->schema([
@@ -105,14 +160,28 @@ public static function form(Form $form): Form
                                     return $so?->customer?->nama_customer ?? '-';
                                 }),
 
-                            Forms\Components\Placeholder::make('nama_barang')
-                                ->label('Nama Barang')
-                                ->content(fn () => '-'),
+                           Forms\Components\Placeholder::make('nama_barang')
+    ->label('Nama Barang')
+    ->content(function (Get $get) {
+        $so = SalesOrder::with('itemable')->find($get('sales_order_id'));
 
-                            Forms\Components\Placeholder::make('deskripsi')
-                                ->label('Deskripsi')
-                                ->content(fn () => '-'),
-                        ]),
+        if (!$so || !$so->itemable) {
+            return '-';
+        }
+
+        return $so->itemable->nama_barang
+            ?? $so->itemable->nama_master_item
+            ?? '-';
+    }),
+Forms\Components\Placeholder::make('deskripsi')
+    ->label('Deskripsi')
+    ->content(function (Get $get) {
+        $so = SalesOrder::with('itemable')->find($get('sales_order_id'));
+
+        return $so?->itemable?->deskripsi ?? '-';
+    }),
+
+                         ]),
 
                         // 🔹 KANAN
                         Forms\Components\Grid::make(1)->schema([
@@ -158,40 +227,53 @@ public static function getNavigationLabel(): string
    public static function table(Table $table): Table
 {
     return $table
+     ->defaultSort('created_at', 'desc')
         ->columns([
-            Tables\Columns\TextColumn::make('no_spk')->searchable(),
+    Tables\Columns\TextColumn::make('no_spk')
+        ->searchable(),
 
-            Tables\Columns\TextColumn::make('kode_ik'),
+    Tables\Columns\TextColumn::make('kode_ik'),
 
-            Tables\Columns\TextColumn::make('salesOrder.no_sales_order')
-                ->label('No Sales Order'),
+    Tables\Columns\TextColumn::make('salesOrder.no_sales_order')
+        ->label('No Sales Order'),
 
-            Tables\Columns\TextColumn::make('production_plan'),
+    // 🔥 KOLOM BARU
+    Tables\Columns\TextColumn::make('salesOrder.qty')
+        ->label('Jumlah Order')
+        ->numeric()
+        ->sortable(),
 
-            Tables\Columns\BadgeColumn::make('status')
-    ->colors([
-        'warning' => 'ON PROCESS',
-        'success' => 'FINISH',
-    ]),
+    Tables\Columns\TextColumn::make('production_plan'),
 
-            Tables\Columns\TextColumn::make('tanggal_estimasi_selesai')
-                ->date(),
+    Tables\Columns\BadgeColumn::make('status')
+        ->colors([
+            'warning' => 'ON PROCESS',
+            'success' => 'FINISH',
+        ]),
 
-            Tables\Columns\TextColumn::make('tanggal_po')
-                ->date(),
-        ])
-        ->actions([
-            Tables\Actions\EditAction::make(),
-            Tables\Actions\DeleteAction::make(),
-            Tables\Actions\Action::make('finish')
-        ->label('Finish')
-        ->icon('heroicon-o-check-circle')
-        ->color('success')
-        ->action(fn ($record) => $record->update([
-            'status' => 'FINISH'
-        ]))
-        ->visible(fn ($record) => $record->status !== 'FINISH'),
-        ]);
+    Tables\Columns\TextColumn::make('tanggal_estimasi_selesai')
+        ->date(),
+
+    Tables\Columns\TextColumn::make('tanggal_po')
+        ->date(),
+])
+     ->actions([
+    ActionGroup::make([
+        Tables\Actions\EditAction::make(),
+        Tables\Actions\DeleteAction::make(),
+
+        Tables\Actions\Action::make('finish')
+            ->label('Mark as FINISH')
+            ->icon('heroicon-o-check-circle')
+            ->color('success')
+            ->action(fn ($record) => $record->update([
+                'status' => 'FINISH'
+            ]))
+            ->visible(fn ($record) => $record->status !== 'FINISH'),
+    ])
+    ->icon('heroicon-m-ellipsis-vertical') // 🔥 icon 3 titik
+    ->tooltip('Actions')
+]);
 }
 
     public static function getRelations(): array

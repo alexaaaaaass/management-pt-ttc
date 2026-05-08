@@ -28,4 +28,8 @@ class FinishGoodItemMaterial extends Model
     {
         return $this->belongsTo(MasterDepartemen::class, 'departemen_id');
     }
+    public function material()
+    {
+        return $this->belongsTo(\App\Models\MasterItem::class, 'master_item_id');
+    }
 }

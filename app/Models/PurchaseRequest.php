@@ -7,26 +7,26 @@ use Illuminate\Database\Eloquent\Model;
 
 class PurchaseRequest extends Model
 {
-  protected $fillable = [
+protected $fillable = [
     'nomor_pr',
     'departemen_id',
-    'tanggal_pr'
+    'tanggal_pr',
+    'status',
 ];
 
-    public function departemen()
-    {
-        return $this->belongsTo(MasterDepartemen::class,'departemen_id');
-    }
-
-    public function items()
-    {
-        return $this->hasMany(PurchaseRequestItem::class);
-    }
-    public function purchaseOrders()
+public function departemen()
 {
-    return $this->hasMany(PurchaseOrder::class);
+    return $this->belongsTo(MasterDepartemen::class,'departemen_id');
 }
 
+public function items()
+{
+    return $this->hasMany(PurchaseRequestItem::class);
+}
+public function purchaseOrders()
+{
+return $this->hasMany(PurchaseOrder::class);
+}
 protected static function booted()
 {
     static::creating(function ($pr) {
@@ -40,6 +40,8 @@ protected static function booted()
         $sequence = str_pad($count, 3, '0', STR_PAD_LEFT);
 
         $pr->nomor_pr = "PR-{$date}-{$sequence}";
+
+        $pr->status = 'deotorisasi'; // default
     });
 }
 }

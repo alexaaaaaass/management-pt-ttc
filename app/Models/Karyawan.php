@@ -51,4 +51,12 @@ class Karyawan extends Model
     {
         return $this->belongsTo(MasterDepartemen::class, 'departemen_id');
     }
+    public function coas()
+{
+    return $this->hasMany(MasterCOA::class, 'karyawan_id');
+}
+public function coaClasses()
+{
+    return $this->hasMany(CoaClass::class, 'karyawan_id');
+}
 }

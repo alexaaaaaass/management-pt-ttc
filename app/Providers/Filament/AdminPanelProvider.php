@@ -55,10 +55,10 @@ class AdminPanelProvider extends PanelProvider
             ->label('Ppic')
             ->collapsed(),
         NavigationGroup::make()
-            ->label('Printing')
+            ->label('Pra Cetak')
             ->collapsed(),
-             NavigationGroup::make()
-            ->label('Diemaking')
+        NavigationGroup::make()
+            ->label('Printing')
             ->collapsed(),
             NavigationGroup::make()
             ->label('Warehouse')
@@ -78,7 +78,6 @@ class AdminPanelProvider extends PanelProvider
             NavigationGroup::make()
             ->label('Report')
             ->collapsed(),
-       
 ])
 
         

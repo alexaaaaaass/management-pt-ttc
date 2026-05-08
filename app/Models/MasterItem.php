@@ -43,4 +43,8 @@ class MasterItem extends Model
 {
     return $this->morphMany(SalesOrder::class, 'itemable');
 }
+public function stock()
+{
+    return $this->hasOne(MaterialStock::class, 'item_id');
+}
 }
