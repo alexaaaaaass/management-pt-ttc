@@ -232,10 +232,17 @@ public static function getNavigationLabel(): string
     Tables\Columns\TextColumn::make('no_spk')
         ->searchable(),
 
-    Tables\Columns\TextColumn::make('kode_ik'),
-
     Tables\Columns\TextColumn::make('salesOrder.no_sales_order')
         ->label('No Sales Order'),
+   Tables\Columns\TextColumn::make('nama_barang')
+    ->label('Nama Barang')
+    ->getStateUsing(function ($record) {
+
+        return $record->salesOrder?->itemable?->nama_barang
+            ?? $record->salesOrder?->itemable?->nama_master_item
+            ?? '-';
+    })
+    ->searchable(),
 
     // 🔥 KOLOM BARU
     Tables\Columns\TextColumn::make('salesOrder.qty')
@@ -243,25 +250,28 @@ public static function getNavigationLabel(): string
         ->numeric()
         ->sortable(),
 
-    Tables\Columns\TextColumn::make('production_plan'),
+        Tables\Columns\TextColumn::make('on_hand_stock')
+    ->label('On Hand Stock')
+    ->getStateUsing(function ($record) {
+
+        return $record->packagings->sum('total_satuan_penuh');
+    })
+    ->badge()
+    ->color('success')
+    ->sortable(),
 
     Tables\Columns\BadgeColumn::make('status')
         ->colors([
             'warning' => 'ON PROCESS',
             'success' => 'FINISH',
         ]),
-
-    Tables\Columns\TextColumn::make('tanggal_estimasi_selesai')
-        ->date(),
-
-    Tables\Columns\TextColumn::make('tanggal_po')
-        ->date(),
 ])
      ->actions([
     ActionGroup::make([
         Tables\Actions\EditAction::make(),
         Tables\Actions\DeleteAction::make(),
-
+          Tables\Actions\ViewAction::make()
+            ->icon('heroicon-o-eye'),
         Tables\Actions\Action::make('finish')
             ->label('Mark as FINISH')
             ->icon('heroicon-o-check-circle')
@@ -283,12 +293,13 @@ public static function getNavigationLabel(): string
         ];
     }
 
-    public static function getPages(): array
-    {
-        return [
-            'index' => Pages\ListSuratPerintahKerjas::route('/'),
-            'create' => Pages\CreateSuratPerintahKerja::route('/create'),
-            'edit' => Pages\EditSuratPerintahKerja::route('/{record}/edit'),
-        ];
-    }
+ public static function getPages(): array
+{
+    return [
+        'index' => Pages\ListSuratPerintahKerjas::route('/'),
+        'create' => Pages\CreateSuratPerintahKerja::route('/create'),
+        'view' => Pages\ViewSuratPerintahKerja::route('/{record}'),
+        'edit' => Pages\EditSuratPerintahKerja::route('/{record}/edit'),
+    ];
+}
 }

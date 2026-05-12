@@ -18,10 +18,16 @@ class ImrPrintingItem extends Model
         'qty_approved',
         'qty_request',
         'qty_input',
+        
     ];
 
     public function imr()
     {
         return $this->belongsTo(ImrPrinting::class);
     }
+
+    public function item()
+{
+    return $this->belongsTo(\App\Models\MasterItem::class, 'item_id');
+}
 }

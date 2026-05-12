@@ -134,37 +134,50 @@ public static function form(Form $form): Form
                 ->schema([
 
                     Repeater::make('materials')
-                        ->relationship()
-                        ->schema([
+    ->relationship()
+    ->collapsible() // 🔥 bikin bisa collapse
+    ->collapsed()   // 🔥 default tertutup
+    ->itemLabel(function ($state) {
 
-                            Grid::make(3)->schema([
+        // 🔥 ambil nama item dari relasi
+        if (!empty($state['master_item_id'])) {
+            $item = \App\Models\MasterItem::find($state['master_item_id']);
+            return $item?->nama_master_item ?? 'Material';
+        }
 
-                                Select::make('master_item_id')
-                                    ->label('Material')
-                                    ->relationship('item', 'nama_master_item')
-                                    ->preload()
-                                    ->required(),
+        return 'Material';
+    })
+    ->schema([
 
-                                Select::make('departemen_id')
-                                    ->label('Departemen')
-                                    ->relationship('departemen', 'nama_departemen')
-                                    ->preload(),
+        Grid::make(3)->schema([
 
-                                TextInput::make('qty')
-                                    ->numeric()
-                                    ->required(),
+            Select::make('master_item_id')
+                ->label('Material')
+                ->relationship('item', 'nama_master_item')
+                ->searchable()
+                ->preload()
+                ->required(),
 
-                                TextInput::make('waste')
-                                    ->numeric()
-                                    ->default(0),
+            Select::make('departemen_id')
+                ->label('Departemen')
+                ->relationship('departemen', 'nama_departemen')
+                ->preload(),
 
-                                Textarea::make('keterangan')
-                                    ->columnSpan(2),
-                            ]),
-                        ])
-                        ->addActionLabel('Tambah Material')
-                        ->columns(1)
-                        ->defaultItems(0),
+            TextInput::make('qty')
+                ->numeric()
+                ->required(),
+
+            TextInput::make('waste')
+                ->numeric()
+                ->default(0),
+
+            Textarea::make('keterangan')
+                ->columnSpan(2),
+        ]),
+    ])
+    ->addActionLabel('Tambah Material')
+    ->columns(1)
+    ->defaultItems(0)
 
                 ]),
         ]);
@@ -196,10 +209,6 @@ public static function getNavigationLabel(): string
 
             TextColumn::make('satuan.nama_satuan')
                 ->label('Satuan'),
-
-            TextColumn::make('created_at')
-                ->dateTime()
-                ->sortable(),
         ])
 
         ->actions([

@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Models\ImrPrintingItem;
 use Illuminate\Database\Eloquent\Model;
+use App\Models\MasterDepartemen;
 
 class ImrPrinting extends Model
 {
@@ -13,12 +14,18 @@ class ImrPrinting extends Model
         'no_imr',
         'spk_id',
         'tanggal_request',
+        'status',
     ];
 
     public function spk()
     {
         return $this->belongsTo(MasterSpk::class, 'spk_id');
     }
+
+    public function departemen()
+{
+    return $this->belongsTo(MasterDepartemen::class);
+}
 
     public function items()
     {

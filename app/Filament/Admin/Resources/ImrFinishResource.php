@@ -17,6 +17,7 @@ class ImrFinishResource extends Resource
 {
     protected static ?string $model = ImrFinish::class;
     protected static ?string $navigationGroup = 'Finishing';
+    protected static ?int $navigationSort = 5;
 
     protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
 

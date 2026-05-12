@@ -9,6 +9,7 @@ class MasterFinishing extends Model
     protected $table = 'master_finishing';
 
     protected $fillable = [
+        'kode_finishing',
         'spk_id',
         'mesin_finishing_id',
         'operator_finishing_id',
@@ -42,5 +43,24 @@ class MasterFinishing extends Model
     public function operatorFinishing()
     {
         return $this->belongsTo(OperatorFinishing::class, 'operator_finishing_id');
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | AUTO GENERATE KODE FINISHING
+    |--------------------------------------------------------------------------
+    */
+
+    protected static function booted()
+    {
+        static::creating(function ($model) {
+
+            $tanggal = now()->format('Ymd');
+
+            $tahap = strtoupper($model->tahap_finishing);
+
+            $model->kode_finishing =
+                'FIN-' . $tahap . '-' . $tanggal;
+        });
     }
 }

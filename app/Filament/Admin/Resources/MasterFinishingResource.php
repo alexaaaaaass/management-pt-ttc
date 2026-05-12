@@ -23,6 +23,11 @@ class MasterFinishingResource extends Resource
         return $form
             ->schema([
 
+                Forms\Components\TextInput::make('kode_finishing')
+                    ->disabled()
+                    ->dehydrated(false)
+                    ->placeholder('Auto Generate'),
+
                 Forms\Components\Select::make('spk_id')
                     ->label('SPK')
                     ->relationship('spk', 'no_spk')
@@ -115,12 +120,19 @@ class MasterFinishingResource extends Resource
                 ->searchable()
                 ->sortable(),
 
-            Tables\Columns\TextColumn::make('mesinFinishing.nama_mesin')
-                ->label('Mesin')
-                ->sortable(),
+           Tables\Columns\TextColumn::make('nama_produk')
+    ->label('Nama Produk')
+    ->getStateUsing(function ($record) {
 
-            Tables\Columns\TextColumn::make('operatorFinishing.nama_operator')
-                ->label('Operator'),
+        return $record->spk?->salesOrder?->itemable?->nama_barang ?? '-';
+    }),
+
+         Tables\Columns\TextColumn::make('kode_finishing')
+    ->label('Kode Finishing')
+    ->searchable()
+    ->sortable()
+    ->badge()
+    ->color('primary'),
 
             Tables\Columns\TextColumn::make('tanggal_entri')
                 ->date()
@@ -141,12 +153,19 @@ class MasterFinishingResource extends Resource
                     'gray' => 'retur',
                 ]),
 
-            Tables\Columns\TextColumn::make('hasil_baik'),
-            Tables\Columns\TextColumn::make('hasil_rusak'),
-            Tables\Columns\TextColumn::make('semi_waste'),
+           Tables\Columns\TextColumn::make('hasil_baik')
+    ->label('Hasil Baik')
+    ->badge()
+    ->color('success'),
 
-            Tables\Columns\TextColumn::make('note_waste')
-                ->toggleable(), // 🔥 bisa hide/show
+Tables\Columns\TextColumn::make('hasil_rusak')
+    ->label('Hasil Rusak')
+    ->badge()
+    ->color('danger'),
+            // Tables\Columns\TextColumn::make('semi_waste'),
+
+            // Tables\Columns\TextColumn::make('note_waste')
+            //     ->toggleable(), // 🔥 bisa hide/show
 
             Tables\Columns\BadgeColumn::make('keterangan_spk')
                 ->colors([

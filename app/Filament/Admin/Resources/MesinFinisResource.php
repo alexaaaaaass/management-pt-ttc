@@ -21,6 +21,7 @@ class MesinFinisResource extends Resource
     protected static ?string $navigationLabel = 'Mesin Finish';
 
     protected static ?string $modelLabel = 'Mesin Finish';
+    protected static ?int $navigationSort = 4;
 
     protected static ?string $pluralModelLabel = 'Mesin Finish';
 

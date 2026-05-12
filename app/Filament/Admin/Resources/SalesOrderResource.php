@@ -109,6 +109,7 @@ Forms\Components\Hidden::make('kode_material'),
 
                 Forms\Components\TextInput::make('no_po_customer'),
 Forms\Components\TextInput::make('qty')
+->label('Jumlah Pesanan')
     ->numeric()
     ->required()
     ->rule(function ($get) {
@@ -279,6 +280,7 @@ Forms\Components\Section::make('Bill of Material')
             ->disabled(),
 
         Forms\Components\TextInput::make('qty')
+        ->label('Jumlah Pesanan')
             ->numeric()
             ->disabled(),
 
@@ -320,13 +322,14 @@ Forms\Components\Section::make('Bill of Material')
             ?? '-';
     }),
                 Tables\Columns\TextColumn::make('customer.nama_customer')->label('Customer'),
-                Tables\Columns\TextColumn::make('qty'),
-                Tables\Columns\TextColumn::make('harga_pcs')
-    ->money('IDR'),
+                Tables\Columns\TextColumn::make('kode_material')->label('Kode Material'),
+                // Tables\Columns\TextColumn::make('qty'),
+    //             Tables\Columns\TextColumn::make('harga_pcs')
+    // ->money('IDR'),
 
-Tables\Columns\TextColumn::make('harga_kirim')
-    ->money('IDR'),
-                Tables\Columns\TextColumn::make('created_at')->dateTime(),
+// Tables\Columns\TextColumn::make('harga_kirim')
+//     ->money('IDR'),
+                // Tables\Columns\TextColumn::make('created_at')->dateTime(),
             ])
             ->actions([
                 Tables\Actions\EditAction::make(),

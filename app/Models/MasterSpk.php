@@ -32,6 +32,20 @@ class MasterSpk extends Model
     {
         return $this->belongsTo(SalesOrder::class);
     }
+    public function packagings()
+    {
+        return $this->hasMany(Packaging::class, 'spk_id');
+    }
+
+    public function printings()
+    {
+        return $this->hasMany(Printing::class, 'spk_id');
+    }
+
+    public function finishings()
+    {
+        return $this->hasMany(MasterFinishing::class, 'spk_id');
+    }
 
 
 

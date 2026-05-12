@@ -127,9 +127,11 @@ public static function getNavigationLabel(): string
     return $table
         ->columns([
             Tables\Columns\TextColumn::make('kode_master_item')
+            ->label('Kode Material')
                 ->searchable(),
 
             Tables\Columns\TextColumn::make('nama_master_item')
+                ->label('Nama Material')
                 ->searchable(),
 
             Tables\Columns\TextColumn::make('satuan.nama_satuan')
