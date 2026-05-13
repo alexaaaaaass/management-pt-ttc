@@ -14,10 +14,9 @@ use Filament\Tables\Table;
 class MasterCOAResource extends Resource
 {
     protected static ?string $model = MasterCOA::class;
-     protected static ?string $navigationGroup = 'Finance';
-
+    protected static ?string $navigationGroup = 'Finance';
     protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
-
+     protected static ?int $navigationSort = 6;
   public static function form(Form $form): Form
 {
     return $form

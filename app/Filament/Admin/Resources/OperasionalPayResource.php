@@ -17,7 +17,7 @@ class OperasionalPayResource extends Resource
 {
     protected static ?string $model = OperasionalPay::class;
      protected static ?string $navigationGroup = 'Finance';
-
+     protected static ?int $navigationSort = 10;
     protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
 
     public static function form(Form $form): Form

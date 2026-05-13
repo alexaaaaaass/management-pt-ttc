@@ -13,10 +13,9 @@ use Filament\Tables\Table;
 class MetodeBayarResource extends Resource
 {
     protected static ?string $model = MetodeBayar::class;
-     protected static ?string $navigationGroup = 'Finance';
-
+    protected static ?string $navigationGroup = 'Finance';
     protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
-
+     protected static ?int $navigationSort = 5;
     public static function form(Form $form): Form
 {
     return $form

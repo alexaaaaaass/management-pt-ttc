@@ -47,7 +47,19 @@ class MasterSpk extends Model
         return $this->hasMany(MasterFinishing::class, 'spk_id');
     }
 
+    public function suratJalans()
+    {
+        return $this->hasMany(SuratJalan::class, 'spk_id');
+    }
 
+    public function getOnHandStockAttribute()
+    {
+        $totalPackaging = $this->packagings()->sum('grand_total');
+
+        $totalKirim = $this->suratJalans()->sum('qty_pengiriman');
+
+        return $totalPackaging - $totalKirim;
+    }
 
     // 🔥 AUTO GENERATE NO SPK
    protected static function booted()

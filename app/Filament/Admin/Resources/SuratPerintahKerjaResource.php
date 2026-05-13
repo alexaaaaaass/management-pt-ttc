@@ -13,6 +13,7 @@ use Filament\Forms\Set;
 use Filament\Tables\Table;
 use App\Models\SalesOrder;
 use Filament\Tables\Actions\ActionGroup;
+use Illuminate\Database\Eloquent\Builder;
 
 
 class SuratPerintahKerjaResource extends Resource
@@ -250,14 +251,34 @@ public static function getNavigationLabel(): string
         ->numeric()
         ->sortable(),
 
-        Tables\Columns\TextColumn::make('on_hand_stock')
+       Tables\Columns\TextColumn::make('on_hand_stock')
     ->label('On Hand Stock')
     ->getStateUsing(function ($record) {
 
-        return $record->packagings->sum('total_satuan_penuh');
+        // 🔹 total barang hasil packaging
+        $totalPackaging = $record->packagings
+            ->sum('total_satuan_penuh');
+
+        // 🔹 total barang terkirim
+        $totalPengiriman = $record->suratJalans
+            ->sum('qty_pengiriman');
+
+        // 🔥 stock sisa
+        return $totalPackaging - $totalPengiriman;
     })
     ->badge()
-    ->color('success')
+    ->color(function ($state) {
+
+        if ($state <= 0) {
+            return 'danger';
+        }
+
+        if ($state <= 100) {
+            return 'warning';
+        }
+
+        return 'success';
+    })
     ->sortable(),
 
     Tables\Columns\BadgeColumn::make('status')
@@ -293,6 +314,8 @@ public static function getNavigationLabel(): string
         ];
     }
 
+    
+
  public static function getPages(): array
 {
     return [
@@ -301,5 +324,15 @@ public static function getNavigationLabel(): string
         'view' => Pages\ViewSuratPerintahKerja::route('/{record}'),
         'edit' => Pages\EditSuratPerintahKerja::route('/{record}/edit'),
     ];
+}
+
+public static function getEloquentQuery(): Builder
+{
+    return parent::getEloquentQuery()
+        ->with([
+            'packagings',
+            'suratJalans',
+            'salesOrder.itemable',
+        ]);
 }
 }

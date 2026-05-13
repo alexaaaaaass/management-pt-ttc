@@ -16,8 +16,8 @@ use Illuminate\Database\Eloquent\SoftDeletingScope;
 class InvPaymentResource extends Resource
 {
     protected static ?string $model = InvPayment::class;
-     protected static ?string $navigationGroup = 'Finance';
-
+    protected static ?string $navigationGroup = 'Finance';
+     protected static ?int $navigationSort = 2;
     protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
 
     public static function form(Form $form): Form

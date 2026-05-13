@@ -17,7 +17,7 @@ class PoBillPayResource extends Resource
 {
     protected static ?string $model = PoBillPay::class;
      protected static ?string $navigationGroup = 'Finance';
-
+protected static ?int $navigationSort = 12;
     protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
 
     public static function form(Form $form): Form

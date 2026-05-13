@@ -33,11 +33,7 @@ public static function form(Form $form): Form
                         ->preload()
                         ->required(),
 
-                        Forms\Components\TextInput::make('kode_packaging')
-    ->label('Kode Packaging')
-    ->disabled()
-    ->dehydrated(false)
-    ->placeholder('Auto Generate'),
+                    Forms\Components\Hidden::make('kode_packaging'),
 
                     Forms\Components\Select::make('satuan_transfer')
                         ->options([

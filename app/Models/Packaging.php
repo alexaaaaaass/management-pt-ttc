@@ -48,34 +48,35 @@ class Packaging extends Model
     |--------------------------------------------------------------------------
     */
 
-    protected static function booted()
-    {
-        static::creating(function ($model) {
+   protected static function booted()
+{
+    static::creating(function ($model) {
 
-            $tanggal = Carbon::now()->format('Ymd');
+        $tanggal = now()->format('Ymd');
 
-            $count = self::whereDate('created_at', today())->count() + 1;
+        // hitung total data hari ini
+        $count = self::count() + 1;
 
-            $model->kode_packaging =
-                'PKG-' .
-                $tanggal .
-                '-' .
-                str_pad($count, 3, '0', STR_PAD_LEFT);
-        });
+        $model->kode_packaging =
+            'PKG-' .
+            $tanggal .
+            '-' .
+            str_pad($count, 3, '0', STR_PAD_LEFT);
+    });
 
-        static::saving(function ($model) {
+    static::saving(function ($model) {
 
-            $model->total_satuan_penuh =
-                (int) $model->jumlah_satuan_penuh
-                * (int) $model->qty_per_satuan_penuh;
+        $model->total_satuan_penuh =
+            (int) $model->jumlah_satuan_penuh
+            * (int) $model->qty_per_satuan_penuh;
 
-            $model->total_satuan_sisa =
-                (int) $model->jumlah_satuan_sisa
-                * (int) $model->qty_per_satuan_sisa;
+        $model->total_satuan_sisa =
+            (int) $model->jumlah_satuan_sisa
+            * (int) $model->qty_per_satuan_sisa;
 
-            $model->grand_total =
-                $model->total_satuan_penuh
-                + $model->total_satuan_sisa;
-        });
-    }
+        $model->grand_total =
+            $model->total_satuan_penuh
+            + $model->total_satuan_sisa;
+    });
+}
 }

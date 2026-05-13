@@ -16,8 +16,8 @@ use Illuminate\Database\Eloquent\SoftDeletingScope;
 class PaymentEntryGoodResource extends Resource
 {
     protected static ?string $model = PaymentEntryGood::class;
-     protected static ?string $navigationGroup = 'Finance';
-
+    protected static ?string $navigationGroup = 'Finance';
+     protected static ?int $navigationSort = 3;
     protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
 
     public static function form(Form $form): Form

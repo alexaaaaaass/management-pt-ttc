@@ -15,7 +15,7 @@ class CoaClassResource extends Resource
     protected static ?string $model = CoaClass::class;
     protected static ?string $navigationGroup = 'Finance';
     protected static ?string $navigationLabel = 'Master Coa Class';
-
+     protected static ?int $navigationSort = 4;
     protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
 
    public static function form(Form $form): Form
