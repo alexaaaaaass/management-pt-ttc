@@ -47,6 +47,10 @@ class SuratJalan extends Model
     {
         return $this->belongsTo(MasterSpk::class, 'spk_id');
     }
+    public function invoice()
+{
+    return $this->hasOne(Invoice::class);
+}
 
     /*
     |--------------------------------------------------------------------------

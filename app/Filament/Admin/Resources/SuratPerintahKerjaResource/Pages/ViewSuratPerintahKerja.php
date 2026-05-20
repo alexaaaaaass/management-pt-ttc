@@ -26,6 +26,13 @@ class ViewSuratPerintahKerja extends ViewRecord
                 */
 
                 Section::make('Detail Surat Perintah Kerja')
+                  ->extraAttributes([
+        'style' => '
+            border-left: 5px solid #3b82f6;
+            border-radius: 10px;
+            padding: 12px;
+        ',
+    ])
                     ->schema([
 
                         Grid::make(3)
@@ -59,6 +66,13 @@ class ViewSuratPerintahKerja extends ViewRecord
                 */
 
                 Section::make('Bill Of Material')
+                  ->extraAttributes([
+        'style' => '
+            border-left: 5px solid #FF0000;
+            border-radius: 10px;
+            padding: 12px;
+        ',
+    ])
                     ->schema([
 
                         RepeatableEntry::make('salesOrder.itemable.materials')
@@ -87,6 +101,13 @@ class ViewSuratPerintahKerja extends ViewRecord
                     ]),
 
                 Section::make('Informasi Produksi Printing')
+                   ->extraAttributes([
+        'style' => '
+            border-left: 5px solid #6FCF97;
+            border-radius: 10px;
+            padding: 12px;
+        ',
+    ])
                     ->schema([
 
                         RepeatableEntry::make('printings')
@@ -127,6 +148,13 @@ class ViewSuratPerintahKerja extends ViewRecord
                 */
 
                 Section::make('Informasi Produksi Finishing')
+                    ->extraAttributes([
+        'style' => '
+            border-left: 5px solid #6FCF97;
+            border-radius: 10px;
+            padding: 12px;
+        ',
+    ])
                     ->schema([
 
                         RepeatableEntry::make('finishings')
@@ -166,6 +194,13 @@ class ViewSuratPerintahKerja extends ViewRecord
                 */
 
                 Section::make('Transfer Barang Jadi')
+                  ->extraAttributes([
+        'style' => '
+            border-left: 5px solid #6FCF97;
+            border-radius: 10px;
+            padding: 12px;
+        ',
+    ])
                     ->schema([
 
                         RepeatableEntry::make('packagings')
@@ -201,6 +236,78 @@ class ViewSuratPerintahKerja extends ViewRecord
                                     ])
                             ])
                     ]),
+
+                    /*
+|--------------------------------------------------------------------------
+| PENGIRIMAN BARANG
+|--------------------------------------------------------------------------
+*/
+
+Section::make('Pengiriman')
+    ->extraAttributes([
+        'style' => '
+            border-left: 5px solid #6FCF97;
+            border-radius: 10px;
+            padding: 12px;
+        ',
+    ])
+    ->schema([
+
+        RepeatableEntry::make('suratJalans')
+            ->schema([
+
+            
+
+                Grid::make(7)
+                    ->schema([
+
+                        TextEntry::make('kode_surat_jalan')
+                            ->label('Kode SJ')
+                            ->badge()
+                            ->color('primary'),
+
+                        TextEntry::make('qty_pengiriman')
+                            ->label('Qty Kirim')
+                            ->badge()
+                            ->color('success'),
+
+                        TextEntry::make('transportasi')
+                            ->badge()
+                            ->color('info'),
+
+                        TextEntry::make('driver')
+                            ->badge()
+                            ->color('warning'),
+
+                        TextEntry::make('pengirim')
+                            ->badge()
+                            ->color('gray'),
+
+                        TextEntry::make('no_polisi')
+                            ->label('No Polisi'),
+
+                        TextEntry::make('tanggal_surat_jalan')
+                            ->label('Tanggal Kirim')
+                            ->date(),
+
+                    ]),
+
+                Grid::make(1)
+                    ->schema([
+
+                        TextEntry::make('alamat_tujuan')
+                            ->label('Alamat Tujuan'),
+
+                        TextEntry::make('keterangan')
+                            ->label('Keterangan')
+                            ->placeholder('-'),
+
+                    ])
+
+            ])
+            ->contained(false)
+
+    ]),
             ]);
     }
 }
