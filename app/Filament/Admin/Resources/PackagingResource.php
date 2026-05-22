@@ -17,6 +17,8 @@ class PackagingResource extends Resource
      protected static ?string $navigationGroup = 'Finishing';
      protected static ?int $navigationSort = 2;
     protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
+    protected static ?string $pluralModelLabel = 'Packaging';
+
 
 public static function form(Form $form): Form
 {

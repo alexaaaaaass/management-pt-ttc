@@ -21,7 +21,7 @@ class FinishGoodItemResource extends Resource
 {
     protected static ?string $model = FinishGoodItem::class;
     protected static ?string $navigationGroup = 'Marketing';
-
+    protected static ?int $navigationSort = 1;
     protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
 
   

@@ -16,6 +16,8 @@ class MaterialStockResource extends Resource
     protected static ?string $model = MaterialStock::class;
     protected static ?string $navigationGroup = 'Warehouse';
     protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
+    protected static ?string $pluralModelLabel = 'Material Stock';
+
 
     public static function form(Form $form): Form
     {

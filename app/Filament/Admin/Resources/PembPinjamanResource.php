@@ -17,7 +17,7 @@ class PembPinjamanResource extends Resource
 {
     protected static ?string $model = PembPinjaman::class;
     protected static ?string $navigationGroup = 'HRD';
-
+    protected static ?int $navigationSort = 11;
     protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
 
     public static function form(Form $form): Form

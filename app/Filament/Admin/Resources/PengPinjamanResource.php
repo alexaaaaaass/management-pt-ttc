@@ -17,7 +17,7 @@ class PengPinjamanResource extends Resource
 {
     protected static ?string $model = PengPinjaman::class;
      protected static ?string $navigationGroup = 'HRD';
-
+    protected static ?int $navigationSort = 10;
     protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
 
     public static function form(Form $form): Form

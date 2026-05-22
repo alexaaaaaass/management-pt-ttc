@@ -17,7 +17,7 @@ class CutiResource extends Resource
 {
     protected static ?string $model = Cuti::class;
      protected static ?string $navigationGroup = 'HRD';
-
+    protected static ?int $navigationSort = 7;
     protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
 
     public static function form(Form $form): Form

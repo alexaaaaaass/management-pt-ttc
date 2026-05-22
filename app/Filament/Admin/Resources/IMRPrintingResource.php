@@ -18,6 +18,8 @@ class IMRPrintingResource extends Resource
     protected static ?string $model = IMRPrinting::class;
     protected static ?string $navigationGroup = 'Printing';
     protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
+    protected static ?string $pluralModelLabel = 'IMR Printing';
+
 
     public static function form(Form $form): Form
     {

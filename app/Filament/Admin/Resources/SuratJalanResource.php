@@ -23,6 +23,9 @@ class SuratJalanResource extends Resource
 
     protected static ?int $navigationSort = 1;
 
+    protected static ?string $pluralModelLabel = 'Surat Jalan';
+
+
     public static function getNavigationLabel(): string
     {
         return 'Surat Jalan';
@@ -204,6 +207,7 @@ class SuratJalanResource extends Resource
                     ->columns(2),
             ]);
     }
+
 
     /*
     |--------------------------------------------------------------------------

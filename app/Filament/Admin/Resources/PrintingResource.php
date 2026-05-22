@@ -16,6 +16,8 @@ class PrintingResource extends Resource
     protected static ?string $model = Printing::class;
     protected static ?string $navigationGroup = 'Printing';
     protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
+    protected static ?string $pluralModelLabel = 'Printing';
+
 
    public static function form(Form $form): Form
 {
