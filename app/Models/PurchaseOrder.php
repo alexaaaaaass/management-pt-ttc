@@ -33,6 +33,12 @@ class PurchaseOrder extends Model
     {
         return $this->hasMany(PurchaseOrderItem::class);
     }
+    public function fakturs()
+{
+    return $this->hasMany(
+        TransFaktur::class
+    );
+}
       protected static function booted()
     {
         static::creating(function ($po) {

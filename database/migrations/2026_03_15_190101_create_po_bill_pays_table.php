@@ -6,22 +6,67 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    /**
-     * Run the migrations.
-     */
     public function up(): void
     {
-        Schema::create('po_bill_pays', function (Blueprint $table) {
+        Schema::create('po_bill_pays', function (
+            Blueprint $table
+        ) {
+
             $table->id();
+
+            $table->string(
+                'kode_pembayaran'
+            )->unique();
+
+            $table->foreignId(
+                'po_billing_id'
+            )->constrained(
+                'po_billings'
+            );
+
+            $table->foreignId(
+                'karyawan_id'
+            )->nullable()
+             ->constrained(
+                 'karyawans'
+             );
+
+            $table->date(
+                'tanggal_pembayaran'
+            );
+
+            $table->string(
+                'gudang'
+            )->nullable();
+
+            $table->string(
+                'periode'
+            )->nullable();
+
+            $table->decimal(
+                'total_tagihan',
+                18,
+                2
+            )->default(0);
+
+            $table->decimal(
+                'total_pembayaran',
+                18,
+                2
+            )->default(0);
+
+            $table->text(
+                'keterangan'
+            )->nullable();
+
             $table->timestamps();
         });
     }
 
-    /**
-     * Reverse the migrations.
-     */
     public function down(): void
     {
-        Schema::dropIfExists('po_bill_pays');
+        Schema::dropIfExists(
+            'po_bill_pays'
+        );
     }
 };

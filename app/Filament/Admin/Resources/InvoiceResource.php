@@ -251,6 +251,22 @@ $ppnNominal =
             Tables\Columns\TextColumn::make('sisa_tagihan')
                 ->money('IDR'),
 
+                Tables\Columns\TextColumn::make('status_pembayaran')
+    ->label('Status')
+    ->badge()
+    ->getStateUsing(function ($record) {
+
+        return $record->sisa_tagihan <= 0
+            ? 'LUNAS'
+            : 'BELUM LUNAS';
+    })
+    ->color(function ($record) {
+
+        return $record->sisa_tagihan <= 0
+            ? 'success'
+            : 'danger';
+    }),
+
             Tables\Columns\TextColumn::make(
                 'tanggal_invoice'
             )

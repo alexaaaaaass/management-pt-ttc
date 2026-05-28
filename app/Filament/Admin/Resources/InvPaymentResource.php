@@ -275,16 +275,16 @@ class InvPaymentResource extends Resource
             )
                 ->label('Metode'),
 
-            Tables\Columns\BadgeColumn::make(
-                'invoice.status'
-            )
-                ->colors([
+            // Tables\Columns\BadgeColumn::make(
+            //     'invoice.status'
+            // )
+            //     ->colors([
 
-                    'success' => 'LUNAS',
+            //         'success' => 'LUNAS',
 
-                    'danger' => 'BELUM LUNAS',
+            //         'danger' => 'BELUM LUNAS',
 
-                ]),
+            //     ]),
 
         ])
         ->actions([

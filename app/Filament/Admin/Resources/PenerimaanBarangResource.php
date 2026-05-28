@@ -106,6 +106,7 @@ class PenerimaanBarangResource extends Resource
     ->schema([
 
       Forms\Components\Repeater::make('items')
+       ->relationship()
       ->statePath('items')
       ->itemLabel(function ($state) {
     return $state['nama_item_display'] ?? 'Item';
@@ -120,13 +121,15 @@ class PenerimaanBarangResource extends Resource
             ->disabled()
             ->dehydrated(false),
 
-        Forms\Components\TextInput::make('qty_po_display')
-            ->label('Qty | Satuan Purchase Order')
-            ->disabled()
-            ->dehydrated(false),
+     Forms\Components\TextInput::make(
+    'qty_sebelumnya_display'
+)
+    ->label(
+        'Qty | Satuan Penerimaan Sebelumnya'
+    ),
 
-        Forms\Components\TextInput::make('qty_po_display')
-            ->label('Qty | Satuan Penerimaan Sebelumnya')
+       Forms\Components\TextInput::make('qty_po_display')
+    ->label('Qty | Satuan Purchase Order')
             ->disabled()
             ->dehydrated(false),
 

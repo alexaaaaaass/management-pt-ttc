@@ -83,9 +83,13 @@ class TransKasBankResource extends Resource
 })
 
                     ->schema([
-
-                        Hidden::make('tipe_transaksi'),
-
+Hidden::make('tipe_transaksi')
+    ->default(
+        request()->query('type')
+            ?? 'BANK_MASUK'
+    )
+    ->dehydrated()
+    ->required(),
                         Placeholder::make(
                             'info_tipe'
                         )
@@ -167,6 +171,17 @@ class TransKasBankResource extends Resource
 
                         Section::make('Terima dari:')
                             ->schema([
+
+                              Select::make('customer_id')
+            ->label('Customer')
+            ->relationship(
+                'customer',
+                'nama_customer'
+            )
+            ->searchable()
+            ->preload()
+            ->placeholder('Pilih Customer'),
+
 
                                 Grid::make(2)
                                     ->schema([
@@ -296,23 +311,29 @@ class TransKasBankResource extends Resource
 
             ->actions([
 
-                Tables\Actions\EditAction::make(),
+    Tables\Actions\ViewAction::make(),
 
-            ]);
+    Tables\Actions\EditAction::make(),
+
+]);
     }
 
-    public static function getPages(): array
-    {
-        return [
+   public static function getPages(): array
+{
+    return [
 
-            'index'
-                => Pages\ListTransKasBanks::route('/'),
+        'index'
+            => Pages\ListTransKasBanks::route('/'),
 
-            'create'
-                => Pages\CreateTransKasBank::route('/create'),
+        'create'
+            => Pages\CreateTransKasBank::route('/create'),
 
-            'edit'
-                => Pages\EditTransKasBank::route('/{record}/edit'),
-        ];
-    }
+        'edit'
+            => Pages\EditTransKasBank::route('/{record}/edit'),
+
+        'view'
+            => Pages\ViewTransKasBank::route('/{record}'),
+
+    ];
+}
 }

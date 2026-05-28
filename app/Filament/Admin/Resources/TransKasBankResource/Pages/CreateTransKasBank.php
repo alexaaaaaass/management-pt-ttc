@@ -15,8 +15,10 @@ class CreateTransKasBank extends CreateRecord
     ): array {
 
         $data['tipe_transaksi'] =
-            request()->get('type');
-
+            $data['tipe_transaksi']
+            ?? request()->get('type')
+            ?? 'BANK_MASUK';
+        // dd($data);
         return $data;
     }
 }

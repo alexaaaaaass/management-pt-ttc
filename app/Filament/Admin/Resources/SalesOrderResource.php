@@ -200,24 +200,27 @@ Forms\Components\TextInput::make('harga_kirim')
                 Forms\Components\Textarea::make('catatan_colour_range'),
             ]),
             Forms\Components\Actions::make([
-    Action::make('getBom')
-        ->label('Get Bill Of Material')
-        ->icon('heroicon-o-arrow-down-tray')
-        ->color('success')
-        ->action(function ($get, $set) {
 
-            $state = $get('item_source');
+  Action::make('getBom')
+    ->label('Get Bill Of Material')
+    ->icon('heroicon-o-arrow-down-tray')
+    ->color('success')
+    ->action(function ($get, $set) {
 
-            if (!$state) return;
+        $state = $get('item_source');
 
-            [$type, $id] = explode('-', $state);
+        if (!$state) return;
 
-            if ($type !== 'fg') {
-                $set('bom_items', []);
-                return;
-            }
+        [$type, $id] = explode('-', $state);
 
-                $item = \App\Models\FinishGoodItem::with([
+        if ($type !== 'fg') {
+            $set('bom_items', []);
+            return;
+        }
+
+        $qtyPesanan = (float) $get('qty');
+
+        $item = \App\Models\FinishGoodItem::with([
             'materials.material',
             'materials.departemen'
         ])->find($id);
@@ -225,19 +228,41 @@ Forms\Components\TextInput::make('harga_kirim')
         $bom = [];
 
         foreach ($item->materials as $mat) {
+
+            $qtyBom =
+                $qtyPesanan * ($mat->qty ?? 0);
+
             $bom[] = [
-                'nama_material' => optional($mat->material)->nama_master_item ?? '-',
-                'departemen' => optional($mat->departemen)->nama_departemen ?? '-',
-                'qty' => $mat->qty ?? 0,
-                'satuan' => optional($mat->material?->satuan)->nama_satuan ?? '-',
-                'waste' => $mat->waste ?? 0,
-                'keterangan' => $mat->keterangan ?? '-',
+
+                'nama_material' =>
+                    optional($mat->material)
+                    ->nama_master_item ?? '-',
+
+                'departemen' =>
+                    optional($mat->departemen)
+                    ->nama_departemen ?? '-',
+
+                'qty' => $qtyBom,
+
+                'qty_master' =>
+                    $mat->qty ?? 0,
+
+                'satuan' =>
+                    optional(
+                        $mat->material?->satuan
+                    )->nama_satuan ?? '-',
+
+                'waste' =>
+                    $mat->waste ?? 0,
+
+                'keterangan' =>
+                    $mat->keterangan ?? '-',
             ];
         }
 
         $set('bom_items', []);
         $set('bom_items', $bom);
-        })
+    })
 ]),
 Forms\Components\Section::make('Bill of Material')
 ->extraAttributes([
@@ -290,7 +315,16 @@ Forms\Components\Section::make('Bill of Material')
         Forms\Components\TextInput::make('waste')
             ->numeric()
             ->disabled(),
-              Forms\Components\Textarea::make('keterangan')
+             Forms\Components\TextInput::make(
+            'qty_master'
+        )
+            ->label('Qty BOM')
+            ->disabled(),
+
+        Forms\Components\TextInput::make(
+            'qty'
+        )
+            ->label('Qty Produksi')
             ->disabled(),
 
             ])
@@ -323,13 +357,6 @@ Forms\Components\Section::make('Bill of Material')
     }),
                 Tables\Columns\TextColumn::make('customer.nama_customer')->label('Customer'),
                 Tables\Columns\TextColumn::make('kode_material')->label('Kode Material'),
-                // Tables\Columns\TextColumn::make('qty'),
-    //             Tables\Columns\TextColumn::make('harga_pcs')
-    // ->money('IDR'),
-
-// Tables\Columns\TextColumn::make('harga_kirim')
-//     ->money('IDR'),
-                // Tables\Columns\TextColumn::make('created_at')->dateTime(),
             ])
             ->actions([
                 Tables\Actions\EditAction::make(),
