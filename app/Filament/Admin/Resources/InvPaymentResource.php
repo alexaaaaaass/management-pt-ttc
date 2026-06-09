@@ -260,9 +260,11 @@ class InvPaymentResource extends Resource
             )
                 ->label('Customer'),
 
-            Tables\Columns\TextColumn::make(
-                'nominal_bayar'
-            )
+          Tables\Columns\TextColumn::make('nominal_bayar')
+    ->label('Nominal Bayar')
+    ->money('IDR')
+    ->badge()
+    ->color('success')
                 ->money('IDR'),
 
             Tables\Columns\TextColumn::make(

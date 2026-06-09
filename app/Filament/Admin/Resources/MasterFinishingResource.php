@@ -83,13 +83,16 @@ class MasterFinishingResource extends Resource
                     ->numeric()
                     ->default(0),
 
-                Forms\Components\Select::make('note_waste')
-                    ->options([
-                        'CETAK KOTOR' => 'CETAK KOTOR',
-                        'CETAK LUNTUR' => 'CETAK LUNTUR',
-                        'CETAK BINTIK' => 'CETAK BINTIK',
-                    ]),
-
+             Forms\Components\Select::make('error_production_id')
+    ->label('Note Waste')
+    ->options(
+        \App\Models\ErrorProduction::all()
+            ->mapWithKeys(fn ($item) => [
+                $item->id => "{$item->kode_error} - {$item->nama_error}"
+            ])
+    )
+    ->searchable()
+    ->preload(),
                 Forms\Components\Select::make('keterangan_spk')
                     ->options([
                         'reguler' => 'Reguler',

@@ -76,9 +76,8 @@ class TransKasResource extends Resource
                         Grid::make(2)
                             ->schema([
                                 // Tambah ->live() di sini agar Placeholder di atas ikut berubah secara real-time
-                                Hidden::make('tipe_transaksi')
-                                    ->live(),
-
+                        Hidden::make('tipe_transaksi')
+    ->dehydrated(true),
                                 TextInput::make('kode_transaksi')
                                     ->disabled()
                                     ->default('AUTO'),

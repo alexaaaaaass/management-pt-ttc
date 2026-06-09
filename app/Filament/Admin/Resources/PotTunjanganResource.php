@@ -3,21 +3,17 @@
 namespace App\Filament\Admin\Resources;
 
 use App\Filament\Admin\Resources\PotTunjanganResource\Pages;
-use App\Filament\Admin\Resources\PotTunjanganResource\RelationManagers;
-use App\Models\PotTunjangan;
-use Filament\Forms;
+use App\Models\PotTunjangnan;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
-use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Database\Eloquent\SoftDeletingScope;
 
 class PotTunjanganResource extends Resource
 {
-    protected static ?string $model = PotTunjangan::class;
+    protected static ?string $model = PotTunjangnan::class;
      protected static ?string $navigationGroup = 'HRD';
-
+      protected static ?int $navigationSort = 8;
     protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
 
     public static function form(Form $form): Form

@@ -3,26 +3,27 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use App\Models\ErrorProduction;
 
 class MasterFinishing extends Model
 {
     protected $table = 'master_finishing';
 
-    protected $fillable = [
-        'kode_finishing',
-        'spk_id',
-        'mesin_finishing_id',
-        'operator_finishing_id',
-        'tanggal_entri',
-        'proses_finishing',
-        'tahap_finishing',
-        'hasil_baik',
-        'hasil_rusak',
-        'semi_waste',
-        'note_waste',
-        'keterangan_spk',
-        'keterangan',
-    ];
+  protected $fillable = [
+    'kode_finishing',
+    'spk_id',
+    'mesin_finishing_id',
+    'operator_finishing_id',
+    'tanggal_entri',
+    'proses_finishing',
+    'tahap_finishing',
+    'hasil_baik',
+    'hasil_rusak',
+    'semi_waste',
+    'error_production_id',
+    'keterangan_spk',
+    'keterangan',
+];
 
     /*
     |--------------------------------------------------------------------------
@@ -50,6 +51,11 @@ class MasterFinishing extends Model
     | AUTO GENERATE KODE FINISHING
     |--------------------------------------------------------------------------
     */
+
+    public function errorProduction()
+{
+    return $this->belongsTo(ErrorProduction::class);
+}
 
     protected static function booted()
     {

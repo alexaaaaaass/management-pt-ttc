@@ -11,10 +11,25 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('cutis', function (Blueprint $table) {
-            $table->id();
-            $table->timestamps();
-        });
+    Schema::create('cutis', function (Blueprint $table) {
+    $table->id();
+
+    $table->foreignId('karyawan_id')
+        ->constrained('karyawans')
+        ->cascadeOnDelete();
+
+    $table->date('tanggal_cuti');
+
+    $table->string('jenis_cuti');
+
+    $table->integer('jumlah_hari')->default(1);
+
+    $table->string('lampiran')->nullable();
+
+    $table->text('keterangan')->nullable();
+
+    $table->timestamps();
+});
     }
 
     /**

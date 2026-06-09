@@ -218,7 +218,7 @@ Forms\Components\TextInput::make('harga_kirim')
             return;
         }
 
-        $qtyPesanan = (float) $get('qty');
+       $qtyPesanan = floatval($get('qty') ?? 0);
 
         $item = \App\Models\FinishGoodItem::with([
             'materials.material',
@@ -230,7 +230,7 @@ Forms\Components\TextInput::make('harga_kirim')
         foreach ($item->materials as $mat) {
 
             $qtyBom =
-                $qtyPesanan * ($mat->qty ?? 0);
+        $qtyPesanan * floatval($mat->qty);
 
             $bom[] = [
 
@@ -242,10 +242,11 @@ Forms\Components\TextInput::make('harga_kirim')
                     optional($mat->departemen)
                     ->nama_departemen ?? '-',
 
-                'qty' => $qtyBom,
+                'qty' => round($qtyBom, 2),
 
-                'qty_master' =>
-                    $mat->qty ?? 0,
+                 'qty_master' =>
+            floatval($mat->qty),
+
 
                 'satuan' =>
                     optional(

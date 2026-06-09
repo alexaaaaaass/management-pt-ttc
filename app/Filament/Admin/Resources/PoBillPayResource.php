@@ -281,24 +281,67 @@ protected static ?int $navigationSort = 12;
     return 'Po Bill Pay';
 }
 
-    public static function table(Table $table): Table
-    {
-        return $table
-            ->columns([
-                //
-            ])
-            ->filters([
-                //
-            ])
-            ->actions([
-                Tables\Actions\EditAction::make(),
-            ])
-            ->bulkActions([
-                Tables\Actions\BulkActionGroup::make([
-                    Tables\Actions\DeleteBulkAction::make(),
-                ]),
-            ]);
-    }
+   public static function table(Table $table): Table
+{
+    return $table
+        ->columns([
+            Tables\Columns\TextColumn::make('tanggal_pembayaran')
+                ->label('Tgl Pembayaran')
+                ->date('d M Y')
+                ->sortable(),
+
+            Tables\Columns\TextColumn::make('poBilling.kode_tagihan')
+                ->label('Billing Ref')
+                ->searchable()
+                ->sortable(),
+
+            Tables\Columns\TextColumn::make('gudang')
+                ->label('Gudang')
+                ->toggleable(isToggledHiddenByDefault: true),
+
+            Tables\Columns\TextColumn::make('periode')
+                ->label('Periode')
+                ->sortable(),
+
+            // Tables\Columns\TextColumn::make('karyawan.nama')
+            //     ->label('PIC / Karyawan')
+            //     ->searchable(),
+
+            // Total Tagihan dari Billing Reference
+            Tables\Columns\TextColumn::make('total_tagihan')
+                ->label('Total Tagihan')
+                ->money('IDR', locale: 'id')
+                ->sortable(),
+
+            // Total Pembayaran yang diinput / dijumlahkan dari repeater
+            Tables\Columns\TextColumn::make('total_pembayaran')
+                ->label('Total Bayar')
+                ->money('IDR', locale: 'id')
+                ->sortable()
+                ->badge()
+                ->color(fn (string $state): string => 'success'),
+        ])
+        ->filters([
+            Tables\Filters\Filter::make('tanggal_pembayaran')
+                ->form([
+                    DatePicker::make('dari_tanggal')->label('Dari Tanggal'),
+                    DatePicker::make('sampai_tanggal')->label('Sampai Tanggal'),
+                ])
+                ->query(function ($query, array $data) {
+                    return $query
+                        ->when($data['dari_tanggal'], fn ($q, $date) => $q->whereDate('tanggal_pembayaran', '>=', $date))
+                        ->when($data['sampai_tanggal'], fn ($q, $date) => $q->whereDate('tanggal_pembayaran', '<=', $date));
+                })
+        ])
+        ->actions([
+            Tables\Actions\EditAction::make(),
+        ])
+        ->bulkActions([
+            Tables\Actions\BulkActionGroup::make([
+                Tables\Actions\DeleteBulkAction::make(),
+            ]),
+        ]);
+}
 
     public static function getRelations(): array
     {

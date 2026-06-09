@@ -5,13 +5,18 @@ use Illuminate\Database\Eloquent\Model;
 
 class FinishGoodItemMaterial extends Model
 {
-    protected $fillable = [
+     protected $fillable = [
         'finish_good_item_id',
         'master_item_id',
         'departemen_id',
         'qty',
         'waste',
         'keterangan'
+    ];
+
+    protected $casts = [
+        'qty' => 'float',
+        'waste' => 'float',
     ];
 
     public function finishGoodItem()
