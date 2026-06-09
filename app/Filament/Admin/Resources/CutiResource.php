@@ -6,43 +6,17 @@ use App\Filament\Admin\Resources\CutiResource\Pages;
 use App\Models\Cuti;
 use Filament\Forms;
 use Filament\Forms\Form;
-use Filament\Forms\Components\Select;
-use Filament\Forms\Components\DatePicker;
-use Filament\Forms\Components\FileUpload;
-use Filament\Forms\Components\Textarea;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
-<<<<<<< HEAD
-use Filament\Tables\Columns\TextColumn;
-=======
 use Carbon\Carbon;
->>>>>>> 2b7f9fc8bdc1b557da06ff9a81056e9442b7b258
 
 class CutiResource extends Resource
 {
     protected static ?string $model = Cuti::class;
-<<<<<<< HEAD
-    protected static ?int $navigationSort = 7;
-    protected static ?string $navigationGroup = 'HRD';
-
-    protected static ?string $navigationIcon = 'heroicon-o-calendar-days';
-
-    public static function getModelLabel(): string
-{
-    return 'Cuti';
-}
-
-public static function getPluralModelLabel(): string
-{
-    return 'Cuti';
-}
-
-=======
      protected static ?string $navigationGroup = 'HRD';
     protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
     protected static ?int $navigationSort = 7;
->>>>>>> 2b7f9fc8bdc1b557da06ff9a81056e9442b7b258
 
   public static function form(Form $form): Form
 {
@@ -50,64 +24,6 @@ public static function getPluralModelLabel(): string
 
         Forms\Components\Section::make('Pengajuan Cuti')
             ->schema([
-<<<<<<< HEAD
-                Select::make('karyawan_id')
-                    ->relationship('karyawan', 'nama_lengkap')
-                    ->searchable()
-                    ->required(),
-
-                DatePicker::make('tanggal_cuti')
-                    ->required(),
-
-                Select::make('jenis_cuti')
-                    ->options([
-                        'Cuti Tahunan' => 'Cuti Tahunan',
-                        'Cuti Khusus' => 'Cuti Khusus',
-                    ])
-                    ->required(),
-
-                FileUpload::make('lampiran')
-                    ->directory('cuti'),
-
-                Textarea::make('keterangan')
-                    ->columnSpanFull(),
-            ]);
-    }
-
-    public static function table(Table $table): Table
-    {
-        return $table
-            ->columns([
-                TextColumn::make('karyawan.nama_lengkap')
-                    ->label('Karyawan')
-                    ->searchable(),
-
-                TextColumn::make('tanggal_cuti')
-                    ->label('Tanggal Cuti')
-                    ->date(),
-
-                TextColumn::make('jenis_cuti')
-                    ->label('Jenis Cuti'),
-
-                TextColumn::make('lampiran')
-                    ->label('Lampiran')
-                    ->formatStateUsing(fn () => 'Lihat'),
-
-                TextColumn::make('keterangan')
-                    ->limit(50),
-            ])
-            ->actions([
-                Tables\Actions\EditAction::make(),
-                Tables\Actions\DeleteAction::make(),
-            ])
-            ->bulkActions([
-                Tables\Actions\BulkActionGroup::make([
-                    Tables\Actions\DeleteBulkAction::make(),
-                    Tables\Actions\CreateAction::make()
-                    ->label('Tambah Data Cuti')]),
-            ]);
-    }
-=======
 
                 Forms\Components\Select::make('karyawan_id')
                     ->relationship('karyawan', 'nama')
@@ -192,7 +108,6 @@ public static function getNavigationLabel(): string
           
         ]);
 }
->>>>>>> 2b7f9fc8bdc1b557da06ff9a81056e9442b7b258
 
     public static function getRelations(): array
     {

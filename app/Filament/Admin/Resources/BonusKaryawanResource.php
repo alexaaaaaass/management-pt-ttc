@@ -2,40 +2,26 @@
 
 namespace App\Filament\Admin\Resources;
 
-<<<<<<< HEAD
-=======
 use App\Filament\Admin\Resources\BonusKaryawanResource\Pages;
->>>>>>> 2b7f9fc8bdc1b557da06ff9a81056e9442b7b258
 use App\Models\BonusKaryawan;
-use Filament\Forms\Form;
-use Filament\Tables\Table;
-<<<<<<< HEAD
-use Filament\Resources\Resource;
-use Filament\Forms\Components\Select;
 use Filament\Forms\Components\DatePicker;
+use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
-use Filament\Tables;
+use Filament\Forms\Form;
+use Filament\Resources\Resource;
 use Filament\Tables\Columns\TextColumn;
-use App\Filament\Admin\Resources\BonusKaryawanResource\Pages;
-=======
->>>>>>> 2b7f9fc8bdc1b557da06ff9a81056e9442b7b258
+use Filament\Tables\Table;
+use Tables\Actions\BulkActionGroup;
+use Tables\Actions\DeleteAction;
+use Tables\Actions\EditAction;
 
 class BonusKaryawanResource extends Resource
 {
     protected static ?string $model = BonusKaryawan::class;
-<<<<<<< HEAD
-    
     protected static ?string $navigationGroup = 'HRD';
     protected static ?int $navigationSort = 9;
-    protected static ?string $navigationIcon = 'heroicon-o-banknotes';
-
-    protected static ?string $navigationLabel = 'Bonus Karyawan';
-=======
-     protected static ?string $navigationGroup = 'HRD';
- protected static ?int $navigationSort = 9;
     protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
->>>>>>> 2b7f9fc8bdc1b557da06ff9a81056e9442b7b258
 
     public static function form(Form $form): Form
     {
@@ -92,12 +78,12 @@ class BonusKaryawanResource extends Resource
                     ->limit(50),
             ])
             ->actions([
-                Tables\Actions\EditAction::make(),
-                Tables\Actions\DeleteAction::make(),
+                EditAction::make(),
+                DeleteAction::make(),
             ])
             ->bulkActions([
-                Tables\Actions\BulkActionGroup::make([
-                    Tables\Actions\DeleteBulkAction::make(),
+                BulkActionGroup::make([
+                DeleteBulkAction::make(),
                 ]),
             ]);
     }
