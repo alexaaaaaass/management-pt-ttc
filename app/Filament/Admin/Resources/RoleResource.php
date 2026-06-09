@@ -2,32 +2,19 @@
 
 namespace App\Filament\Admin\Resources;
 
-<<<<<<< HEAD
-=======
 use App\Filament\Admin\Resources\RoleResource\Pages;
->>>>>>> 2b7f9fc8bdc1b557da06ff9a81056e9442b7b258
 use App\Models\Role;
-use Filament\Forms\Form;
-use Filament\Tables\Table;
-<<<<<<< HEAD
-use Filament\Resources\Resource;
 use Filament\Forms\Components\TextInput;
-use Filament\Tables;
+use Filament\Forms\Form;
+use Filament\Resources\Resource;
 use Filament\Tables\Columns\TextColumn;
-use App\Filament\Admin\Resources\RoleResource\Pages;
-=======
-
->>>>>>> 2b7f9fc8bdc1b557da06ff9a81056e9442b7b258
+use Filament\Tables\Table;
+use Tables\Actions\DeleteAction;
+use Tables\Actions\EditAction;
 
 class RoleResource extends Resource
 {
     protected static ?string $model = Role::class;
-<<<<<<< HEAD
-=======
-    protected static ?string $navigationGroup = 'HRD';
-    protected static ?int $navigationSort = 3;
->>>>>>> 2b7f9fc8bdc1b557da06ff9a81056e9442b7b258
-
     protected static ?string $navigationGroup = 'HRD';
     protected static ?int $navigationSort = 3;
     protected static ?string $navigationIcon = 'heroicon-o-shield-check';
@@ -65,8 +52,8 @@ class RoleResource extends Resource
                     ->label('Dibuat'),
             ])
             ->actions([
-                Tables\Actions\EditAction::make(),
-                Tables\Actions\DeleteAction::make(),
+                EditAction::make(),
+                DeleteAction::make(),
             ]);
     }
 

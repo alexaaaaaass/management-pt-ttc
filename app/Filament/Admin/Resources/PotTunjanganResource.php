@@ -2,42 +2,13 @@
 
 namespace App\Filament\Admin\Resources;
 
-<<<<<<< HEAD
-use App\Models\PotTunjangan;
-=======
 use App\Filament\Admin\Resources\PotTunjanganResource\Pages;
 use App\Models\PotTunjangnan;
->>>>>>> 2b7f9fc8bdc1b557da06ff9a81056e9442b7b258
 use Filament\Forms\Form;
-use Filament\Tables\Table;
-<<<<<<< HEAD
 use Filament\Resources\Resource;
-use Filament\Forms;
-use Filament\Tables;
-use App\Filament\Admin\Resources\PotTunjanganResource\Pages;
-
-class PotTunjanganResource extends Resource
-{
-    protected static ?string $model = PotTunjangan::class;
-
-    protected static ?string $navigationGroup = 'HRD';
-
-    protected static ?int $navigationSort = 5;
-
-    protected static ?string $navigationIcon = 'heroicon-o-minus-circle';
-
-    protected static ?string $navigationLabel = 'Pot Tunjangan';
-
-    public static function getModelLabel(): string
-    {
-        return 'Pot Tunjangan';
-    }
-
-    public static function getPluralModelLabel(): string
-    {
-        return 'Pot Tunjangan';
-    }
-=======
+use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Table;
+use Forms\Components\Select;
 
 class PotTunjanganResource extends Resource
 {
@@ -45,13 +16,12 @@ class PotTunjanganResource extends Resource
      protected static ?string $navigationGroup = 'HRD';
       protected static ?int $navigationSort = 8;
     protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
->>>>>>> 2b7f9fc8bdc1b557da06ff9a81056e9442b7b258
 
     public static function form(Form $form): Form
     {
         return $form
             ->schema([
-                Forms\Components\Select::make('karyawan_id')
+                Select::make('karyawan_id')
                     ->label('Karyawan')
                     ->relationship('karyawan', 'nama_lengkap')
                     ->searchable()
@@ -91,26 +61,26 @@ class PotTunjanganResource extends Resource
     {
         return $table
             ->columns([
-                Tables\Columns\TextColumn::make('karyawan.nama_lengkap')
+                TextColumn::make('karyawan.nama_lengkap')
                     ->label('Karyawan')
                     ->searchable(),
 
                 Tables\Columns\TextColumn::make('periode_payroll')
                     ->label('Periode Payroll'),
 
-                Tables\Columns\TextColumn::make('potongan_jabatan')
+                TextColumn::make('potongan_jabatan')
                     ->money('IDR')
                     ->label('Potongan Jabatan'),
 
-                Tables\Columns\TextColumn::make('potongan_kompetensi')
+                TextColumn::make('potongan_kompetensi')
                     ->money('IDR')
                     ->label('Potongan Kompetensi'),
 
-                Tables\Columns\TextColumn::make('potongan_intensif')
+                TextColumn::make('potongan_intensif')
                     ->money('IDR')
                     ->label('Potongan Intensif'),
 
-                Tables\Columns\TextColumn::make('keterangan')
+                TextColumn::make('keterangan')
                     ->limit(30),
             ])
             ->actions([
