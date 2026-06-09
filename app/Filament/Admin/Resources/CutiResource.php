@@ -13,11 +13,16 @@ use Filament\Forms\Components\Textarea;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
+<<<<<<< HEAD
 use Filament\Tables\Columns\TextColumn;
+=======
+use Carbon\Carbon;
+>>>>>>> 2b7f9fc8bdc1b557da06ff9a81056e9442b7b258
 
 class CutiResource extends Resource
 {
     protected static ?string $model = Cuti::class;
+<<<<<<< HEAD
     protected static ?int $navigationSort = 7;
     protected static ?string $navigationGroup = 'HRD';
 
@@ -33,11 +38,19 @@ public static function getPluralModelLabel(): string
     return 'Cuti';
 }
 
+=======
+     protected static ?string $navigationGroup = 'HRD';
+    protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
+    protected static ?int $navigationSort = 7;
+>>>>>>> 2b7f9fc8bdc1b557da06ff9a81056e9442b7b258
 
-    public static function form(Form $form): Form
-    {
-        return $form
+  public static function form(Form $form): Form
+{
+    return $form->schema([
+
+        Forms\Components\Section::make('Pengajuan Cuti')
             ->schema([
+<<<<<<< HEAD
                 Select::make('karyawan_id')
                     ->relationship('karyawan', 'nama_lengkap')
                     ->searchable()
@@ -94,6 +107,92 @@ public static function getPluralModelLabel(): string
                     ->label('Tambah Data Cuti')]),
             ]);
     }
+=======
+
+                Forms\Components\Select::make('karyawan_id')
+                    ->relationship('karyawan', 'nama')
+                    ->searchable()
+                    ->required(),
+
+            Forms\Components\Select::make('jenis_cuti')
+    ->label('Jenis Cuti')
+    ->options([
+        'Cuti Tahunan' => 'Cuti Tahunan',
+        'Cuti Menikah' => 'Cuti Menikah',
+        'Cuti Melahirkan' => 'Cuti Melahirkan',
+        'Cuti Sakit' => 'Cuti Sakit',
+        'Cuti Khusus' => 'Cuti Khusus',
+    ])
+    ->searchable()
+    ->required(),
+
+               Forms\Components\DatePicker::make('tanggal_mulai')
+    ->required()
+    ->live(),
+
+Forms\Components\DatePicker::make('tanggal_selesai')
+    ->required()
+    ->live()
+    ->afterStateUpdated(function ($state, callable $set, callable $get) {
+
+        if (!$get('tanggal_mulai') || !$state) {
+            return;
+        }
+
+        $jumlahHari = Carbon::parse($get('tanggal_mulai'))
+            ->diffInDays(Carbon::parse($state)) + 1;
+
+        $set('jumlah_hari', $jumlahHari);
+    }),
+
+Forms\Components\TextInput::make('jumlah_hari')
+    ->disabled()
+    ->dehydrated()
+    ->numeric(),
+
+                Forms\Components\FileUpload::make('lampiran')
+                    ->directory('cuti')
+                    ->image()
+                    ->downloadable()
+                    ->openable(),
+
+                Forms\Components\Textarea::make('keterangan')
+                    ->columnSpanFull(),
+
+            ])
+            ->columns(2),
+    ]);
+}
+
+public static function getNavigationLabel(): string
+{
+    return 'Cuti';
+}
+    
+    
+  public static function table(Table $table): Table
+{
+    return $table
+        ->columns([
+
+            Tables\Columns\TextColumn::make('karyawan.nama')
+                ->label('Karyawan')
+                ->searchable(),
+
+            Tables\Columns\TextColumn::make('tanggal_mulai')
+                ->label('Tanggal Cuti')
+                ->date(),
+
+           Tables\Columns\TextColumn::make('jenis_cuti')
+    ->label('Jenis Cuti'),  
+        
+            Tables\Columns\TextColumn::make('keterangan')
+                ->limit(50),
+
+          
+        ]);
+}
+>>>>>>> 2b7f9fc8bdc1b557da06ff9a81056e9442b7b258
 
     public static function getRelations(): array
     {

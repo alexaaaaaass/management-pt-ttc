@@ -16,4 +16,10 @@ class EditTransKas extends EditRecord
             Actions\DeleteAction::make(),
         ];
     }
+//     public function mount($record): void
+// {
+//     parent::mount($record);
+
+//     dd($this->record->tipe_transaksi);
+// }
 }

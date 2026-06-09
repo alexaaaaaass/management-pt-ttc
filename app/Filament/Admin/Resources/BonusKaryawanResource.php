@@ -2,9 +2,14 @@
 
 namespace App\Filament\Admin\Resources;
 
+<<<<<<< HEAD
+=======
+use App\Filament\Admin\Resources\BonusKaryawanResource\Pages;
+>>>>>>> 2b7f9fc8bdc1b557da06ff9a81056e9442b7b258
 use App\Models\BonusKaryawan;
 use Filament\Forms\Form;
 use Filament\Tables\Table;
+<<<<<<< HEAD
 use Filament\Resources\Resource;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\DatePicker;
@@ -13,16 +18,24 @@ use Filament\Forms\Components\TextInput;
 use Filament\Tables;
 use Filament\Tables\Columns\TextColumn;
 use App\Filament\Admin\Resources\BonusKaryawanResource\Pages;
+=======
+>>>>>>> 2b7f9fc8bdc1b557da06ff9a81056e9442b7b258
 
 class BonusKaryawanResource extends Resource
 {
     protected static ?string $model = BonusKaryawan::class;
+<<<<<<< HEAD
     
     protected static ?string $navigationGroup = 'HRD';
     protected static ?int $navigationSort = 9;
     protected static ?string $navigationIcon = 'heroicon-o-banknotes';
 
     protected static ?string $navigationLabel = 'Bonus Karyawan';
+=======
+     protected static ?string $navigationGroup = 'HRD';
+ protected static ?int $navigationSort = 9;
+    protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
+>>>>>>> 2b7f9fc8bdc1b557da06ff9a81056e9442b7b258
 
     public static function form(Form $form): Form
     {

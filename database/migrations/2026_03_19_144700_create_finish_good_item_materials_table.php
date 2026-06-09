@@ -28,7 +28,7 @@ return new class extends Migration
         ->constrained('master_departemens')
         ->nullOnDelete();
 
-    $table->integer('qty')->nullable();
+  $table->double('qty', 15, 4);
     $table->decimal('waste', 10, 2)->default(0);
     $table->text('keterangan')->nullable();
 

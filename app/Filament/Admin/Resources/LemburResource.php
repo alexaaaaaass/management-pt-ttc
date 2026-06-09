@@ -15,7 +15,11 @@ class LemburResource extends Resource
 {
     protected static ?string $model = Lembur::class;
      protected static ?string $navigationGroup = 'HRD';
+<<<<<<< HEAD
     protected static ?int $navigationSort = 5;
+=======
+     protected static ?int $navigationSort = 5;
+>>>>>>> 2b7f9fc8bdc1b557da06ff9a81056e9442b7b258
     protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
 
     public static function form(Form $form): Form

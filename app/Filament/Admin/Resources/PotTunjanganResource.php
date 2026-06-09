@@ -2,9 +2,15 @@
 
 namespace App\Filament\Admin\Resources;
 
+<<<<<<< HEAD
 use App\Models\PotTunjangan;
+=======
+use App\Filament\Admin\Resources\PotTunjanganResource\Pages;
+use App\Models\PotTunjangnan;
+>>>>>>> 2b7f9fc8bdc1b557da06ff9a81056e9442b7b258
 use Filament\Forms\Form;
 use Filament\Tables\Table;
+<<<<<<< HEAD
 use Filament\Resources\Resource;
 use Filament\Forms;
 use Filament\Tables;
@@ -31,6 +37,15 @@ class PotTunjanganResource extends Resource
     {
         return 'Pot Tunjangan';
     }
+=======
+
+class PotTunjanganResource extends Resource
+{
+    protected static ?string $model = PotTunjangnan::class;
+     protected static ?string $navigationGroup = 'HRD';
+      protected static ?int $navigationSort = 8;
+    protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
+>>>>>>> 2b7f9fc8bdc1b557da06ff9a81056e9442b7b258
 
     public static function form(Form $form): Form
     {

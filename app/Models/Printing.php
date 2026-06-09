@@ -3,24 +3,24 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
-
+use App\Models\ErrorProduction;
 class Printing extends Model
 {
     protected $table = 'printings';
 
-    protected $fillable = [
-        'spk_id',
-        'mesin_id',
-        'operator_id',
-        'tanggal_entri',
-        'proses_printing',
-        'tahap_printing',
-        'hasil_baik',
-        'hasil_rusak',
-        'semi_waste',
-        'note_waste',
-        'keterangan_spk',
-    ];
+  protected $fillable = [
+    'spk_id',
+    'mesin_id',
+    'operator_id',
+    'tanggal_entri',
+    'proses_printing',
+    'tahap_printing',
+    'hasil_baik',
+    'hasil_rusak',
+    'semi_waste',
+    'error_production_id',
+    'keterangan_spk',
+];
 
     protected $casts = [
         'tanggal_entri' => 'date',
@@ -39,5 +39,11 @@ class Printing extends Model
     public function operator()
     {
         return $this->belongsTo(MasterOperator::class, 'operator_id');
+    }
+    
+
+    public function errorProduction()
+    {
+        return $this->belongsTo(ErrorProduction::class);
     }
 }

@@ -74,11 +74,14 @@ class PrintingResource extends Resource
                     ->default(0)
                     ->required(),
 
-                Forms\Components\Select::make('note_waste')
-                    ->options([
-                        'CETAK_LUNTUR' => 'Cetak Luntur',
-                        'CETAK_BOCOR_BANJIR' => 'Cetak Bocor / Banjir',
-                    ]),
+              Forms\Components\Select::make('error_production_id')
+    ->label('Note Waste')
+    ->relationship(
+        name: 'errorProduction',
+        titleAttribute: 'nama_error'
+    )
+    ->searchable()
+    ->preload(),
 
                 Forms\Components\TextInput::make('keterangan_spk')
                     ->columnSpanFull()

@@ -2,9 +2,13 @@
 
 namespace App\Providers\Filament;
 
+use App\Filament\Admin\Resources\AdminResource\Widgets\PemasukanChart;
+use App\Filament\Admin\Resources\AdminResource\Widgets\PengeluaranChart;
+use App\Filament\Admin\Resources\AdminResource\Widgets\ProductionMonitoringWidget;
 use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\DisableBladeIconComponents;
 use Filament\Http\Middleware\DispatchServingFilamentEvent;
+use Filament\Navigation\NavigationGroup;
 use Filament\Pages;
 use Filament\Panel;
 use Filament\PanelProvider;
@@ -17,7 +21,6 @@ use Illuminate\Routing\Middleware\SubstituteBindings;
 use Illuminate\Session\Middleware\AuthenticateSession;
 use Illuminate\Session\Middleware\StartSession;
 use Illuminate\View\Middleware\ShareErrorsFromSession;
-use Filament\Navigation\NavigationGroup;
 
 class AdminPanelProvider extends PanelProvider
 {
@@ -35,6 +38,7 @@ class AdminPanelProvider extends PanelProvider
 
             // ukuran logo
             ->brandLogoHeight('40px')
+          ->sidebarCollapsibleOnDesktop()    
         ->colors([
             'primary' => Color::Amber,
         ])
@@ -90,6 +94,9 @@ class AdminPanelProvider extends PanelProvider
         ->discoverWidgets(in: app_path('Filament/Admin/Widgets'), for: 'App\\Filament\\Admin\\Widgets')
        ->widgets([
     \App\Filament\Admin\Widgets\StatsOverview::class,
+         PemasukanChart::class,
+    PengeluaranChart::class,
+     ProductionMonitoringWidget::class,
 ])
         ->middleware([
             EncryptCookies::class,

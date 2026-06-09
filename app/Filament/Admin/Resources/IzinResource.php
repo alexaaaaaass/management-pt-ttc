@@ -14,10 +14,14 @@ use Filament\Tables\Table;
 class IzinResource extends Resource
 {
     protected static ?string $model = Izin::class;
+<<<<<<< HEAD
      protected static ?string $navigationGroup = 'HRD';
     protected static ?int $navigationSort = 6;
+=======
+    protected static ?string $navigationGroup = 'HRD';
+>>>>>>> 2b7f9fc8bdc1b557da06ff9a81056e9442b7b258
     protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
-
+    protected static ?int $navigationSort = 6;
    public static function form(Form $form): Form
 {
     return $form->schema([
@@ -85,12 +89,19 @@ class IzinResource extends Resource
                         'alpha' => 'Alpha',
                     ])
                     ->required(),
+Forms\Components\TimePicker::make('jam_mulai')
+    ->label('Jam Mulai')
+    ->seconds(false)
+    ->displayFormat('H:i')
+    ->format('H:i:s')
+    ->native(false),
 
-                Forms\Components\TimePicker::make('jam_mulai')
-                    ->label('Jam Mulai'),
-
-                Forms\Components\TimePicker::make('jam_selesai')
-                    ->label('Jam Selesai'),
+Forms\Components\TimePicker::make('jam_selesai')
+    ->label('Jam Selesai')
+    ->seconds(false)
+    ->displayFormat('H:i')
+    ->format('H:i:s')
+    ->native(false),
 
                 Forms\Components\Textarea::make('keterangan')
                     ->columnSpanFull(),
