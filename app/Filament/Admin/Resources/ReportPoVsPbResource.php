@@ -17,7 +17,7 @@ class ReportPoVsPbResource extends Resource
 {
     protected static ?string $model = ReportPoVsPb::class;
     protected static ?string $navigationGroup = 'Report';
-
+    protected static ?int $navigationSort = 3;
     protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
 
     public static function form(Form $form): Form

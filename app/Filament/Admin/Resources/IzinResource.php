@@ -15,7 +15,7 @@ class IzinResource extends Resource
 {
     protected static ?string $model = Izin::class;
      protected static ?string $navigationGroup = 'HRD';
-
+    protected static ?int $navigationSort = 6;
     protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
 
    public static function form(Form $form): Form

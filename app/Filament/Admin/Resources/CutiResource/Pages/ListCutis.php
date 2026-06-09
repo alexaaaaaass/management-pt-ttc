@@ -13,7 +13,9 @@ class ListCutis extends ListRecords
     protected function getHeaderActions(): array
     {
         return [
-            Actions\CreateAction::make(),
+            Actions\CreateAction::make()
+                ->label('Tambah Data Cuti')
+                ->modalHeading('Tambah Data Cuti'),
         ];
     }
 }

@@ -16,7 +16,7 @@ use Filament\Forms\Set;
 class SuratJalanResource extends Resource
 {
     protected static ?string $model = SuratJalan::class;
-
+    
     protected static ?string $navigationGroup = 'Dispatch';
 
     protected static ?string $navigationIcon = 'heroicon-o-truck';

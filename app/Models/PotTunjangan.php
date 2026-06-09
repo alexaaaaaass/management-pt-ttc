@@ -5,17 +5,18 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-class Cuti extends Model
+class PotTunjangan extends Model
 {
     use HasFactory;
 
-    protected $table = 'cuti';
+    protected $table = 'pot_tunjangan';
 
     protected $fillable = [
         'karyawan_id',
-        'tanggal_cuti',
-        'jenis_cuti',
-        'lampiran',
+        'periode_payroll',
+        'potongan_jabatan',
+        'potongan_kompetensi',
+        'potongan_intensif',
         'keterangan',
     ];
 

@@ -17,7 +17,7 @@ class ReportProduksiResource extends Resource
 {
     protected static ?string $model = ReportProduksi::class;
     protected static ?string $navigationGroup = 'Report';
-
+    protected static ?int $navigationSort = 2;
     protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
 
     public static function form(Form $form): Form

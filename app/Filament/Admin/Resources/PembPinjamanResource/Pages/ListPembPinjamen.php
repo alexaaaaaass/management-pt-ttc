@@ -13,7 +13,17 @@ class ListPembPinjamen extends ListRecords
     protected function getHeaderActions(): array
     {
         return [
-            Actions\CreateAction::make(),
+
+            Actions\Action::make('rekap')
+                ->label('Rekap')
+                ->icon('heroicon-o-chart-bar')
+                ->url(
+                    PembPinjamanResource::getUrl('rekap')
+                ),
+
+            Actions\CreateAction::make()
+                ->label('Tambah Pembayaran'),
+
         ];
     }
 }

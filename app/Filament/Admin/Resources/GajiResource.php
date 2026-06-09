@@ -17,7 +17,7 @@ class GajiResource extends Resource
 {
     protected static ?string $model = Gaji::class;
     protected static ?string $navigationGroup = 'HRD';
-
+    protected static ?int $navigationSort = 13;
     protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
 
     public static function form(Form $form): Form

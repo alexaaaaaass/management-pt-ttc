@@ -13,7 +13,10 @@ class ListHariLiburs extends ListRecords
     protected function getHeaderActions(): array
     {
         return [
-            Actions\CreateAction::make(),
+            Actions\CreateAction::make()
+                ->label('Tambah Hari Libur')
+                ->modalHeading('Tambah Hari Libur')
+                ->modalSubmitActionLabel('Simpan'),
         ];
     }
 }
