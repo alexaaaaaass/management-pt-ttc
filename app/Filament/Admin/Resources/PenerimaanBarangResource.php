@@ -58,9 +58,9 @@ class PenerimaanBarangResource extends Resource
                 ($item->item->kode_material ?? '-') . ' - ' .
                 ($item->item->nama_master_item ?? '-'),
 
-            'qty_po_display' =>
-                number_format($item->qty_po ?? 0, 2) . ' | ' .
-                ($item->item->satuan->nama_satuan ?? '-'),
+           'qty_po_display' =>
+    (float) ($item->qty_po ?? 0) . ' | ' .
+    ($item->item->satuan->nama_satuan ?? '-'),
 
             'qty_sebelumnya_display' =>
                 '0 | ' . ($item->item->satuan->nama_satuan ?? '-'),

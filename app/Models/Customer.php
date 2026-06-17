@@ -17,5 +17,6 @@ class Customer extends Model
         'alamat_ketiga',
         'kode_group',
         'nama_group',
+        'nama_pic', // tambahan
     ];
 }

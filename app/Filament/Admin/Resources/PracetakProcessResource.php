@@ -78,15 +78,14 @@ class PracetakProcessResource extends Resource
                     ->numeric()
                     ->required(),
 
-                Forms\Components\Select::make('status')
-                    ->options([
-                        'design' => 'Design',
-                        'plat_making' => 'Plat Making',
-                        'selesai' => 'Selesai',
-                    ])
-                    ->default('design')
-                    ->disabledOn('create') // 🔥 auto design saat create
-                    ->required(),
+             Forms\Components\Select::make('status')
+    ->options([
+        'plat_making' => 'Plat Making',
+        'selesai' => 'Selesai',
+    ])
+    ->default('plat_making')
+    ->disabledOn('create')
+    ->required(),
 
                 Forms\Components\Select::make('ket_spk')
                     ->options([
@@ -239,12 +238,11 @@ class PracetakProcessResource extends Resource
 
             Tables\Columns\TextColumn::make('qty'),
 
-            Tables\Columns\BadgeColumn::make('status')
-                ->colors([
-                    'warning' => 'design',
-                    'info' => 'plat_making',
-                    'success' => 'selesai',
-                ]),
+          Tables\Columns\BadgeColumn::make('status')
+    ->colors([
+        'info' => 'plat_making',
+        'success' => 'selesai',
+    ]),
 
             Tables\Columns\TextColumn::make('nama_plat'),
 
@@ -270,7 +268,7 @@ class PracetakProcessResource extends Resource
         ->visible(fn ($record) => $record->status === 'design')
         ->action(fn ($record) => $record->update(['status' => 'plat_making'])),
 
-    Tables\Actions\Action::make('toSelesai')
+   Tables\Actions\Action::make('toSelesai')
     ->label('Selesai')
     ->color('success')
     ->visible(fn ($record) => $record->status === 'plat_making')
@@ -299,7 +297,7 @@ class PracetakProcessResource extends Resource
 
         $record->update([
             ...$data,
-            'status' => 'selesai'
+            'status' => 'selesai',
         ]);
     }),
     Tables\Actions\EditAction::make(),

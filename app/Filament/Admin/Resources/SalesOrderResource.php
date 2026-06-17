@@ -361,6 +361,21 @@ Forms\Components\Section::make('Bill of Material')
             ])
             ->actions([
                 Tables\Actions\EditAction::make(),
+
+                Tables\Actions\Action::make('preview_pdf')
+    ->label('Preview')
+    ->icon('heroicon-o-eye')
+    ->color('info')
+    ->url(fn ($record) =>
+        route('sales-order.preview',$record))
+    ->openUrlInNewTab(),
+
+Tables\Actions\Action::make('download_pdf')
+    ->label('Download')
+    ->icon('heroicon-o-arrow-down-tray')
+    ->color('success')
+    ->url(fn ($record) =>
+        route('sales-order.download',$record)),
             ])
             ->bulkActions([
                 Tables\Actions\DeleteBulkAction::make(),

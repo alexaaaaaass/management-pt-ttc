@@ -36,4 +36,8 @@ class PracetakProcess extends Model
     {
         return $this->belongsTo(MesinPraCetak::class, 'mesin_id');
     }
+
+    protected $attributes = [
+    'status' => 'plat_making',
+];
 }

@@ -2,7 +2,7 @@
 
 use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
-
+use App\Http\Controllers\SalesOrderPdfController;
 /*
 |--------------------------------------------------------------------------
 | Web Routes
@@ -17,6 +17,16 @@ use Illuminate\Support\Facades\Route;
 Route::get('/', function () {
     return view('welcome');
 });
+
+Route::get(
+    '/sales-order/{salesOrder}/preview',
+    [SalesOrderPdfController::class, 'preview']
+)->name('sales-order.preview');
+
+Route::get(
+    '/sales-order/{salesOrder}/download',
+    [SalesOrderPdfController::class, 'download']
+)->name('sales-order.download');
 
 Route::get('/dashboard', function () {
     return view('dashboard');

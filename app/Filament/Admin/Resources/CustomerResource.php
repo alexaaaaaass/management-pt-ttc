@@ -19,7 +19,7 @@ class CustomerResource extends Resource
     protected static ?string $model = Customer::class;
     protected static ?string $navigationIcon = 'heroicon-o-users';
 
-  public static function form(Form $form): Form
+ public static function form(Form $form): Form
 {
     return $form
         ->schema([
@@ -44,6 +44,10 @@ class CustomerResource extends Resource
                 ->required(),
 
             TextInput::make('nama_group')
+                ->required(),
+
+            TextInput::make('nama_pic') // field baru
+                ->label('Nama PIC')
                 ->required(),
         ])
         ->columns(2);

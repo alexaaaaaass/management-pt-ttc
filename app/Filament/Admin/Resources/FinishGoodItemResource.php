@@ -95,8 +95,15 @@ public static function form(Form $form): Form
                         Textarea::make('deskripsi')
                             ->columnSpan(2),
 
-                        Textarea::make('spesifikasi_kertas')
-                            ->columnSpan(2),
+                    Textarea::make('spesifikasi_kertas')
+    ->label('Spesifikasi Material')
+    ->columnSpan(2),
+
+TextInput::make('gramasi')
+    ->label('Gramasi (GSM)'),
+
+TextInput::make('tebal_kertas')
+    ->label('Tebal Kertas (mm)'),
 
                         TextInput::make('up_satu'),
                         TextInput::make('up_dua'),

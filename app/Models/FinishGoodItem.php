@@ -9,27 +9,32 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 class FinishGoodItem extends Model
 {
     use SoftDeletes;
-    protected $fillable = [
-        'customer_id',
-        'type_item_id',
-        'satuan_id',
-        'kode_material_produk',
-        'kode_barcode',
-        'pc_number',
-        'nama_barang',
-        'deskripsi',
-        'spesifikasi_kertas',
-        'up_satu',
-        'up_dua',
-        'up_tiga',
-        'ukuran_potong',
-        'ukuran_cetak',
-        'panjang',
-        'lebar',
-        'tinggi',
-        'berat_kotor',
-        'berat_bersih',
-    ];
+   protected $fillable = [
+    'customer_id',
+    'type_item_id',
+    'satuan_id',
+    'kode_material_produk',
+    'kode_barcode',
+    'pc_number',
+    'nama_barang',
+    'deskripsi',
+    'spesifikasi_kertas',
+
+    // tambahan
+    'gramasi',
+    'tebal_kertas',
+
+    'up_satu',
+    'up_dua',
+    'up_tiga',
+    'ukuran_potong',
+    'ukuran_cetak',
+    'panjang',
+    'lebar',
+    'tinggi',
+    'berat_kotor',
+    'berat_bersih',
+];
 
     // Relasi
     public function customer()
