@@ -46,8 +46,11 @@ class PrintingResource extends Resource
 
                 Forms\Components\Select::make('proses_printing')
                     ->options([
-                        'potong' => 'Potong',
-                        'printing' => 'Printing',
+                        'color-printing' => 'Color Printing',
+                        'cold-foil' => 'Cold Foil',
+                        'spot-uv' => 'Spot UV',
+                        'furnish-uv' => 'Furnish UV',
+                        'drip-off' => 'Drip Off',
                     ])
                     ->required(),
 
@@ -59,20 +62,26 @@ class PrintingResource extends Resource
                     ])
                     ->required(),
 
-                Forms\Components\TextInput::make('hasil_baik')
-                    ->numeric()
-                    ->default(0)
-                    ->required(),
+             Forms\Components\TextInput::make('hasil_baik')
+    ->label('Hasil Baik Satuan (Meter)')
+    ->numeric()
+    ->suffix('m')
+    ->default(0)
+    ->required(),
 
-                Forms\Components\TextInput::make('hasil_rusak')
-                    ->numeric()
-                    ->default(0)
-                    ->required(),
+Forms\Components\TextInput::make('hasil_rusak')
+    ->label('Hasil Rusak Satuan (Meter)')
+    ->numeric()
+    ->suffix('m')
+    ->default(0)
+    ->required(),
 
-                Forms\Components\TextInput::make('semi_waste')
-                    ->numeric()
-                    ->default(0)
-                    ->required(),
+Forms\Components\TextInput::make('semi_waste')
+    ->label('Semi Waste Satuan (Meter)')
+    ->numeric()
+    ->suffix('m')
+    ->default(0)
+    ->required(),
 
               Forms\Components\Select::make('error_production_id')
     ->label('Note Waste')

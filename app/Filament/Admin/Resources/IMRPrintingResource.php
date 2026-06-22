@@ -47,6 +47,8 @@ class IMRPrintingResource extends Resource
                     )
                     ->required(),
 
+                    
+
                 Forms\Components\Actions::make([
                     Forms\Components\Actions\Action::make('loadBom')
                         ->label('Load Material IMR')
@@ -216,24 +218,29 @@ public static function table(Table $table): Table
 
         foreach ($record->items as $index => $item) {
 
-            $schema[] = Forms\Components\Grid::make(3)
-                ->schema([
+          $schema[] = Forms\Components\Grid::make(4)
+    ->schema([
 
-                    Forms\Components\Placeholder::make("items.$index.nama_item")
-                        ->label('Item')
-                        ->content($item->item->nama_master_item ?? 'Item'),
+        Forms\Components\Placeholder::make("items.$index.nama_item")
+            ->label('Item')
+            ->content($item->item->nama_master_item ?? '-'),
 
-                    Forms\Components\TextInput::make("items.$index.qty_request")
-                        ->label('Qty Request')
-                        ->default($item->qty_request)
-                        ->disabled(),
+        Forms\Components\Placeholder::make("items.$index.satuan")
+            ->label('Satuan')
+            ->content($item->item?->satuan?->nama_satuan ?? '-'),
 
-                    Forms\Components\TextInput::make("items.$index.qty_approved")
-                        ->label('Qty Approve')
-                        ->numeric()
-                        ->required()
-                        ->default($item->qty_request),
-                ]);
+        Forms\Components\TextInput::make("items.$index.qty_request")
+            ->label('Qty Request')
+            ->disabled()
+            ->default($item->qty_request),
+
+        Forms\Components\TextInput::make("items.$index.qty_approved")
+            ->label('Qty Approve')
+            ->numeric()
+            ->required()
+            ->default($item->qty_request),
+
+    ]);
         }
 
         return $schema;

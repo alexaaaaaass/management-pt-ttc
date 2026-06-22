@@ -229,39 +229,21 @@ Forms\Components\TextInput::make('harga_kirim')
 
         foreach ($item->materials as $mat) {
 
-            $qtyBom =
-        $qtyPesanan * floatval($mat->qty);
+          $qtyBom = $qtyPesanan * floatval($mat->qty);
 
-            $bom[] = [
+$bom[] = [
+    'nama_material' => optional($mat->material)->nama_master_item,
+    'departemen' => optional($mat->departemen)->nama_departemen,
 
-                'nama_material' =>
-                    optional($mat->material)
-                    ->nama_master_item ?? '-',
+    'qty_produksi' => round($qtyBom, 2),
 
-                'departemen' =>
-                    optional($mat->departemen)
-                    ->nama_departemen ?? '-',
+    'qty_master' => floatval($mat->qty),
 
-                'qty' => round($qtyBom, 2),
+    'satuan' => optional($mat->material?->satuan)->nama_satuan,
 
-                 'qty_master' =>
-            floatval($mat->qty),
-
-
-                'satuan' =>
-                    optional(
-                        $mat->material?->satuan
-                    )->nama_satuan ?? '-',
-
-                'waste' =>
-                    $mat->waste ?? 0,
-
-                'keterangan' =>
-                    $mat->keterangan ?? '-',
-            ];
+    'waste' => $mat->waste ?? 0,
+];
         }
-
-        $set('bom_items', []);
         $set('bom_items', $bom);
     })
 ]),
@@ -272,6 +254,15 @@ Forms\Components\Section::make('Bill of Material')
     ->schema([
 
         Forms\Components\Repeater::make('bom_items')
+    ->live()
+    ->itemLabel(function ($state) {
+
+    $nama = $state['nama_material'] ?? 'Material';
+    $qtyProduksi = $state['qty_master'] ?? 0;
+    $satuan = strtoupper($state['satuan'] ?? '');
+
+    return "{$nama} ({$qtyProduksi} {$satuan})";
+})
               ->label(function ($get) {
         $state = $get('item_source');
 
@@ -287,12 +278,17 @@ Forms\Components\Section::make('Bill of Material')
             ? 'Bill Of Material - ' . $item->nama_barang
             : 'Bill Of Material';
     })
-        ->itemLabel(function ($state) {
-    $nama = $state['nama_material'] ?? 'Material';
-    $qty = $state['qty'] ?? 0;
-    $satuan = $state['satuan'] ?? '';
+    ->itemLabel(function ($state) {
 
-    return "{$nama} ({$qty} {$satuan})";
+    $nama = $state['nama_material'] ?? 'Material';
+
+    // qty produksi hasil perhitungan
+    $qtyProduksi = $state['qty_master'] ?? 0;
+
+    // satuan material
+    $satuan = strtoupper($state['satuan'] ?? '');
+
+    return "{$nama} ({$qtyProduksi} {$satuan})";
 })
             ->schema([
 

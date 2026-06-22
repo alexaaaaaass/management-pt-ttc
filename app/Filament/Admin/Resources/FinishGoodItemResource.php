@@ -105,16 +105,29 @@ TextInput::make('gramasi')
 TextInput::make('tebal_kertas')
     ->label('Tebal Kertas (mm)'),
 
-                        TextInput::make('up_satu'),
-                        TextInput::make('up_dua'),
-                        TextInput::make('up_tiga'),
+                        TextInput::make('up_satu')
+                            ->label('Ukuran Potong Produksi')
+                            ->suffix('pcs'),
+                        // TextInput::make('up_dua'),
+                        // TextInput::make('up_tiga'),
 
-                        TextInput::make('ukuran_potong'),
+                        // TextInput::make('ukuran_potong'),
                         TextInput::make('ukuran_cetak'),
 
-                        TextInput::make('panjang')->numeric(),
-                        TextInput::make('lebar')->numeric(),
-                        TextInput::make('tinggi')->numeric(),
+                      TextInput::make('panjang')
+    ->label('Panjang (Meter)')
+    ->numeric()
+    ->suffix('m'),
+
+TextInput::make('lebar')
+    ->label('Lebar (Meter)')
+    ->numeric()
+    ->suffix('m'),
+
+TextInput::make('tinggi')
+    ->label('Tinggi (Meter)')
+    ->numeric()
+    ->suffix('m'),
 
                         TextInput::make('berat_kotor'),
                         TextInput::make('berat_bersih'),
@@ -171,6 +184,7 @@ TextInput::make('tebal_kertas')
                 ->preload(),
 
             TextInput::make('qty')
+            ->label('Qty Produksi Per Satuan')
                 ->numeric()
                 ->required(),
 
@@ -269,6 +283,8 @@ public static function getNavigationLabel(): string
             'index' => Pages\ListFinishGoodItems::route('/'),
             'create' => Pages\CreateFinishGoodItem::route('/create'),
             'edit' => Pages\EditFinishGoodItem::route('/{record}/edit'),
+                // halaman kalkulator
+            'calculator' => Pages\LabelCalculator::route('/calculator'),
         ];
     }
 }
