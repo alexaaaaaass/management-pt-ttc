@@ -7,8 +7,9 @@ use Carbon\Carbon;
 
 class PurchaseOrder extends Model
 {
-    protected $fillable = [
+      protected $fillable = [
         'no_po',
+        'po_type', // tambahkan ini
         'purchase_request_id',
         'supplier_id',
         'po_date',
@@ -16,7 +17,8 @@ class PurchaseOrder extends Model
         'currency',
         'ppn',
         'ongkir',
-        'dp'
+        'dp',
+        'status',
     ];
     
       public function purchaseRequest()
@@ -39,18 +41,13 @@ class PurchaseOrder extends Model
         TransFaktur::class
     );
 }
-      protected static function booted()
-    {
-        static::creating(function ($po) {
 
-            $tanggal = $po->po_date ?? now();
-            $date = Carbon::parse($tanggal)->format('Ymd');
-
-            $count = self::whereDate('po_date', $tanggal)->count() + 1;
-
-            $sequence = str_pad($count, 3, '0', STR_PAD_LEFT);
-
-            $po->no_po = "PO-UGRMS-{$date}-{$sequence}";
-        });
-    }
+protected static function booted() { 
+    static::creating(function ($po) {
+        $tanggal = $po->po_date ?? now();
+        $date = Carbon::parse($tanggal)->format('Ymd');
+        $count = self::whereDate('po_date', $tanggal)->count() + 1; 
+        $sequence = str_pad($count, 3, '0', STR_PAD_LEFT); 
+        $po->no_po = "PO-UGRMS-{$date}-{$sequence}"; }); }
+   
 }

@@ -190,13 +190,19 @@ public static function table(Table $table): Table
 
             Tables\Columns\TextColumn::make('status')
                 ->badge()
-              ->color(fn ($state) => match ($state) {
-    'pending' => 'warning',
-    'approved' => 'success',
-    'partial' => 'info',
-    'rejected' => 'danger',
-    default => 'gray',
-}),
+            ->color(fn ($state) => match ($state) {
+
+    'Pending'  => 'warning',
+
+    'Approved' => 'success',
+
+    'Partial'  => 'info',
+
+    'Rejected' => 'danger',
+
+    default    => 'gray',
+
+})
         ])
 
         ->actions([
@@ -306,18 +312,18 @@ public static function table(Table $table): Table
         }
 
         // STATUS FINAL
-        if ($allZero) {
+      if ($allZero) {
 
-            $status = 'rejected';
+    $status = 'Rejected';
 
-        } elseif ($isPartial) {
+} elseif ($isPartial) {
 
-            $status = 'partial';
+    $status = 'Partial';
 
-        } else {
+} else {
 
-            $status = 'approved';
-        }
+    $status = 'Approved';
+}
 
         $record->update([
             'status' => $status
@@ -326,7 +332,7 @@ public static function table(Table $table): Table
 })
 
     ->requiresConfirmation()
-    ->visible(fn ($record) => $record->status === 'pending'),
+   ->visible(fn ($record) => $record->status === 'Pending'),
 
    Tables\Actions\Action::make('reject')
     ->label('Reject')
@@ -336,12 +342,12 @@ public static function table(Table $table): Table
 
     ->action(function ($record) {
 
-        $record->update([
-            'status' => 'rejected'
-        ]);
+       $record->update([
+    'status' => 'Rejected'
+]);
     })
 
-    ->visible(fn ($record) => $record->status === 'pending'),
+    ->visible(fn ($record) => $record->status === 'Pending'),
            
 
         Tables\Actions\EditAction::make(),
@@ -356,12 +362,17 @@ public static function table(Table $table): Table
 
         ->filters([
         Tables\Filters\SelectFilter::make('status')
-    ->options([
-        'pending' => 'pending',
-        'approved' => 'approved',
-        'partial' => 'partial',
-        'rejected' => 'rejected',
-    ])
+   ->options([
+
+    'Pending'  => 'Pending',
+
+    'Approved' => 'Approved',
+
+    'Partial'  => 'Partial',
+
+    'Rejected' => 'Rejected',
+
+])
     ->default('pending')
         ])
 

@@ -145,30 +145,60 @@ class PurchaseRequestResource extends Resource
             ->label('Dibuat Pada')
                 ->dateTime(),
         ])
-        ->actions([
-            Tables\Actions\EditAction::make(),
+    ->actions([
 
-            Tables\Actions\Action::make('toggle_status')
-                ->label(fn ($record) =>
-                    $record->status === 'otorisasi'
-                        ? 'Deotorisasi'
-                        : 'Otorisasi'
-                )
-                ->icon('heroicon-o-arrow-path')
-                ->color(fn ($record) =>
-                    $record->status === 'otorisasi'
-                        ? 'danger'
-                        : 'success'
-                )
-                ->requiresConfirmation()
-                ->action(function ($record) {
-                    $record->update([
-                        'status' => $record->status === 'otorisasi'
-                            ? 'deotorisasi'
-                            : 'otorisasi',
-                    ]);
-                }),
-        ])
+    Tables\Actions\ActionGroup::make([
+
+        Tables\Actions\EditAction::make(),
+
+        Tables\Actions\ViewAction::make(),
+
+        Tables\Actions\Action::make('toggle_status')
+            ->label(fn ($record) =>
+                $record->status === 'otorisasi'
+                    ? 'Deotorisasi'
+                    : 'Otorisasi'
+            )
+            ->icon('heroicon-o-arrow-path')
+            ->color(fn ($record) =>
+                $record->status === 'otorisasi'
+                    ? 'danger'
+                    : 'success'
+            )
+            ->requiresConfirmation()
+            ->action(function ($record) {
+
+                $record->update([
+                    'status' => $record->status === 'otorisasi'
+                        ? 'deotorisasi'
+                        : 'otorisasi',
+                ]);
+
+            }),
+
+        Tables\Actions\Action::make('preview_pdf')
+            ->label('Preview PDF')
+            ->icon('heroicon-o-eye')
+            ->url(fn ($record) => route(
+                'purchase-request.preview',
+                $record
+            ))
+            ->openUrlInNewTab(),
+
+        Tables\Actions\Action::make('download_pdf')
+            ->label('Download PDF')
+            ->icon('heroicon-o-arrow-down-tray')
+            ->url(fn ($record) => route(
+                'purchase-request.download',
+                $record
+            )),
+
+        Tables\Actions\DeleteAction::make(),
+
+    ])
+    ->icon('heroicon-m-ellipsis-horizontal'),
+
+])
         ->bulkActions([
             Tables\Actions\DeleteBulkAction::make(),
         ]);

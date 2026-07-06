@@ -9,6 +9,8 @@ use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
+use Filament\Tables\Actions\Action;
+use Filament\Tables\Actions\ActionGroup;
 
 class PenerimaanBarangResource extends Resource
 {
@@ -52,22 +54,28 @@ class PenerimaanBarangResource extends Resource
 
     $items = $po->items->map(function ($item) {
 
-        return [
-            'purchase_order_item_id' => $item->id,
-            'nama_item_display' =>
-                ($item->item->kode_material ?? '-') . ' - ' .
-                ($item->item->nama_master_item ?? '-'),
+       return [
 
-           'qty_po_display' =>
-    (float) ($item->qty_po ?? 0) . ' | ' .
-    ($item->item->satuan->nama_satuan ?? '-'),
+    'purchase_order_item_id'=>$item->id,
 
-            'qty_sebelumnya_display' =>
-                '0 | ' . ($item->item->satuan->nama_satuan ?? '-'),
+    'nama_item_display'=>
+        ($item->item->kode_material ?? '-')
+        .' - '.
+        ($item->item->nama_master_item ?? '-'),
 
-            'qty_terima' => 0,
-            'catatan_po_display' => $item->catatan ?? '-',
-        ];
+    'qty_po_display'=>
+        $item->qty_po.' | '.$item->item->satuan->nama_satuan,
+
+    'qty_received'=>$item->qty_received,
+
+    'qty_sebelumnya_display'=>
+        $item->qty_received.' | '.$item->item->satuan->nama_satuan,
+
+    'qty_terima'=>0,
+
+    'catatan_po_display'=>$item->catatan,
+
+];
     })->toArray();
 
     $set('items', $items);
@@ -88,6 +96,8 @@ class PenerimaanBarangResource extends Resource
 
                         Forms\Components\TextInput::make('nama_pengirim')
                             ->label('Nama Pengirim'),
+                        
+                        Forms\Components\Hidden::make('qty_received'),
 
                         Forms\Components\Textarea::make('catatan_pengiriman')
                             ->label('Catatan Pengiriman')
@@ -114,7 +124,9 @@ class PenerimaanBarangResource extends Resource
       ->key('penerimaan_items')
     ->schema([
 
-        Forms\Components\Hidden::make('purchase_order_item_id'),
+        Forms\Components\Hidden::make('purchase_order_item_id')
+    ->dehydrated(true)
+    ->required(),
 
         Forms\Components\TextInput::make('nama_item_display')
             ->label('Type | Kode - Nama Item')
@@ -133,10 +145,35 @@ class PenerimaanBarangResource extends Resource
             ->disabled()
             ->dehydrated(false),
 
-        Forms\Components\TextInput::make('qty_terima')
-            ->label('Qty | Satuan Penerimaan')
-            ->numeric()
-            ->required(),
+      Forms\Components\TextInput::make('qty_terima')
+    ->label('Qty Penerimaan')
+    ->numeric()
+    ->required()
+    ->live()
+    ->afterStateUpdated(function ($state, $get, $set) {
+
+        $qtyPO = (float) explode('|', $get('qty_po_display'))[0];
+
+        $received = (float) ($get('qty_received') ?? 0);
+
+        $remaining = $qtyPO - $received;
+
+        if ($state > $remaining) {
+
+            $set('qty_terima', $remaining);
+
+        }
+
+    })
+    ->helperText(function ($get){
+
+        $qtyPO = (float) explode('|', $get('qty_po_display'))[0];
+
+        $received = (float) ($get('qty_received') ?? 0);
+
+        return 'Sisa yang boleh diterima : '.($qtyPO-$received);
+
+    }),
 
         Forms\Components\TextInput::make('catatan_po_display')
             ->label('Catatan PO')
@@ -185,15 +222,42 @@ class PenerimaanBarangResource extends Resource
                 Tables\Columns\TextColumn::make('nama_pengirim')
                     ->label('Pengirim'),
 
-                Tables\Columns\TextColumn::make('created_at')
-                    ->label('Dibuat')
-                    ->dateTime(),
+            ])
+          ->actions([
 
-            ])
-            ->actions([
-                Tables\Actions\EditAction::make(),
-                Tables\Actions\DeleteAction::make(),
-            ])
+    ActionGroup::make([
+
+        Action::make('preview')
+
+            ->label('Preview PDF')
+
+            ->icon('heroicon-o-eye')
+
+            ->url(fn($record)=>
+
+                route('pb.preview',$record)
+
+            )
+
+            ->openUrlInNewTab(),
+
+      Action::make('download')
+    ->label('Download PDF')
+    ->icon('heroicon-o-arrow-down-tray')
+    ->url(fn (PenerimaanBarang $record) => route('pb.download', [
+        'id' => $record->id,
+    ])),
+        Tables\Actions\EditAction::make(),
+
+        Tables\Actions\DeleteAction::make(),
+
+    ])
+
+    ->icon('heroicon-o-ellipsis-vertical')
+
+    ->tooltip('Actions')
+
+])
             ->bulkActions([
                 Tables\Actions\DeleteBulkAction::make(),
             ]);

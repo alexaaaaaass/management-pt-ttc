@@ -206,6 +206,10 @@ class SubcountOutResource extends Resource
 
                 Tables\Actions\DeleteAction::make(),
 
+                Tables\Actions\Action::make('preview') ->label('Preview PDF') ->icon('heroicon-o-eye') ->color('info') ->url(fn ($record) => route( 'subcount-out.preview', $record )) ->openUrlInNewTab(), 
+                
+                Tables\Actions\Action::make('download') ->label('Download PDF') ->icon('heroicon-o-arrow-down-tray') ->color('success') ->url(fn ($record) => route( 'subcount-out.download', $record )),
+
             ])
             ->icon('heroicon-m-ellipsis-vertical')
 

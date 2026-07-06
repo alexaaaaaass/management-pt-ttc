@@ -3,49 +3,34 @@
 namespace App\Filament\Admin\Resources\PurchaseOrderResource\Pages;
 
 use App\Filament\Admin\Resources\PurchaseOrderResource;
-use App\Models\PurchaseOrderItem;
-use App\Models\PurchaseRequest;
+use App\Services\PurchaseOrder\PurchaseOrderService;
 use Filament\Resources\Pages\CreateRecord;
-use Filament\Notifications\Notification;
 
-    class CreatePurchaseOrder extends CreateRecord
+class CreatePurchaseOrder extends CreateRecord
+{
+    protected static string $resource = PurchaseOrderResource::class;
+
+    protected array $items = [];
+
+    protected function mutateFormDataBeforeCreate(array $data): array
     {
-        protected static string $resource = PurchaseOrderResource::class;
+        $this->items = $data['items'] ?? [];
 
-    //     public $prItems = [];
+        unset($data['items']);
 
-    //    public function getPRItems($prId)
-    // {
-    //     $pr = PurchaseRequest::with('items.item')->find($prId);
+        return $data;
+    }
 
-    //     if ($pr) {
-    //         $this->prItems = $pr->items;
-    //     } else {
-    //         $this->prItems = [];
-    //     }
-    // }
+    protected function afterCreate(): void
+    {
+        app(PurchaseOrderService::class)
+            ->create($this->record, $this->items);
+    }
 
-protected function afterCreate(): void
-{
-    $items = $this->items ?? [];
-
-    foreach ($items as $item) {
-        $this->record->items()->create($item);
+    protected function getRedirectUrl(): string
+    {
+        return static::getResource()::getUrl('edit', [
+            'record' => $this->record,
+        ]);
     }
 }
-protected function getRedirectUrl(): string
-{
-    return $this->getResource()::getUrl('edit', [
-        'record' => $this->record,
-    ]);
-}
-protected function mutateFormDataBeforeCreate(array $data): array
-{
-    $this->items = $data['items'] ?? [];
-    unset($data['items']);
-
-    return $data;
-}
-
-
-    }

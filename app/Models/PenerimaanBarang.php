@@ -12,15 +12,22 @@ class PenerimaanBarang extends Model
     protected $table = 'penerimaan_barangs';
 
     protected $fillable = [
-        'no_penerimaan',
-        'purchase_order_id',
-        'tanggal_terima',
-        'no_surat_jalan',
-        'nama_pengirim',
-        'nopol_kendaraan',
-        'catatan_pengiriman',
-    ];
 
+    'no_penerimaan',
+
+    'purchase_order_id',
+
+    'tanggal_terima',
+
+    'no_surat_jalan',
+
+    'nama_pengirim',
+
+    'nopol_kendaraan',
+
+    'catatan_pengiriman',
+
+];
     public function purchaseOrder()
     {
         return $this->belongsTo(PurchaseOrder::class);
@@ -31,17 +38,47 @@ class PenerimaanBarang extends Model
         return $this->hasMany(PenerimaanBarangItem::class);
     }
 
-    protected static function booted()
-    {
-        static::creating(function ($data) {
-            $date = Carbon::now()->format('Ymd');
 
-            $count = self::whereDate('created_at', now())->count() + 1;
 
-            $urutan = str_pad($count, 3, '0', STR_PAD_LEFT);
+protected static function booted()
+{
+    parent::booted();
 
-            $data->no_penerimaan = "PB-{$date}-{$urutan}";
-        });
+    static::creating(function ($pb) {
+
+        $date = now()->format('Ymd');
+
+        $count = self::whereDate('created_at', now())
+            ->count() + 1;
+
+        $pb->no_penerimaan =
+            'PB-'.$date.'-'.str_pad($count,3,'0',STR_PAD_LEFT);
+
+    });
+
+}
+
+public function processReceiving(): void
+{
+    $this->loadMissing('items.purchaseOrderItem');
+
+    foreach ($this->items as $item) {
+
+        $poItem = $item->purchaseOrderItem;
+
+        if (! $poItem) {
+            continue;
+        }
+
+        $stock = MaterialStock::firstOrCreate(
+            ['item_id' => $poItem->item_id],
+            ['on_hand' => 0, 'allocation' => 0]
+        );
+
+        $stock->increment('on_hand', $item->qty_terima);
+
+        $poItem->increment('qty_received', $item->qty_terima);
     }
+}
     
 }

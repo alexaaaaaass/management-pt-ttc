@@ -186,19 +186,11 @@ class SubcountInResource extends Resource
                 ->label('Surat Jalan')
                 ->searchable(),
 
-            Tables\Columns\TextColumn::make('admin_produksi')
-                ->label('Admin Produksi')
-                ->searchable(),
-
             Tables\Columns\TextColumn::make('supervisor')
                 ->searchable(),
 
-            Tables\Columns\TextColumn::make('admin_mainstore')
-                ->label('Admin Mainstore')
-                ->searchable(),
-
             Tables\Columns\TextColumn::make('items_count')
-                ->label('Jumlah Item')
+                ->label('Jumlah Item/SPK')
                 ->counts('items')
                 ->badge()
                 ->color('info'),
@@ -224,16 +216,33 @@ class SubcountInResource extends Resource
 
         ->actions([
 
-            Tables\Actions\ActionGroup::make([
+           Tables\Actions\ActionGroup::make([
 
-                Tables\Actions\ViewAction::make(),
+    Tables\Actions\ViewAction::make(),
 
-                Tables\Actions\EditAction::make(),
+    Tables\Actions\EditAction::make(),
 
-                Tables\Actions\DeleteAction::make(),
+    Tables\Actions\Action::make('preview_pdf')
+        ->label('Preview PDF')
+        ->icon('heroicon-o-eye')
+        ->url(fn ($record) => route(
+            'subcount-in.preview',
+            $record
+        ))
+        ->openUrlInNewTab(),
 
-            ])
-            ->icon('heroicon-m-ellipsis-vertical')
+    Tables\Actions\Action::make('download_pdf')
+        ->label('Download PDF')
+        ->icon('heroicon-o-arrow-down-tray')
+        ->url(fn ($record) => route(
+            'subcount-in.download',
+            $record
+        )),
+
+    Tables\Actions\DeleteAction::make(),
+
+])
+->icon('heroicon-m-ellipsis-vertical')
 
         ])
 

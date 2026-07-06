@@ -87,6 +87,15 @@ class PurchaseOrderResource extends Resource
                 Forms\Components\DatePicker::make('po_date')
                     ->required(),
 
+                    Forms\Components\Select::make('po_type')
+    ->label('PO Type')
+    ->options([
+        'reguler' => 'Reguler',
+        'subcount' => 'Subcount',
+    ])
+    ->default('reguler')
+    ->required(),
+
                 Forms\Components\Select::make('supplier_id')
                     ->label('Supplier')
                     ->relationship('supplier','nama_supplier')
@@ -229,10 +238,11 @@ class PurchaseOrderResource extends Resource
             ->disabled()
             ->dehydrated(),
 
-        Forms\Components\TextInput::make('price')
+       Forms\Components\TextInput::make('price')
             ->label('Price / Unit')
             ->numeric()
             ->prefix('Rp')
+            ->dehydrated()
             ->reactive()
             ->afterStateUpdated(function ($state, callable $get, callable $set) {
 
@@ -348,13 +358,45 @@ public static function getNavigationLabel(): string
      Tables\Columns\TextColumn::make('supplier.nama_supplier')
                     ->label('Supplier'),
 
+                    Tables\Columns\TextColumn::make('po_type')
+    ->badge()
+    ->color(fn (string $state): string => match ($state) {
+        'reguler' => 'success',
+        'subcount' => 'warning',
+        default => 'gray',
+    }),
+
                 Tables\Columns\TextColumn::make('po_date')
                     ->date(),
 
             ])
-            ->actions([
-                Tables\Actions\EditAction::make(),
-            ])
+           ->actions([
+
+    Tables\Actions\ActionGroup::make([
+
+        Tables\Actions\EditAction::make(),
+
+        Tables\Actions\Action::make('preview_pdf')
+            ->label('Preview PDF')
+            ->icon('heroicon-o-eye')
+            ->url(fn ($record) =>
+                route('purchase-order.preview', $record)
+            )
+            ->openUrlInNewTab(),
+
+        Tables\Actions\Action::make('download_pdf')
+            ->label('Download PDF')
+            ->icon('heroicon-o-arrow-down-tray')
+            ->url(fn ($record) =>
+                route('purchase-order.download', $record)
+            ),
+
+        Tables\Actions\DeleteAction::make(),
+
+    ])
+    ->icon('heroicon-m-ellipsis-horizontal')
+
+])
             ->bulkActions([
                 Tables\Actions\DeleteBulkAction::make(),
             ]);
