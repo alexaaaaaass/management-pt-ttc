@@ -41,7 +41,11 @@ public static function form(Form $form): Form
     'class' => 'z-50'
 ])
     ->label('No Sales Order')
-    ->relationship('salesOrder', 'no_sales_order')
+    ->relationship(
+        name: 'salesOrder',
+        titleAttribute: 'no_sales_order',
+        modifyQueryUsing: fn (Builder $query) => $query->where('order_type', 'SPK')
+    )
     ->searchable()
     ->preload()
     ->native(false)

@@ -5,6 +5,8 @@
     <meta charset="utf-8">
 
     <style>
+
+        
         @page {
             margin: 20px;
         }
@@ -36,7 +38,7 @@
         }
 
         .title {
-            font-size: 26px;
+            font-size: 22px;
             font-weight: bold;
             text-align: right;
         }
@@ -52,15 +54,17 @@
         }
 
         .item-table th,
-        .item-table td {
-            border: 1px solid #000;
-        }
+     .item-table td{
+    border:1px solid #000;
+}
 
-        .item-table th {
-            text-align: center;
-            background: #f2f2f2;
-            font-weight: bold;
-        }
+       .item-table th {
+    text-align: center;
+    background: #80a9ec; /* Biru */
+    color: #fff;
+    font-weight: bold;
+}
+
 
         .text-center {
             text-align: center;
@@ -96,6 +100,26 @@
         .pagecount:before {
             content: counter(pages);
         }
+        .total-box{
+    margin-top:12px;
+    width:40%;
+    float:right;
+}
+
+.total-box td{
+    border:1px solid #000;
+    padding:6px;
+}
+
+.total-title{
+    background:#1f4e78;
+    color:#fff;
+    font-weight:bold;
+}
+
+.text-bold{
+    font-weight:bold;
+}
     </style>
 
 </head>
@@ -133,7 +157,7 @@
 
                 <div class="title">
 
-                    PENERIMAAN BARANG
+                    LAPORAN PENERIMAAN BARANG
 
                 </div>
 

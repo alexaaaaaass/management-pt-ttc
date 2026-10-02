@@ -28,6 +28,7 @@ class AdminPanelProvider extends PanelProvider
 {
     return $panel
         ->id('admin')
+        ->viteTheme('resources/css/filament/admin/theme.css')
         ->login()
         ->path('admin')
             // GANTI NAMA HEADER

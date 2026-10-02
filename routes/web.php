@@ -7,7 +7,9 @@ use App\Http\Controllers\PurchaseRequestPdfController;
 use App\Http\Controllers\PurchaseOrderPdfController;
 use App\Http\Controllers\SubcountInPdfController;
 use App\Models\PenerimaanBarang;
+use App\Http\Controllers\IMRPrintingPdfController;
 use App\Http\Controllers\SubcountOutPdfController;
+use App\Http\Controllers\ExternalReturnPdfController;
 use Barryvdh\DomPDF\Facade\Pdf;
 
 /*
@@ -122,27 +124,21 @@ Route::get('/penerimaan-barang/{id}/download', function ($id) {
 
 })->name('pb.download');
 
+Route::get(
+    '/external-return/{externalReturn}/preview',
+    [ExternalReturnPdfController::class, 'preview']
+)->name('external-return.preview');
 
-// Route::get('/penerimaan-barang/{id}/download', function($id){
-
-//    $pb = PenerimaanBarang::with([
-//     'purchaseOrder',
-//     'purchaseOrder.supplier',
-//     'items.purchaseOrderItem.item.satuan'
-// ])->findOrFail($id);
-
-// dd($pb->toArray());
-//     return Pdf::loadView(
-//         'pdf.penerimaan-barang',
-//         compact('pb')
-//     )->download($pb->no_penerimaan.'.pdf');
-
-// })->name('pb.download');
+Route::get(
+    '/external-return/{externalReturn}/download',
+    [ExternalReturnPdfController::class, 'download']
+)->name('external-return.download');
 
 
-
-
-
+Route::get(
+    '/imr/{imr}/preview',
+    [IMRPrintingPdfController::class, 'preview']
+)->name('imr.preview');
 
 
 require __DIR__.'/auth.php';

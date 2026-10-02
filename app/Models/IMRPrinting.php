@@ -2,10 +2,8 @@
 
 namespace App\Models;
 
-use App\Models\ImrPrintingItem;
 use Illuminate\Database\Eloquent\Model;
 use App\Models\MasterDepartemen;
-
 class ImrPrinting extends Model
 {
     protected $table = 'imr_printing';
@@ -13,34 +11,69 @@ class ImrPrinting extends Model
     protected $fillable = [
         'no_imr',
         'spk_id',
+        'departemen_id',
         'tanggal_request',
         'status',
     ];
 
+    protected static function booted(): void
+{
+    static::created(function (self $model) {
+
+        $model->updateQuietly([
+            'no_imr' =>
+                'IMR-'
+                . now()->format('Ym')
+                . '-'
+                . str_pad($model->id, 4, '0', STR_PAD_LEFT),
+        ]);
+
+    });
+}
+
+    /*
+    |--------------------------------------------------------------------------
+    | Relations
+    |--------------------------------------------------------------------------
+    */
+
     public function spk()
     {
-        return $this->belongsTo(MasterSpk::class, 'spk_id');
+        return $this->belongsTo(
+            MasterSpk::class,
+            'spk_id'
+        );
     }
 
     public function departemen()
-{
-    return $this->belongsTo(MasterDepartemen::class);
-}
+    {
+        return $this->belongsTo(
+            MasterDepartemen::class,
+            'departemen_id'
+        );
+    }
 
     public function items()
     {
-        return $this->hasMany(ImrPrintingItem::class, 'imr_id');
+        return $this->hasMany(
+            ImrPrintingItem::class,
+            'imr_id'
+        );
     }
 
-   protected static function booted()
-{
-    static::created(function ($model) {
+    public function internalReturns()
+    {
+        return $this->hasMany(
+            InternalReturn::class,
+            'imr_id'
+        );
+    }
 
-        $model->no_imr =
-            'IMR-' . now()->format('Ym') . '-' .
-            str_pad($model->id, 4, '0', STR_PAD_LEFT);
-
-        $model->saveQuietly();
-    });
-}
+    public function movements()
+    {
+        return $this->morphMany(
+            MaterialMovement::class,
+            'reference'
+        );
+    }
 }

@@ -12,8 +12,30 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('external_returns', function (Blueprint $table) {
+
             $table->id();
+
+            $table->string('no_return')->unique();
+
+            $table->foreignId('penerimaan_barang_id')
+                ->constrained('penerimaan_barangs')
+                ->cascadeOnDelete();
+
+            $table->date('tanggal_return');
+
+            $table->foreignId('supplier_id')
+                ->constrained('master_suppliers');
+
+            $table->text('alasan')->nullable();
+
+          $table->enum('status',[
+    'draft',
+    'approved',
+    'cancel'
+])->default('draft');
+
             $table->timestamps();
+
         });
     }
 

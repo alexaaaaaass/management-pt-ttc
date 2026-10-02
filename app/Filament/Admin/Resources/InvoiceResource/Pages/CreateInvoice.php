@@ -3,6 +3,7 @@
 namespace App\Filament\Admin\Resources\InvoiceResource\Pages;
 
 use App\Filament\Admin\Resources\InvoiceResource;
+use App\Models\SuratJalan;
 use Filament\Resources\Pages\CreateRecord;
 
 class CreateInvoice extends CreateRecord
@@ -11,44 +12,23 @@ class CreateInvoice extends CreateRecord
 
     protected function mutateFormDataBeforeCreate(array $data): array
     {
-        $subtotal = (float) ($data['subtotal'] ?? 0);
+        $suratJalan = SuratJalan::with([
+            'salesOrder',
+            'salesOrder.customer',
+        ])->find($data['surat_jalan_id']);
 
-        $diskon = (float) ($data['diskon'] ?? 0);
+        if ($suratJalan) {
 
-        $ppn = (float) ($data['ppn'] ?? 0);
+            $data['sales_order_id'] = $suratJalan->sales_order_id;
 
-        $ongkir = (float) ($data['ongkir'] ?? 0);
+            $data['customer_id'] = $suratJalan
+                ->salesOrder
+                ?->customer_id;
 
-        $uangMuka = (float) ($data['uang_muka'] ?? 0);
-
-        /*
-        |--------------------------------------------------------------------------
-        | HITUNG
-        |--------------------------------------------------------------------------
-        */
-
-        $diskonNominal =
-            ($subtotal * $diskon) / 100;
-
-        $ppnNominal =
-            ($subtotal * $ppn) / 100;
-
-        $grandTotal =
-            $subtotal
-            - $diskonNominal
-            + $ppnNominal
-            + $ongkir;
-
-        /*
-        |--------------------------------------------------------------------------
-        | SAVE
-        |--------------------------------------------------------------------------
-        */
-
-        $data['grand_total'] = $grandTotal;
-
-        $data['sisa_tagihan'] =
-            $grandTotal - $uangMuka;
+            $data['no_po_customer'] = $suratJalan
+                ->salesOrder
+                ?->no_po_customer;
+        }
 
         return $data;
     }

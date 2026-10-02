@@ -22,4 +22,12 @@ class MasterDepartemen extends Model
     {
         return $this->hasMany(Karyawan::class, 'departemen_id');
     }
+
+    public function imrPrintings()
+    {
+        return $this->hasMany(
+            ImrPrinting::class,
+            'departemen_id'
+        );
+    }
 }

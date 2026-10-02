@@ -14,12 +14,6 @@ class ImrPrintingItem extends Model
 
         'item_id',
 
-        'department',
-
-        'catatan',
-
-        'satuan',
-
         'total_pesanan',
 
         'qty_request',
@@ -28,60 +22,26 @@ class ImrPrintingItem extends Model
 
         'qty_issued',
 
-        'qty_remaining',
+        'qty_returned',
+
+        'satuan',
+
+        'catatan',
 
     ];
 
- protected static function booted()
-{
-    static::saving(function ($item) {
-
-        $item->qty_remaining = max(
-            0,
-            $item->qty_approved - $item->qty_issued
-        );
-
-    });
-
-    static::saved(function ($item) {
-
-        $imr = $item->imr;
-
-        if (!$imr) {
-            return;
-        }
-
-        $request = $imr->items()->sum('qty_request');
-        $approved = $imr->items()->sum('qty_approved');
-
-        if ($approved == 0) {
-
-            // kalau user memang reject
-            if ($imr->status == 'Rejected') {
-                return;
-            }
-
-            $status = 'Pending';
-
-        } elseif ($approved < $request) {
-
-            $status = 'Partial';
-
-        } else {
-
-            $status = 'Approved';
-
-        }
-
-        $imr->updateQuietly([
-            'status' => $status,
-        ]);
-    });
-}
+    /*
+    |--------------------------------------------------------------------------
+    | Relations
+    |--------------------------------------------------------------------------
+    */
 
     public function imr()
     {
-        return $this->belongsTo(ImrPrinting::class);
+        return $this->belongsTo(
+            ImrPrinting::class,
+            'imr_id'
+        );
     }
 
     public function item()
@@ -89,6 +49,39 @@ class ImrPrintingItem extends Model
         return $this->belongsTo(
             MasterItem::class,
             'item_id'
+        );
+    }
+
+    public function internalReturnItems()
+    {
+        return $this->hasMany(
+            InternalReturnItem::class,
+            'imr_printing_item_id'
+        );
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Accessor
+    |--------------------------------------------------------------------------
+    */
+
+    public function getQtyRemainingAttribute()
+    {
+        return max(
+            0,
+            $this->qty_approved
+            - $this->qty_issued
+            - $this->qty_returned
+        );
+    }
+
+    public function getQtyAvailableReturnAttribute()
+    {
+        return max(
+            0,
+            $this->qty_issued
+            - $this->qty_returned
         );
     }
 }

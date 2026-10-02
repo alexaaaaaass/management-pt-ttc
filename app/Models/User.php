@@ -23,6 +23,14 @@ class User extends Authenticatable
         'password',
     ];
 
+    public function materialMovements()
+    {
+        return $this->hasMany(
+            MaterialMovement::class,
+            'created_by'
+        );
+    }
+
     /**
      * The attributes that should be hidden for serialization.
      *

@@ -3,27 +3,22 @@
 namespace App\Filament\Admin\Resources;
 
 use App\Filament\Admin\Resources\InvPaymentResource\Pages;
-use App\Models\InvPayment;
-use Filament\Forms\Form;
-use Filament\Resources\Resource;
-use Filament\Tables;
-use Filament\Tables\Table;
-
 use App\Models\Invoice;
-use App\Models\MetodeBayar;
-use App\Models\MasterCOA;
-use App\Models\Karyawan;
-
-use Filament\Forms\Get;
-use Filament\Forms\Set;
-
+use App\Models\InvPayment;
+use Filament\Forms\Components\Checkbox;
+use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Grid;
-use Filament\Forms\Components\Section;
 use Filament\Forms\Components\Placeholder;
+use Filament\Forms\Components\Section;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
-use Filament\Forms\Components\DatePicker;
+use Filament\Forms\Form;
+use Filament\Forms\Get;
+use Filament\Forms\Set;
+use Filament\Resources\Resource;
+use Filament\Tables;
+use Filament\Tables\Table;
 
 
 class InvPaymentResource extends Resource
@@ -33,21 +28,21 @@ class InvPaymentResource extends Resource
      protected static ?int $navigationSort = 2;
     protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
 
-   public static function form(Form $form): Form
+  public static function form(Form $form): Form
 {
     return $form
-        ->schema([
+        ->schema([ 
 
             Grid::make(3)
                 ->schema([
 
                     /*
                     |--------------------------------------------------------------------------
-                    | FORM
+                    | FORM PAYMENT
                     |--------------------------------------------------------------------------
                     */
 
-                    Section::make('Detail Pembayaran')
+                    Section::make('Input Pembayaran')
                         ->columnSpan(2)
                         ->schema([
 
@@ -55,25 +50,25 @@ class InvPaymentResource extends Resource
                                 ->schema([
 
                                     Select::make('invoice_id')
-                                        ->label('Pilih Invoice')
-                                        ->relationship(
-                                            'invoice',
-                                            'kode_invoice'
-                                        )
+    ->relationship(
+        'invoice',
+        'kode_invoice'
+    )
+    ->default(request('invoice'))
+    ->disabled(fn () => request()->has('invoice'))
+    ->dehydrated()
                                         ->getOptionLabelFromRecordUsing(
                                             fn ($record) =>
-                                                $record->kode_invoice
-                                                . ' - '
-                                                . ($record->suratJalan?->salesOrder?->customer?->nama_customer ?? '-')
+                                                $record->kode_invoice .
+                                                ' • ' .
+                                                ($record->suratJalan?->salesOrder?->customer?->nama_customer ?? '-')
                                         )
                                         ->searchable()
                                         ->preload()
                                         ->required()
                                         ->live(),
 
-                                    DatePicker::make(
-                                        'tanggal_bayar'
-                                    )
+                                    DatePicker::make('tanggal_bayar')
                                         ->default(now())
                                         ->required(),
 
@@ -82,10 +77,7 @@ class InvPaymentResource extends Resource
                             Grid::make(2)
                                 ->schema([
 
-                                    Select::make(
-                                        'metode_bayar_id'
-                                    )
-                                        ->label('Metode Bayar')
+                                    Select::make('metode_bayar_id')
                                         ->relationship(
                                             'metodeBayar',
                                             'metode_pembayaran'
@@ -95,7 +87,6 @@ class InvPaymentResource extends Resource
                                         ->required(),
 
                                     Select::make('coa_id')
-                                        ->label('Kas/Bank (COA)')
                                         ->relationship(
                                             'coa',
                                             'nama_akun'
@@ -109,18 +100,72 @@ class InvPaymentResource extends Resource
                             Grid::make(2)
                                 ->schema([
 
-                                    TextInput::make(
-                                        'nominal_bayar'
-                                    )
-                                        ->numeric()
-                                        ->required(),
+                                Checkbox::make('full_payment')
+    ->label('Bayar Full')
+    ->live()
+    ->dehydrated(false)
+    ->afterStateUpdated(function (
+        $state,
+        Set $set,
+        Get $get
+    ) {
 
-                                    Select::make(
-                                        'karyawan_id'
-                                    )
-                                        ->label(
-                                            'Penerima / Karyawan'
-                                        )
+        if (!$state) {
+
+            return;
+
+        }
+
+        $invoice = Invoice::find(
+            $get('invoice_id')
+        );
+
+        $set(
+            'nominal_bayar',
+            $invoice?->sisa_tagihan
+        );
+
+    }),
+                                    TextInput::make('nominal_bayar')
+                                        ->numeric()
+                                        ->required()
+                                        ->live()
+                                        ->rule(function (Get $get) {
+                                        return function (
+                                            $attribute,
+                                            $value,
+                                            $fail
+                                        ) use ($get) {
+
+                                            $invoice = Invoice::find(
+                                                $get('invoice_id')
+                                            );
+
+                                            if (
+                                                $value >
+                                                $invoice->sisa_tagihan
+                                            ) {
+
+                                                $fail(
+                                                    'Nominal pembayaran melebihi sisa tagihan.'
+                                                );
+
+                                            }
+
+                                        };
+
+                                    })
+                                        ->default(function (Get $get) {
+
+                                            $invoice = Invoice::find(
+                                                $get('invoice_id')
+                                            );
+
+                                            return $invoice?->sisa_tagihan;
+
+                                        }),
+
+                                    Select::make('karyawan_id')
                                         ->relationship(
                                             'karyawan',
                                             'nama'
@@ -132,106 +177,83 @@ class InvPaymentResource extends Resource
                                 ]),
 
                             Textarea::make('keterangan')
-                                ->rows(3),
+                                ->rows(3)
 
                         ]),
 
                     /*
                     |--------------------------------------------------------------------------
-                    | INFO TAGIHAN
+                    | SIDEBAR INFO
                     |--------------------------------------------------------------------------
                     */
 
-                    Section::make('Informasi Tagihan')
-                        ->schema([
+                    Section::make('Ringkasan Invoice')
+    ->visible(fn (Get $get) => filled($get('invoice_id')))
+    ->schema([
 
-                            Placeholder::make(
-                                'total_tagihan'
-                            )
-                                ->label('Total Tagihan')
-                                ->content(function (Get $get) {
+        Placeholder::make('customer')
+            ->label('Customer')
+            ->content(function (Get $get) {
 
-                                    $invoice =
-                                        Invoice::find(
-                                            $get('invoice_id')
-                                        );
+                return Invoice::find(
+                    $get('invoice_id')
+                )?->customer?->nama_customer;
 
-                                    return 'Rp '
-                                        . number_format(
-                                            $invoice?->grand_total ?? 0,
-                                            0,
-                                            ',',
-                                            '.'
-                                        );
-                                }),
+            }),
 
-                            Placeholder::make(
-                                'total_terbayar'
-                            )
-                                ->label('Total Terbayar')
-                                ->content(function (Get $get) {
+        Placeholder::make('grand_total')
+            ->label('Grand Total')
+            ->content(function (Get $get) {
 
-                                    $invoice =
-                                        Invoice::find(
-                                            $get('invoice_id')
-                                        );
+                $invoice = Invoice::find(
+                    $get('invoice_id')
+                );
 
-                                    if (!$invoice) {
-                                        return 'Rp 0';
-                                    }
+                return 'Rp '.number_format(
+                    $invoice?->grand_total ?? 0,
+                    0,
+                    ',',
+                    '.'
+                );
 
-                                    $totalBayar =
-                                        $invoice
-                                            ->payments()
-                                            ->sum(
-                                                'nominal_bayar'
-                                            );
+            }),
 
-                                    return 'Rp '
-                                        . number_format(
-                                            $totalBayar,
-                                            0,
-                                            ',',
-                                            '.'
-                                        );
-                                }),
+        Placeholder::make('paid')
+            ->label('Sudah Dibayar')
+            ->content(function (Get $get) {
 
-                            Placeholder::make(
-                                'sisa_piutang'
-                            )
-                                ->label('Sisa Piutang')
-                                ->content(function (Get $get) {
+                $invoice = Invoice::find(
+                    $get('invoice_id')
+                );
 
-                                    $invoice =
-                                        Invoice::find(
-                                            $get('invoice_id')
-                                        );
+                return 'Rp '.number_format(
+                    $invoice?->total_payment ?? 0,
+                    0,
+                    ',',
+                    '.'
+                );
 
-                                    if (!$invoice) {
-                                        return 'Rp 0';
-                                    }
+            }),
 
-                                    $totalBayar =
-                                        $invoice
-                                            ->payments()
-                                            ->sum(
-                                                'nominal_bayar'
-                                            );
+        Placeholder::make('outstanding')
+            ->label('Outstanding')
+            ->content(function (Get $get) {
 
-                                    $sisa =
-                                        $invoice->grand_total
-                                        - $totalBayar;
+                $invoice = Invoice::find(
+                    $get('invoice_id')
+                );
 
-                                    return 'Rp '
-                                        . number_format(
-                                            $sisa,
-                                            0,
-                                            ',',
-                                            '.'
-                                        );
-                                }),
+                return 'Rp '.number_format(
+                    $invoice?->sisa_tagihan ?? 0,
+                    0,
+                    ',',
+                    '.'
+                );
 
-                        ]),
+            }),
+
+    ])
+    ->columns(2),
 
                 ])
 
@@ -276,17 +298,14 @@ class InvPaymentResource extends Resource
                 'metodeBayar.metode_pembayaran'
             )
                 ->label('Metode'),
-
-            // Tables\Columns\BadgeColumn::make(
-            //     'invoice.status'
-            // )
-            //     ->colors([
-
-            //         'success' => 'LUNAS',
-
-            //         'danger' => 'BELUM LUNAS',
-
-            //     ]),
+            Tables\Columns\BadgeColumn::make('invoice.status')
+                ->label('Status Invoice')
+                ->color(fn (string $state): string => match ($state) {
+                    'Paid' => 'success',
+                    'Partial' => 'warning',
+                    'Unpaid' => 'danger',
+                    default => 'gray',
+                })
 
         ])
         ->actions([

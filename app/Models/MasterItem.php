@@ -30,6 +30,14 @@ class MasterItem extends Model
         return $this->belongsTo(MasterSatuan::class, 'satuan_id');
     }
 
+    public function imrPrintingItems()
+    {
+        return $this->hasMany(
+            ImrPrintingItem::class,
+            'item_id'
+        );
+    }
+
     public function kategori()
     {
         return $this->belongsTo(CategoryItem::class, 'category_item_id');
@@ -40,11 +48,19 @@ class MasterItem extends Model
         return $this->belongsTo(TypeItem::class, 'type_item_id');
     }
     public function salesOrders()
-{
-    return $this->morphMany(SalesOrder::class, 'itemable');
-}
-public function stock()
-{
-    return $this->hasOne(MaterialStock::class, 'item_id');
-}
+    {
+        return $this->morphMany(SalesOrder::class, 'itemable');
+    }
+    public function stock()
+    {
+        return $this->hasOne(MaterialStock::class, 'item_id');
+    }
+
+    public function movements()
+    {
+        return $this->hasMany(
+            MaterialMovement::class,
+            'item_id'
+        );
+    }
 }

@@ -60,4 +60,37 @@ class InvPayment extends Model
             Karyawan::class
         );
     }
+
+   protected static function booted(): void
+{
+    static::creating(function ($payment) {
+
+        if (!$payment->status) {
+
+            $payment->status = 'SUCCESS';
+
+        }
+
+    });
+
+    static::created(function ($payment) {
+
+        $payment->invoice?->refreshPayment();
+
+    });
+
+    static::updated(function ($payment) {
+
+        $payment->invoice?->refreshPayment();
+
+    });
+
+    static::deleted(function ($payment) {
+
+        $payment->invoice?->refreshPayment();
+
+    });
+}
+
+   
 }

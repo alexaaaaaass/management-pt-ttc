@@ -2,9 +2,10 @@
 
 namespace App\Filament\Admin\Resources\InvPaymentResource\Pages;
 
-use App\Models\Invoice;
+use App\Filament\Admin\Resources\InvoiceResource;
 use App\Filament\Admin\Resources\InvPaymentResource;
-
+use App\Models\Invoice;
+use Filament\Forms\Form;
 use Filament\Resources\Pages\CreateRecord;
 
 class CreateInvPayment extends CreateRecord
@@ -12,48 +13,99 @@ class CreateInvPayment extends CreateRecord
     protected static string $resource =
         InvPaymentResource::class;
 
-    protected function afterCreate(): void
+   protected function afterCreate(): void
+{
+    // $payment = $this->record;
+
+    // $invoice = Invoice::find(
+    //     $payment->invoice_id
+    // );
+
+    // if (!$invoice) {
+    //     return;
+    // }
+
+    // /*
+    // |--------------------------------------------------------------------------
+    // | TOTAL PAYMENT
+    // |--------------------------------------------------------------------------
+    // */
+
+    // $totalPayment = $invoice
+    //     ->payments()
+    //     ->sum('nominal_bayar');
+
+    // /*
+    // |--------------------------------------------------------------------------
+    // | SISA TAGIHAN
+    // |--------------------------------------------------------------------------
+    // */
+
+    // $sisa =
+    //     $invoice->grand_total
+    //     - $totalPayment;
+
+    // /*
+    // |--------------------------------------------------------------------------
+    // | STATUS
+    // |--------------------------------------------------------------------------
+    // */
+
+    // if ($totalPayment <= 0) {
+
+    //     $status = 'Unpaid';
+
+    // } elseif ($totalPayment >= $invoice->grand_total) {
+
+    //     $status = 'Paid';
+
+    //     $sisa = 0;
+
+    // } else {
+
+    //     $status = 'Partial';
+
+    // }
+
+    // /*
+    // |--------------------------------------------------------------------------
+    // | UPDATE INVOICE
+    // |--------------------------------------------------------------------------
+    // */
+
+    // $invoice->update([
+
+    //     'total_payment' => $totalPayment,
+
+    //     'sisa_tagihan' => $sisa,
+
+    //     'status' => $status,
+
+    // ]);
+}
+    protected function getCreatedNotificationTitle(): ?string
     {
-        $payment = $this->record;
+        return 'Pembayaran berhasil disimpan';
+    }
 
-        $invoice = Invoice::find(
-            $payment->invoice_id
+    protected function getRedirectUrl(): string
+    {
+        return InvoiceResource::getUrl(
+            'view',
+            [
+                'record' => $this->record->invoice_id
+            ]
         );
+    }
 
-        /*
-        |--------------------------------------------------------------------------
-        | TOTAL BAYAR
-        |--------------------------------------------------------------------------
-        */
+    protected function mutateFormDataBeforeFill(array $data): array
+    {
+        if ($invoice = request('invoice')) {
 
-        $totalBayar =
-            $invoice->payments()
-                ->sum('nominal_bayar');
+            $data['invoice_id'] = $invoice;
 
-        /*
-        |--------------------------------------------------------------------------
-        | SISA TAGIHAN
-        |--------------------------------------------------------------------------
-        */
+        }
 
-        $sisa =
-            $invoice->grand_total
-            - $totalBayar;
-
-        /*
-        |--------------------------------------------------------------------------
-        | UPDATE
-        |--------------------------------------------------------------------------
-        */
-
-        $invoice->update([
-
-            'sisa_tagihan' => $sisa,
-
-            'status' =>
-                $sisa <= 0
-                    ? 'LUNAS'
-                    : 'BELUM LUNAS',
-        ]);
+        return $data;
     }
 }

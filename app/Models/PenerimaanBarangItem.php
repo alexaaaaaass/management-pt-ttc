@@ -22,6 +22,14 @@ class PenerimaanBarangItem extends Model
         return $this->belongsTo(PenerimaanBarang::class);
     }
 
+   public function externalReturnItems()
+{
+    return $this->hasMany(
+        ExternalReturnItem::class,
+        'penerimaan_barang_item_id'
+    );
+}
+
     public function purchaseOrderItem()
     {
         return $this->belongsTo(PurchaseOrderItem::class);

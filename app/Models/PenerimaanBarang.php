@@ -38,6 +38,13 @@ class PenerimaanBarang extends Model
         return $this->hasMany(PenerimaanBarangItem::class);
     }
 
+    public function externalReturns()
+{
+    return $this->hasMany(
+        ExternalReturn::class
+    );
+}
+
 
 
 protected static function booted()

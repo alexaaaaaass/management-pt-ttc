@@ -17,7 +17,15 @@ class MasterSupplier extends Model
     ];
 
     public function purchaseOrders()
-{
-    return $this->hasMany(PurchaseOrder::class,'supplier_id');
-}
+    {
+        return $this->hasMany(PurchaseOrder::class,'supplier_id');
+    }
+
+    public function externalReturns()
+    {
+        return $this->hasMany(
+            ExternalReturn::class,
+            'supplier_id'
+        );
+    }
 }
