@@ -34,8 +34,8 @@ class AdminPanelProvider extends PanelProvider
             // GANTI NAMA HEADER
             ->brandName('Sistem ERP')
 
-            // GANTI DENGAN LOGO
-            ->brandLogo(asset('images/logo.png'))
+            // GANTI DENGAN LOGO PT
+            ->brandLogo(asset('images/Logo PT Teknografi.png'))
 
             // ukuran logo
             ->brandLogoHeight('40px')

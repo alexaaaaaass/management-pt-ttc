@@ -13,6 +13,19 @@ class EditSuratJalan extends EditRecord
     protected function getHeaderActions(): array
     {
         return [
+            \Filament\Actions\Action::make('preview_pdf')
+                ->label('Preview PDF')
+                ->icon('heroicon-o-document')
+                ->color('warning')
+                ->url(fn () => route('suratjalan.preview', $this->record))
+                ->openUrlInNewTab(),
+
+            \Filament\Actions\Action::make('download_pdf')
+                ->label('Download PDF')
+                ->icon('heroicon-o-arrow-down-tray')
+                ->color('success')
+                ->url(fn () => route('suratjalan.download', $this->record)),
+
             Actions\DeleteAction::make(),
         ];
     }
