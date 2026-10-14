@@ -23,7 +23,7 @@ class RecordMaterialMovement
 
             'created_by' => auth()->id(),
 
-            'reference_type' => $referenceType,
+            'reference_type' => $referenceType ?: 'MANUAL',
 
             'reference_id' => $referenceId,
 

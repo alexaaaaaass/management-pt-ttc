@@ -10,18 +10,21 @@ use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
+use Filament\Tables;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
-use Tables\Actions\BulkActionGroup;
-use Tables\Actions\DeleteAction;
-use Tables\Actions\EditAction;
 
 class BonusKaryawanResource extends Resource
 {
     protected static ?string $model = BonusKaryawan::class;
     protected static ?string $navigationGroup = 'HRD';
     protected static ?int $navigationSort = 9;
-    protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
+    protected static ?string $navigationIcon = 'heroicon-o-gift';
+
+    public static function getNavigationLabel(): string
+    {
+        return 'Bonus Karyawan';
+    }
 
     public static function form(Form $form): Form
     {
@@ -29,25 +32,37 @@ class BonusKaryawanResource extends Resource
             ->schema([
                 TextInput::make('kode_gudang')
                     ->label('Kode Gudang')
+                    ->default('UGRMS')
                     ->required(),
 
                 Select::make('karyawan_id')
                     ->label('Karyawan')
-                    ->relationship('karyawan', 'nama_lengkap')
+                    ->relationship('karyawan', 'nama')
                     ->searchable()
+                    ->preload()
                     ->required(),
 
                 DatePicker::make('tanggal_bonus')
                     ->label('Tanggal Bonus')
+                    ->default(now())
+                    ->required(),
+
+                TextInput::make('periode')
+                    ->label('Periode (YYYY-MM)')
+                    ->default(now()->format('Y-m'))
+                    ->placeholder('2026-10')
                     ->required(),
 
                 TextInput::make('nilai_bonus')
                     ->label('Nilai Bonus')
                     ->numeric()
+                    ->prefix('Rp')
+                    ->minValue(1)
                     ->required(),
 
                 Textarea::make('keterangan')
-                    ->label('Keterangan')
+                    ->label('Keterangan / Alasan Bonus')
+                    ->rows(3)
                     ->columnSpanFull(),
             ])
             ->columns(2);
@@ -57,33 +72,40 @@ class BonusKaryawanResource extends Resource
     {
         return $table
             ->columns([
-                TextColumn::make('kode_gudang')
-                    ->label('Kode Gudang')
-                    ->searchable(),
-
-                TextColumn::make('karyawan.nama_lengkap')
+                TextColumn::make('karyawan.nama')
                     ->label('Karyawan')
-                    ->searchable(),
+                    ->searchable()
+                    ->sortable()
+                    ->weight('bold'),
+
+                TextColumn::make('periode')
+                    ->label('Periode')
+                    ->badge(),
 
                 TextColumn::make('tanggal_bonus')
-                    ->label('Tanggal Bonus')
-                    ->date(),
+                    ->label('Tanggal')
+                    ->date('d/m/Y')
+                    ->sortable(),
 
                 TextColumn::make('nilai_bonus')
                     ->label('Nilai Bonus')
-                    ->money('IDR'),
+                    ->money('IDR')
+                    ->sortable(),
+
+                TextColumn::make('kode_gudang')
+                    ->label('Gudang'),
 
                 TextColumn::make('keterangan')
                     ->label('Keterangan')
                     ->limit(50),
             ])
             ->actions([
-                EditAction::make(),
-                DeleteAction::make(),
+                Tables\Actions\EditAction::make(),
+                Tables\Actions\DeleteAction::make(),
             ])
             ->bulkActions([
-                BulkActionGroup::make([
-                DeleteBulkAction::make(),
+                Tables\Actions\BulkActionGroup::make([
+                    Tables\Actions\DeleteBulkAction::make(),
                 ]),
             ]);
     }
@@ -91,9 +113,9 @@ class BonusKaryawanResource extends Resource
     public static function getPages(): array
     {
         return [
-            'index' => Pages\ListBonusKaryawans::route('/'),
+            'index'  => Pages\ListBonusKaryawans::route('/'),
             'create' => Pages\CreateBonusKaryawan::route('/create'),
-            'edit' => Pages\EditBonusKaryawan::route('/{record}/edit'),
+            'edit'   => Pages\EditBonusKaryawan::route('/{record}/edit'),
         ];
     }
 }

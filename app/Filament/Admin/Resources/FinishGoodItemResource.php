@@ -90,13 +90,36 @@ public static function form(Form $form): Form
 
                         TextInput::make('kode_barcode'),
                         TextInput::make('pc_number'),
-                        TextInput::make('nama_barang'),
+                        TextInput::make('nama_barang')
+                            ->required(),
+
+                        TextInput::make('jenis')
+                            ->label('Jenis (Rokok/Produk)')
+                            ->placeholder('Contoh: SKM, SKT, SPM'),
+
+                        TextInput::make('komponen')
+                            ->label('Komponen')
+                            ->placeholder('Contoh: Etiket, Inner Frame'),
+
+                        TextInput::make('isi')
+                            ->label('Isi (Batang/Pack)')
+                            ->placeholder('Contoh: 20, 16, 12'),
+
+                        TextInput::make('warna')
+                            ->label('Warna')
+                            ->placeholder('Contoh: 5, 4+1'),
+
+                        TextInput::make('finishing')
+                            ->label('Finishing')
+                            ->placeholder('Contoh: Spot UV, Cutting, Emboss')
+                            ->columnSpan(2),
 
                         Textarea::make('deskripsi')
                             ->columnSpan(2),
 
                     Textarea::make('spesifikasi_kertas')
-    ->label('Spesifikasi Material')
+    ->label('Spesifikasi Kertas / Material')
+    ->placeholder('Contoh: Metalize, Ivory 230gr')
     ->columnSpan(2),
 
 TextInput::make('gramasi')
@@ -283,8 +306,6 @@ public static function getNavigationLabel(): string
             'index' => Pages\ListFinishGoodItems::route('/'),
             'create' => Pages\CreateFinishGoodItem::route('/create'),
             'edit' => Pages\EditFinishGoodItem::route('/{record}/edit'),
-                // halaman kalkulator
-            'calculator' => Pages\LabelCalculator::route('/calculator'),
         ];
     }
 }

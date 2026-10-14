@@ -13,7 +13,7 @@ return new class extends Migration
     {
         Schema::create('operator_diemaking', function (Blueprint $table) {
             $table->id();
-            $table->string('nama');
+            $table->string('nama_operator');
             $table->timestamps();
         });
     }

@@ -18,7 +18,8 @@ return new class extends Migration
         ->constrained('karyawans')
         ->cascadeOnDelete();
 
-    $table->date('tanggal_cuti');
+    $table->date('tanggal_mulai');
+    $table->date('tanggal_selesai');
 
     $table->string('jenis_cuti');
 

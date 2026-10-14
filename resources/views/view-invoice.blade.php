@@ -20,7 +20,7 @@ $sj = $invoice->suratJalan;
 $spk = $sj?->spk;
 $customer = $invoice->customer;
 
-$paid = (float) $invoice->payments->sum('nominal_bayar');
+$paid = (float) ($invoice->total_payment ?? ($invoice->uang_muka + $invoice->payments->sum('nominal_bayar')));
 
 $progress = $invoice->grand_total > 0
     ? min(100, ($paid / $invoice->grand_total) * 100)
@@ -51,7 +51,8 @@ $ppnNominal =
                             :color="match($invoice->status){
                                 'Paid' => 'success',
                                 'Partial' => 'warning',
-                                'Cancelled' => 'danger',
+                                'Unpaid' => 'danger',
+                                'Cancelled' => 'gray',
                                 default => 'gray',
                             }"
                             size="md"

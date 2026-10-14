@@ -95,28 +95,45 @@ class EditPenerimaanBarang extends EditRecord
 }
     protected function getHeaderActions(): array
     {
+        $canModify = app(\App\Services\PurchaseOrder\PenerimaanBarangService::class)->canModify($this->record);
+
         return [
-            Actions\DeleteAction::make(),
+            Actions\DeleteAction::make()
+                ->disabled(! $canModify)
+                ->tooltip(! $canModify ? 'Tidak dapat dihapus karena sudah memiliki Retur Eksternal terkait.' : null),
         ];
     }
 
     protected function beforeSave(): void
-{
-    // 🔥 rollback stock lama
-    foreach ($this->record->items as $oldItem) {
+    {
+        $stockService = app(\App\Services\Inventory\StockService::class);
 
-        $poItem = \App\Models\PurchaseOrderItem::find($oldItem->purchase_order_item_id);
+        // Rollback stock lama & decrement qty_received PO
+        foreach ($this->record->items as $oldItem) {
+            $poItem = \App\Models\PurchaseOrderItem::find($oldItem->purchase_order_item_id);
 
-        if (!$poItem) continue;
+            if (! $poItem) {
+                continue;
+            }
 
-        $stock = \App\Models\MaterialStock::where('item_id', $poItem->item_id)->first();
+            if ((float) $oldItem->qty_terima > 0) {
+                $stockService->decreaseStock(
+                    itemId: $poItem->item_id,
+                    qty: (float) $oldItem->qty_terima,
+                    reference: $this->record,
+                    remarks: 'Rollback Penerimaan Barang Edit - ' . ($this->record->no_penerimaan ?: $this->record->no_surat_jalan)
+                );
 
-        if ($stock) {
-            $stock->decrement('on_hand', $oldItem->qty_terima);
+                $poItem->decrement('qty_received', $oldItem->qty_terima);
+            }
         }
+
+        // Hapus item lama
+        $this->record->items()->delete();
     }
 
-    // 🔥 hapus item lama
-    $this->record->items()->delete();
-}
+    protected function afterSave(): void
+    {
+        $this->record->processReceiving();
+    }
 }

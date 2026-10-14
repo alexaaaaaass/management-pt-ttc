@@ -76,13 +76,19 @@ class SalesOrderResource extends Resource
                         }
 
                         if ($get('order_type') === 'SPK') {
-                            $item = \App\Models\FinishGoodItem::find($state);
+                            $item = \App\Models\FinishGoodItem::with('typeItem')->find($state);
 
                             $set('itemable_type', \App\Models\FinishGoodItem::class);
                             $set('itemable_id', $item?->id);
                             $set('customer_id', $item?->customer_id);
                             $set('kode_material', $item?->kode_material_produk);
                             $set('material_item_id', null);
+                            $set('jenis', $item?->jenis);
+                            $set('komponen', $item?->komponen ?? $item?->typeItem?->nama_type_item);
+                            $set('isi', $item?->isi);
+                            $set('kertas', $item?->spesifikasi_kertas);
+                            $set('warna', $item?->warna);
+                            $set('finishing', $item?->finishing);
                         } else {
                             $item = \App\Models\MasterItem::find($state);
 
@@ -129,22 +135,16 @@ class SalesOrderResource extends Resource
                             $itemableType = $get('itemable_type');
                             $itemableId = $get('itemable_id');
 
-                            if ($itemableType !== \App\Models\FinishGoodItem::class) return;
+                            if ($itemableType !== \App\Models\FinishGoodItem::class || !$itemableId) return;
 
-                            $finishGood = \App\Models\FinishGoodItem::with('materials')->find($itemableId);
-                            if (!$finishGood) return;
+                            $shortages = app(\App\Services\Inventory\StockService::class)->checkBomShortages(
+                                (int) $itemableId,
+                                (float) $value
+                            );
 
-                            foreach ($finishGood->materials as $bom) {
-                                $kebutuhan = $value * $bom->qty;
-                                $stock = \App\Models\MaterialStock::where('item_id', $bom->master_item_id)->first();
-                                $available = $stock ? ($stock->on_hand - $stock->allocation) : 0;
-
-                                if ($kebutuhan > $available) {
-                                    $fail("Stock tidak cukup untuk material: "
-                                        . ($bom->material->nama_master_item ?? '-')
-                                        . " | Butuh: $kebutuhan | Sisa: $available");
-                                    return;
-                                }
+                            if (!empty($shortages)) {
+                                $first = $shortages[0];
+                                $fail("Stock tidak cukup untuk material: {$first['nama_material']} | Butuh: {$first['kebutuhan']} | Sisa: {$first['tersedia']}");
                             }
                         };
                     }),
@@ -163,6 +163,14 @@ class SalesOrderResource extends Resource
                     ->formatStateUsing(fn ($state) => $state ? number_format($state, 0, ',', '.') : null)
                     ->dehydrateStateUsing(fn ($state) => $state ? (int) str_replace('.', '', $state) : null),
 
+                Forms\Components\TextInput::make('diskon')
+                    ->label('Diskon')
+                    ->numeric()
+                    ->prefix('Rp')
+                    ->default(0)
+                    ->formatStateUsing(fn ($state) => $state ? number_format($state, 0, ',', '.') : null)
+                    ->dehydrateStateUsing(fn ($state) => $state ? (int) str_replace('.', '', $state) : 0),
+
                 Forms\Components\Select::make('mata_uang')
                     ->options([
                         'rupiah' => 'Rupiah',
@@ -175,6 +183,11 @@ class SalesOrderResource extends Resource
                 Forms\Components\TextInput::make('syarat_pembayaran'),
 
                 Forms\Components\DatePicker::make('tanggal_po'),
+
+                Forms\Components\TextInput::make('lead_time')
+                    ->label('Lead Time')
+                    ->default('21 Hari Kerja')
+                    ->placeholder('Contoh: 21 Hari Kerja'),
 
                 Forms\Components\Select::make('klaim_kertas')
                     ->options([
@@ -206,6 +219,40 @@ class SalesOrderResource extends Resource
                     ->columnSpanFull(),
             ]),
 
+            Forms\Components\Section::make('Spesifikasi Produk (Order Confirmation)')
+                ->description('Spesifikasi teknis kemasan rokok/cetak untuk dicantumkan pada preview PDF Order Confirmation.')
+                ->collapsible()
+                ->collapsed(false)
+                ->visible(fn(Get $get) => $get('order_type') == 'SPK')
+                ->schema([
+                    Forms\Components\Grid::make(3)->schema([
+                        Forms\Components\TextInput::make('jenis')
+                            ->label('Jenis')
+                            ->placeholder('Contoh: SKM, SKT, SPM'),
+
+                        Forms\Components\TextInput::make('komponen')
+                            ->label('Komponen')
+                            ->placeholder('Contoh: Etiket, Inner Frame'),
+
+                        Forms\Components\TextInput::make('isi')
+                            ->label('Isi')
+                            ->placeholder('Contoh: 20, 16, 12'),
+
+                        Forms\Components\TextInput::make('kertas')
+                            ->label('Kertas')
+                            ->placeholder('Contoh: Metalize, Ivory 230gr'),
+
+                        Forms\Components\TextInput::make('warna')
+                            ->label('Warna')
+                            ->placeholder('Contoh: 5, 4+1'),
+
+                        Forms\Components\TextInput::make('finishing')
+                            ->label('Finishing')
+                            ->placeholder('Contoh: Spot UV, Cutting, Emboss')
+                            ->columnSpan(3),
+                    ]),
+                ]),
+
             Forms\Components\Actions::make([
                 Action::make('getBom')
                     ->label('Get Bill Of Material')
@@ -213,31 +260,13 @@ class SalesOrderResource extends Resource
                     ->color('success')
                     ->action(function ($get, $set) {
                         $id = $get('item_source');
-                        if (!$id || $get('order_type') !== 'SPK') {
+                        if (! $id || $get('order_type') !== 'SPK') {
                             $set('bom_items', []);
                             return;
                         }
 
-                        $qtyPesanan = floatval($get('qty') ?? 0);
-                        $item = \App\Models\FinishGoodItem::with([
-                            'materials.material',
-                            'materials.departemen'
-                        ])->find($id);
-
-                        if (!$item) return;
-
-                        $bom = [];
-                        foreach ($item->materials as $mat) {
-                            $qtyBom = $qtyPesanan * floatval($mat->qty);
-                            $bom[] = [
-                                'nama_material' => $mat->material?->nama_master_item,
-                                'departemen'    => $mat->departemen?->nama_departemen,
-                                'qty_master'    => floatval($mat->qty),
-                                'qty_produksi'  => round($qtyBom, 2),
-                                'satuan'        => strtoupper($mat->material?->satuan?->nama_satuan ?? ''),
-                                'waste'         => $mat->waste ?? 0,
-                            ];
-                        }
+                        $qtyPesanan = (float) ($get('qty') ?? 0);
+                        $bom = app(\App\Services\Sales\SalesOrderService::class)->getBomPreview((int) $id, $qtyPesanan);
                         $set('bom_items', $bom);
                     })
             ])->columnSpanFull(),
@@ -367,38 +396,67 @@ class SalesOrderResource extends Resource
         return $table
             ->defaultSort('created_at', 'desc')
             ->columns([
-                Tables\Columns\TextColumn::make('no_sales_order')->searchable(),
-              Tables\Columns\TextColumn::make('item_display')
-    ->label('Item')
-    ->badge()
-    ->separator(',')
-    ->getStateUsing(function ($record) {
+                Tables\Columns\TextColumn::make('no_sales_order')
+                    ->label('No SO')
+                    ->badge()
+                    ->color('primary')
+                    ->searchable(),
 
-        if ($record->items->count()) {
-            return $record->items
-                ->pluck('material.nama_master_item')
-                ->filter()
-                ->implode(',');
-        }
+                Tables\Columns\TextColumn::make('order_type')
+                    ->label('Tipe')
+                    ->badge()
+                    ->color(fn ($state) => $state === 'SPK' ? 'info' : 'warning'),
 
-        return $record->itemable?->nama_barang;
-    }),
-                Tables\Columns\TextColumn::make('customer.nama_customer')->label('Customer'),
-                Tables\Columns\TextColumn::make('kode_material')->label('Kode Material'),
+                Tables\Columns\TextColumn::make('customer.nama_customer')
+                    ->label('Customer')
+                    ->searchable(),
+
+                Tables\Columns\TextColumn::make('item_display')
+                    ->label('Produk / Material')
+                    ->badge()
+                    ->wrap()
+                    ->getStateUsing(function ($record) {
+                        if ($record->items->count()) {
+                            return $record->items
+                                ->pluck('material.nama_master_item')
+                                ->filter()
+                                ->implode(', ');
+                        }
+
+                        return $record->itemable?->nama_barang ?? '-';
+                    }),
+
+                Tables\Columns\TextColumn::make('qty')
+                    ->label('Qty Pesanan')
+                    ->numeric()
+                    ->getStateUsing(fn ($record) => $record->order_qty),
+
+                Tables\Columns\TextColumn::make('status_pengiriman')
+                    ->label('Status Pengiriman')
+                    ->badge()
+                    ->getStateUsing(fn ($record) => $record->fulfillment['status'])
+                    ->color(fn ($record) => $record->fulfillment['color']),
             ])
             ->actions([
-                Tables\Actions\EditAction::make(),
-                Tables\Actions\Action::make('preview_pdf')
-                    ->label('Preview')
-                    ->icon('heroicon-o-eye')
-                    ->color('info')
-                    ->url(fn ($record) => route('sales-order.preview', $record))
-                    ->openUrlInNewTab(),
-                Tables\Actions\Action::make('download_pdf')
-                    ->label('Download')
-                    ->icon('heroicon-o-arrow-down-tray')
-                    ->color('success')
-                    ->url(fn ($record) => route('sales-order.download', $record)),
+                Tables\Actions\ActionGroup::make([
+                    Tables\Actions\EditAction::make()
+                        ->disabled(fn ($record) => ! app(\App\Services\Sales\SalesOrderService::class)->canModify($record))
+                        ->tooltip(fn ($record) => ! app(\App\Services\Sales\SalesOrderService::class)->canModify($record) ? 'Sales Order terkunci karena sudah memiliki Surat Jalan atau SPK' : null),
+                    Tables\Actions\Action::make('preview_pdf')
+                        ->label('Preview PDF')
+                        ->icon('heroicon-o-eye')
+                        ->color('info')
+                        ->url(fn ($record) => route('sales-order.preview', $record))
+                        ->openUrlInNewTab(),
+                    Tables\Actions\Action::make('download_pdf')
+                        ->label('Download PDF')
+                        ->icon('heroicon-o-arrow-down-tray')
+                        ->color('success')
+                        ->url(fn ($record) => route('sales-order.download', $record)),
+                    Tables\Actions\DeleteAction::make()
+                        ->disabled(fn ($record) => ! app(\App\Services\Sales\SalesOrderService::class)->canModify($record))
+                        ->tooltip(fn ($record) => ! app(\App\Services\Sales\SalesOrderService::class)->canModify($record) ? 'Tidak dapat dihapus karena sudah memiliki Surat Jalan atau SPK' : null),
+                ])
             ])
             ->bulkActions([
                 Tables\Actions\DeleteBulkAction::make(),

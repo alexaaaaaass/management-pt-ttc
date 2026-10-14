@@ -20,6 +20,13 @@ class FinishGoodItem extends Model
     'deskripsi',
     'spesifikasi_kertas',
 
+    // Spesifikasi Produk Cetak & Kemasan
+    'jenis',
+    'komponen',
+    'isi',
+    'warna',
+    'finishing',
+
     // tambahan
     'gramasi',
     'tebal_kertas',

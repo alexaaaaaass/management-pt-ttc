@@ -204,7 +204,9 @@ class SubcountOutResource extends Resource
 
                 Tables\Actions\EditAction::make(),
 
-                Tables\Actions\DeleteAction::make(),
+                Tables\Actions\DeleteAction::make()
+                    ->hidden(fn ($record) => !app(\App\Services\Subcontract\SubcontractService::class)->canDeleteSubcountOut($record))
+                    ->using(fn ($record) => app(\App\Services\Subcontract\SubcontractService::class)->deleteSubcountOut($record)),
 
                 Tables\Actions\Action::make('preview') ->label('Preview PDF') ->icon('heroicon-o-eye') ->color('info') ->url(fn ($record) => route( 'subcount-out.preview', $record )) ->openUrlInNewTab(), 
                 

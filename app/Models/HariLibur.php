@@ -9,10 +9,14 @@ class HariLibur extends Model
 {
     use HasFactory;
 
-    protected $table = 'hari_libur';
+    protected $table = 'hari_liburs';
 
     protected $fillable = [
         'tanggal_libur',
         'keterangan',
+    ];
+
+    protected $casts = [
+        'tanggal_libur' => 'date',
     ];
 }

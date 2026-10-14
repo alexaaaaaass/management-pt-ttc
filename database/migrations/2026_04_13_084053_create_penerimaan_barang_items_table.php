@@ -25,6 +25,7 @@ return new class extends Migration
             $table->string('no_lot')->nullable();
 
             $table->text('catatan_item')->nullable();
+            $table->decimal('qty_return', 10, 2)->default(0.00)->nullable();
 
             $table->timestamps();
         });

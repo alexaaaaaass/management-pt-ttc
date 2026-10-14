@@ -64,42 +64,38 @@ class SubcountInResource extends Resource
 
                     Select::make('subcount_out_id')
                         ->label('Surat Jalan Subcount Out')
-                        ->options(
-                            SubcountOut::pluck(
-                                'surat_jalan_subcount',
-                                'id'
-                            )
-                        )
+                        ->options(function () {
+                            return SubcountOut::with('items')->get()->mapWithKeys(function ($out) {
+                                $sisa = app(\App\Services\Subcontract\SubcontractService::class)->calculateOutstandingQty($out->id);
+                                $label = $out->surat_jalan_subcount . ' (Sisa Belum Diterima: ' . number_format($sisa, 0, ',', '.') . ')';
+                                return [$out->id => $label];
+                            });
+                        })
                         ->searchable()
                         ->live()
                         ->afterStateUpdated(function ($state, $set) {
-
-                            $subcountOut = SubcountOut::with('items.item')
-                                ->find($state);
+                            $subcountOut = SubcountOut::with('items.item')->find($state);
 
                             if (!$subcountOut) {
                                 return;
                             }
 
+                            $service = app(\App\Services\Subcontract\SubcontractService::class);
                             $items = [];
 
                             foreach ($subcountOut->items as $item) {
+                                $sisa = $service->calculateOutstandingQty($subcountOut->id, $item->item_id);
+                                if ($sisa <= 0) {
+                                    continue;
+                                }
 
                                 $items[] = [
-
                                     'subcount_out_id' => $subcountOut->id,
-
                                     'item_asal_id' => $item->item_id,
-
-                                    'nama_item_asal' =>
-                                        $item->item?->nama_master_item,
-
+                                    'nama_item_asal' => $item->item?->nama_master_item ?? $item->nama_produk,
                                     'qty_dikirim' => $item->qty,
-
-                                    'qty_diterima' => $item->qty,
-
+                                    'qty_diterima' => $sisa,
                                     'item_hasil_id' => null,
-
                                     'keterangan' => null,
                                 ];
                             }
@@ -239,7 +235,8 @@ class SubcountInResource extends Resource
             $record
         )),
 
-    Tables\Actions\DeleteAction::make(),
+    Tables\Actions\DeleteAction::make()
+        ->using(fn ($record) => app(\App\Services\Subcontract\SubcontractService::class)->deleteSubcountIn($record)),
 
 ])
 ->icon('heroicon-m-ellipsis-vertical')

@@ -16,6 +16,7 @@ return new class extends Migration
                   ->cascadeOnDelete();
 
             $table->date('tanggal_pr');
+            $table->enum('status', ['otorisasi', 'deotorisasi'])->default('deotorisasi');
 
             $table->timestamps();
         });

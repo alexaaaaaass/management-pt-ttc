@@ -20,6 +20,8 @@ return new class extends Migration
             $table->decimal('ppn',5,2)->default(0);
             $table->decimal('ongkir',12,2)->default(0);
             $table->decimal('dp',12,2)->default(0);
+            $table->enum('po_type', ['reguler', 'subcount'])->default('reguler')->nullable();
+            $table->enum('status', ['Open', 'Partial', 'Completed'])->default('Open')->nullable();
 
             $table->timestamps();
         });

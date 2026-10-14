@@ -36,18 +36,45 @@ class PurchaseOrder extends Model
         return $this->hasMany(PurchaseOrderItem::class);
     }
     public function fakturs()
-{
-    return $this->hasMany(
-        TransFaktur::class
-    );
-}
+    {
+        return $this->hasMany(TransFaktur::class);
+    }
 
-protected static function booted() { 
-    static::creating(function ($po) {
-        $tanggal = $po->po_date ?? now();
-        $date = Carbon::parse($tanggal)->format('Ymd');
-        $count = self::whereDate('po_date', $tanggal)->count() + 1; 
-        $sequence = str_pad($count, 3, '0', STR_PAD_LEFT); 
-        $po->no_po = "PO-UGRMS-{$date}-{$sequence}"; }); }
-   
+    public function penerimaanBarangs()
+    {
+        return $this->hasMany(PenerimaanBarang::class, 'purchase_order_id');
+    }
+
+    public function poBillings()
+    {
+        return $this->hasMany(PoBilling::class, 'purchase_order_id');
+    }
+
+    public function getReceivingProgressAttribute(): array
+    {
+        return app(\App\Services\PurchaseOrder\PurchaseOrderService::class)->getReceivingProgress($this);
+    }
+
+    protected static function booted()
+    {
+        static::creating(function ($po) {
+            if (empty($po->no_po)) {
+                $po->no_po = app(\App\Services\PurchaseOrder\PurchaseOrderService::class)->generateNoPo($po->po_date);
+            }
+        });
+
+        static::deleting(function ($po) {
+            if ($po->poBillings()->exists()) {
+                throw new \Exception('Purchase Order tidak dapat dihapus karena sudah memiliki Tagihan Supplier (PO Billing) terkait.');
+            }
+
+            if ($po->penerimaanBarangs()->exists()) {
+                throw new \Exception('Purchase Order tidak dapat dihapus karena sudah memiliki Penerimaan Barang terkait.');
+            }
+
+            if ($po->fakturs()->exists()) {
+                throw new \Exception('Purchase Order tidak dapat dihapus karena sudah memiliki Faktur terkait.');
+            }
+        });
+    }
 }

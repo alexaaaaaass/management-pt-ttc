@@ -40,8 +40,14 @@ class InvoiceResource extends Resource
                                     ->relationship(
                                         'suratJalan',
                                         'kode_surat_jalan',
-                                        fn ($query) => $query->whereDoesntHave('invoice')
+                                        fn ($query, ?Invoice $record) => $query->where(function ($q) use ($record) {
+                                            $q->whereDoesntHave('invoice');
+                                            if ($record && $record->surat_jalan_id) {
+                                                $q->orWhere('id', $record->surat_jalan_id);
+                                            }
+                                        })
                                     )
+                                    ->disabled(fn (string $operation) => $operation === 'edit')
                                     ->searchable()
                                     ->preload()
                                     ->required()
@@ -62,7 +68,7 @@ class InvoiceResource extends Resource
                                         $so = $sj->salesOrder;
 
                                         // Set Preview Items
-                                        if ($so->mode === 'MULTI_MATERIAL') {
+                                        if ($so && $so->mode === 'MULTI_MATERIAL') {
                                             $rows = [];
                                             foreach ($so->items as $item) {
                                                 $rows[] = [
@@ -76,31 +82,21 @@ class InvoiceResource extends Resource
                                             $set('preview_items', []);
                                         }
 
-                                        // Perhitungan Subtotal
-                                        if ($so->mode == 'SPK') {
-                                            $subtotal = ($sj->qty_pengiriman ?? 0) * ($so->harga_pcs ?? 0);
-                                        } elseif ($so->mode == 'SINGLE_MATERIAL') {
-                                            $item = $so->items->first();
-                                            $subtotal = ($sj->qty_pengiriman ?? 0) * ($item->harga ?? 0);
-                                        } else {
-                                            $subtotal = 0;
-                                            foreach ($sj->items as $detail) {
-                                                $subtotal += ($detail->qty_kirim ?? 0) * ($detail->salesOrderItem->harga ?? 0);
-                                            }
-                                        }
+                                        // Perhitungan Subtotal via InvoiceService
+                                        $subtotal = app(\App\Services\Finance\InvoiceService::class)->calculateSubtotal($sj);
 
                                         $set('subtotal', $subtotal);
 
-                                        $set('ongkir', $so->harga_kirim ?? 0);
+                                        $set('ongkir', $so?->harga_kirim ?? 0);
 
                                         /*
                                         |--------------------------------------------------------------------------
                                         | Hidden data
                                         |--------------------------------------------------------------------------
                                         */
-                                        $set('customer_id', $so->customer_id);
-                                        $set('sales_order_id', $so->id);
-                                        $set('no_po_customer', $so->no_po_customer);
+                                        $set('customer_id', $so?->customer_id);
+                                        $set('sales_order_id', $so?->id);
+                                        $set('no_po_customer', $so?->no_po_customer);
                                     }),
 
                                 TextInput::make('kode_invoice')
@@ -379,10 +375,11 @@ class InvoiceResource extends Resource
 
                 Tables\Columns\TextColumn::make('status')
                     ->badge()
-                    ->color(function ($record) {
-                        return $record->sisa_tagihan <= 0
-                            ? 'success'
-                            : 'danger';
+                    ->color(fn (string $state): string => match ($state) {
+                        'Paid' => 'success',
+                        'Partial' => 'warning',
+                        'Unpaid' => 'danger',
+                        default => 'gray',
                     }),
 
                 Tables\Columns\TextColumn::make('tanggal_invoice')
@@ -395,6 +392,9 @@ class InvoiceResource extends Resource
                     ->url(fn ($record) => static::getUrl('view', ['record' => $record])),
 
                 Tables\Actions\EditAction::make(),
+
+                Tables\Actions\DeleteAction::make()
+                    ->hidden(fn ($record) => !app(\App\Services\Finance\InvoiceService::class)->canDelete($record)),
             ]);
     }
 

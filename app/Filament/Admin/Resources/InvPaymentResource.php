@@ -130,39 +130,33 @@ class InvPaymentResource extends Resource
                                         ->numeric()
                                         ->required()
                                         ->live()
-                                        ->rule(function (Get $get) {
-                                        return function (
-                                            $attribute,
-                                            $value,
-                                            $fail
-                                        ) use ($get) {
+                                        ->rule(function (Get $get, ?InvPayment $record) {
+                                            return function (
+                                                $attribute,
+                                                $value,
+                                                $fail
+                                            ) use ($get, $record) {
+                                                $invoice = Invoice::find($get('invoice_id'));
+                                                if (!$invoice) {
+                                                    return;
+                                                }
 
-                                            $invoice = Invoice::find(
-                                                $get('invoice_id')
-                                            );
+                                                $maxAllowed = (float) $invoice->sisa_tagihan;
+                                                if ($record && $record->invoice_id == $invoice->id) {
+                                                    $maxAllowed += (float) $record->nominal_bayar;
+                                                }
 
-                                            if (
-                                                $value >
-                                                $invoice->sisa_tagihan
-                                            ) {
-
-                                                $fail(
-                                                    'Nominal pembayaran melebihi sisa tagihan.'
-                                                );
-
-                                            }
-
-                                        };
-
-                                    })
+                                                if ((float) $value > $maxAllowed) {
+                                                    $fail('Nominal pembayaran melebihi sisa tagihan (Maks: Rp ' . number_format($maxAllowed, 0, ',', '.') . ').');
+                                                }
+                                            };
+                                        })
                                         ->default(function (Get $get) {
-
                                             $invoice = Invoice::find(
                                                 $get('invoice_id')
                                             );
 
                                             return $invoice?->sisa_tagihan;
-
                                         }),
 
                                     Select::make('karyawan_id')
@@ -309,9 +303,8 @@ class InvPaymentResource extends Resource
 
         ])
         ->actions([
-
             Tables\Actions\EditAction::make(),
-
+            Tables\Actions\DeleteAction::make(),
         ]);
 }
 

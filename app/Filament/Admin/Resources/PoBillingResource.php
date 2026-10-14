@@ -50,43 +50,26 @@ class PoBillingResource extends Resource
                     Grid::make(3)
                         ->schema([
 
-                            Select::make(
-                                'penerimaan_barang_id'
-                            )
-                                ->label(
-                                    'Penerimaan Barang (LPB)'
-                                )
-
-                                ->options(
-
-                                    PenerimaanBarang::with(
-                                        'purchaseOrder'
-                                    )
-
-                                    ->get()
-
-                                    ->mapWithKeys(
-                                        fn ($item) => [
-
-                                            $item->id =>
-
-                                                $item->no_penerimaan .
-
-                                                ' (PO: ' .
-
-                                                optional(
-                                                    $item->purchaseOrder
-                                                )->no_po .
-
-                                                ')'
-                                        ]
-                                    )
-                                )
-
+                            Select::make('penerimaan_barang_id')
+                                ->label('Penerimaan Barang (LPB)')
+                                ->options(function (?PoBilling $record) {
+                                    return PenerimaanBarang::with('purchaseOrder')
+                                        ->where(function ($query) use ($record) {
+                                            $query->whereDoesntHave('poBilling');
+                                            if ($record && $record->penerimaan_barang_id) {
+                                                $query->orWhere('id', $record->penerimaan_barang_id);
+                                            }
+                                        })
+                                        ->get()
+                                        ->mapWithKeys(fn ($item) => [
+                                            $item->id => $item->no_penerimaan . ' (PO: ' . ($item->purchaseOrder?->no_po ?? '-') . ')'
+                                        ]);
+                                })
+                                ->disabled(fn (string $operation) => $operation === 'edit')
                                 ->searchable()
-
+                                ->preload()
+                                ->required()
                                 ->live()
-
                                 ->afterStateUpdated(function (
                                     $state,
                                     Set $set
@@ -418,42 +401,58 @@ class PoBillingResource extends Resource
     {
         return $table
            ->columns([
+                Tables\Columns\TextColumn::make('kode_tagihan')
+                    ->label('Kode Tagihan')
+                    ->searchable()
+                    ->sortable(),
 
-    Tables\Columns\TextColumn::make(
-        'kode_tagihan'
-    )
-        ->searchable(),
+                Tables\Columns\TextColumn::make('penerimaanBarang.no_penerimaan')
+                    ->label('LPB')
+                    ->searchable(),
 
-    Tables\Columns\TextColumn::make(
-        'penerimaanBarang.no_penerimaan'
-    )
-        ->label('LPB'),
+                Tables\Columns\TextColumn::make('purchaseOrder.no_po')
+                    ->label('PO')
+                    ->searchable(),
 
-    Tables\Columns\TextColumn::make(
-        'purchaseOrder.no_po'
-    )
-        ->label('PO'),
+                Tables\Columns\TextColumn::make('supplier.nama_supplier')
+                    ->label('Supplier')
+                    ->searchable(),
 
-    Tables\Columns\TextColumn::make(
-        'supplier.nama_supplier'
-    ),
+                Tables\Columns\TextColumn::make('grand_total')
+                    ->label('Total Tagihan')
+                    ->money('IDR', locale: 'id')
+                    ->sortable(),
 
-    Tables\Columns\TextColumn::make(
-        'grand_total'
-    )
-        ->money('IDR'),
+                Tables\Columns\TextColumn::make('total_payment')
+                    ->label('Dibayar')
+                    ->money('IDR', locale: 'id'),
 
-    Tables\Columns\TextColumn::make(
-        'tanggal_transaksi'
-    )
-        ->date(),
+                Tables\Columns\TextColumn::make('sisa_tagihan')
+                    ->label('Sisa Tagihan')
+                    ->money('IDR', locale: 'id'),
 
-])
+                Tables\Columns\TextColumn::make('status')
+                    ->badge()
+                    ->color(fn (string $state): string => match ($state) {
+                        'Paid' => 'success',
+                        'Partial' => 'warning',
+                        'Unpaid' => 'danger',
+                        default => 'gray',
+                    }),
+
+                Tables\Columns\TextColumn::make('tanggal_transaksi')
+                    ->label('Tgl Transaksi')
+                    ->date('d M Y')
+                    ->sortable(),
+            ])
             ->filters([
                 //
             ])
             ->actions([
                 Tables\Actions\EditAction::make(),
+                Tables\Actions\DeleteAction::make()
+                    ->hidden(fn ($record) => !app(\App\Services\Finance\PoBillingService::class)->canDelete($record))
+                    ->using(fn ($record) => app(\App\Services\Finance\PoBillingService::class)->deleteBilling($record)),
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([

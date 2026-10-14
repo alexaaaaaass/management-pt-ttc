@@ -39,53 +39,82 @@ class PenerimaanBarang extends Model
     }
 
     public function externalReturns()
-{
-    return $this->hasMany(
-        ExternalReturn::class
-    );
-}
+    {
+        return $this->hasMany(
+            ExternalReturn::class
+        );
+    }
 
+    public function poBilling()
+    {
+        return $this->hasOne(PoBilling::class);
+    }
 
+    protected static function booted()
+    {
+        parent::booted();
 
-protected static function booted()
-{
-    parent::booted();
+        static::creating(function ($pb) {
+            if (empty($pb->no_penerimaan)) {
+                $pb->no_penerimaan = app(\App\Services\PurchaseOrder\PenerimaanBarangService::class)->generateNoPenerimaan();
+            }
+        });
 
-    static::creating(function ($pb) {
+        static::deleting(function (PenerimaanBarang $pb) {
+            if ($pb->poBilling()->exists()) {
+                throw new \Exception('Penerimaan Barang tidak dapat dihapus karena sudah memiliki Tagihan Supplier (PO Billing) terkait.');
+            }
 
-        $date = now()->format('Ymd');
+            if ($pb->externalReturns()->exists()) {
+                throw new \Exception('Penerimaan Barang tidak dapat dihapus karena sudah memiliki Retur Eksternal terkait.');
+            }
 
-        $count = self::whereDate('created_at', now())
-            ->count() + 1;
+            $pb->loadMissing(['items.purchaseOrderItem', 'purchaseOrder']);
+            $stockService = app(\App\Services\Inventory\StockService::class);
 
-        $pb->no_penerimaan =
-            'PB-'.$date.'-'.str_pad($count,3,'0',STR_PAD_LEFT);
+            foreach ($pb->items as $item) {
+                $poItem = $item->purchaseOrderItem;
+                if ($poItem && (float) $item->qty_terima > 0) {
+                    $stockService->decreaseStock(
+                        itemId: $poItem->item_id,
+                        qty: (float) $item->qty_terima,
+                        reference: $pb,
+                        remarks: 'Rollback Hapus Penerimaan Barang - ' . $pb->no_penerimaan
+                    );
+                    $poItem->decrement('qty_received', $item->qty_terima);
+                }
+            }
 
-    });
+            if ($pb->purchaseOrder) {
+                app(\App\Services\PurchaseOrder\PurchaseOrderService::class)->syncReceivingStatus($pb->purchaseOrder);
+            }
+        });
+    }
 
-}
+    public function processReceiving(): void
+    {
+        $this->loadMissing('items.purchaseOrderItem');
+        $stockService = app(\App\Services\Inventory\StockService::class);
 
-public function processReceiving(): void
-{
-    $this->loadMissing('items.purchaseOrderItem');
+        foreach ($this->items as $item) {
+            $poItem = $item->purchaseOrderItem;
 
-    foreach ($this->items as $item) {
+            if (! $poItem) {
+                continue;
+            }
 
-        $poItem = $item->purchaseOrderItem;
+            $stockService->increaseStock(
+                itemId: $poItem->item_id,
+                qty: (float) $item->qty_terima,
+                reference: $this,
+                remarks: 'Penerimaan Barang PO - ' . ($this->no_penerimaan ?: $this->no_surat_jalan)
+            );
 
-        if (! $poItem) {
-            continue;
+            $poItem->increment('qty_received', $item->qty_terima);
         }
 
-        $stock = MaterialStock::firstOrCreate(
-            ['item_id' => $poItem->item_id],
-            ['on_hand' => 0, 'allocation' => 0]
-        );
-
-        $stock->increment('on_hand', $item->qty_terima);
-
-        $poItem->increment('qty_received', $item->qty_terima);
+        if ($this->purchaseOrder) {
+            app(\App\Services\PurchaseOrder\PurchaseOrderService::class)->syncReceivingStatus($this->purchaseOrder);
+        }
     }
-}
-    
 }

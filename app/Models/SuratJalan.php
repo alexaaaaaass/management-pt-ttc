@@ -68,82 +68,41 @@ class SuratJalan extends Model
 
     /*
     |--------------------------------------------------------------------------
-    | PROCESS SPK
+    | BOOTED & MODEL HOOKS
     |--------------------------------------------------------------------------
     */
-
-    protected static function processSpk(
-        SuratJalan $suratJalan
-    ): void {
-
-        $spk = $suratJalan->spk;
-
-        if (! $spk) {
-            return;
-        }
-
-        $spk->decrement(
-            'on_hand_stock',
-            $suratJalan->qty_pengiriman
-        );
-    }
-
-    /*
-    |--------------------------------------------------------------------------
-    | AUTO NUMBER
-    |--------------------------------------------------------------------------
-    */
-
     protected static function booted(): void
     {
         static::creating(function ($model) {
+            if (empty($model->kode_surat_jalan)) {
+                $tanggal = Carbon::now()->format('Ymd');
+                $count = self::whereDate('created_at', today())->count() + 1;
 
-            $tanggal = Carbon::now()->format('Ymd');
-
-            $count = self::whereDate(
-                'created_at',
-                today()
-            )->count() + 1;
-
-            $model->kode_surat_jalan =
-                'SJ-'
-                . $tanggal
-                . '-'
-                . str_pad(
-                    $count,
-                    3,
-                    '0',
-                    STR_PAD_LEFT
-                );
+                $model->kode_surat_jalan = 'SJ-' . $tanggal . '-' . str_pad($count, 3, '0', STR_PAD_LEFT);
+            }
         });
 
-        /*
-        |--------------------------------------------------------------------------
-        | Setelah Surat Jalan dibuat
-        |--------------------------------------------------------------------------
-        |
-        | Hanya SPK yang diproses di Model.
-        | Material diproses di CreateSuratJalan
-        | agar SuratJalanItem sudah tersedia.
-        |
-        */
-
-        static::created(function (SuratJalan $suratJalan) {
-
-            $so = $suratJalan->salesOrder;
-
-            if (! $so) {
-                return;
+        static::deleting(function (SuratJalan $suratJalan) {
+            if ($suratJalan->invoice()->exists()) {
+                throw new \Exception('Tidak dapat menghapus Surat Jalan karena sudah memiliki Invoice terkait.');
             }
 
-            if ($so->order_type === 'SPK') {
+            // Kembalikan stok material bila Surat Jalan dibatalkan/dihapus
+            $suratJalan->loadMissing('items');
+            $stockService = app(\App\Services\Inventory\StockService::class);
 
-                self::processSpk(
-                    $suratJalan
-                );
-
+            foreach ($suratJalan->items as $item) {
+                if ($item->qty_kirim > 0 && $item->master_item_id) {
+                    $stockService->increaseStock(
+                        itemId: $item->master_item_id,
+                        qty: (float) $item->qty_kirim,
+                        reference: $suratJalan,
+                        remarks: 'Rollback Hapus Surat Jalan - ' . $suratJalan->kode_surat_jalan
+                    );
+                }
             }
 
+            $suratJalan->items()->delete();
         });
     }
 }

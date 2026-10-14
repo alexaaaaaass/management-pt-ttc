@@ -26,58 +26,19 @@ class SubcountInItem extends Model
         return $this->belongsTo(SubcountOut::class);
     }
 
+    public function itemAsal()
+    {
+        return $this->belongsTo(
+            MasterItem::class,
+            'item_asal_id'
+        );
+    }
+
     public function itemHasil()
     {
         return $this->belongsTo(
             MasterItem::class,
             'item_hasil_id'
         );
-    }
-
-    protected static function booted()
-    {
-        static::created(function ($itemIn) {
-
-            /*
-            |--------------------------------------------------------------------------
-            | Tambah stok material hasil
-            |--------------------------------------------------------------------------
-            */
-
-            $stock = MaterialStock::firstOrCreate(
-                [
-                    'item_id' => $itemIn->item_hasil_id
-                ],
-                [
-                    'on_hand' => 0,
-                    'allocation' => 0
-                ]
-            );
-
-            $stock->increment(
-                'on_hand',
-                $itemIn->qty_diterima
-            );
-
-
-            /*
-            |--------------------------------------------------------------------------
-            | Kurangi allocation material asal
-            |--------------------------------------------------------------------------
-            */
-
-            $rawStock = MaterialStock::where(
-                'item_id',
-                $itemIn->item_asal_id
-            )->first();
-
-            if ($rawStock) {
-
-                $rawStock->decrement(
-                    'allocation',
-                    $itemIn->qty_diterima
-                );
-            }
-        });
     }
 }

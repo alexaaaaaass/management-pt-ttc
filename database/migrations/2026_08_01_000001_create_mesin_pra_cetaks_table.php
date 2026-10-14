@@ -11,8 +11,13 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('roles', function (Blueprint $table) {
+        Schema::create('mesin_pra_cetaks', function (Blueprint $table) {
             $table->id();
+            $table->string('nama_mesin', 255);
+            $table->string('jenis_mesin', 255);
+            $table->string('kapasitas', 100)->nullable();
+            $table->string('proses', 100);
+            $table->enum('status', ['aktif', 'nonaktif'])->default('aktif')->nullable();
             $table->timestamps();
         });
     }
@@ -22,6 +27,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('roles');
+        Schema::dropIfExists('mesin_pra_cetaks');
     }
 };

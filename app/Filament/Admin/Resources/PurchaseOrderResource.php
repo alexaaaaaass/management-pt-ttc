@@ -366,6 +366,15 @@ public static function getNavigationLabel(): string
         default => 'gray',
     }),
 
+                Tables\Columns\TextColumn::make('status')
+                    ->label('Status')
+                    ->badge()
+                    ->color(fn (?string $state): string => match ($state) {
+                        'Completed' => 'success',
+                        'Partial'   => 'warning',
+                        default     => 'gray',
+                    }),
+
                 Tables\Columns\TextColumn::make('po_date')
                     ->date(),
 
@@ -391,7 +400,9 @@ public static function getNavigationLabel(): string
                 route('purchase-order.download', $record)
             ),
 
-        Tables\Actions\DeleteAction::make(),
+        Tables\Actions\DeleteAction::make()
+            ->disabled(fn ($record) => ! app(\App\Services\PurchaseOrder\PurchaseOrderService::class)->canModify($record))
+            ->tooltip(fn ($record) => ! app(\App\Services\PurchaseOrder\PurchaseOrderService::class)->canModify($record) ? 'Tidak dapat dihapus karena sudah memiliki Penerimaan Barang atau Faktur terkait' : null),
 
     ])
     ->icon('heroicon-m-ellipsis-horizontal')

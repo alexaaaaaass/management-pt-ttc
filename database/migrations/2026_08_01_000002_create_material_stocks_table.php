@@ -11,8 +11,11 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('imr_finishes', function (Blueprint $table) {
+        Schema::create('material_stocks', function (Blueprint $table) {
             $table->id();
+            $table->foreignId('item_id')->unique()->constrained('master_items')->onDelete('cascade');
+            $table->decimal('on_hand', 15, 2)->default(0.00)->nullable();
+            $table->decimal('allocation', 15, 2)->default(0.00)->nullable();
             $table->timestamps();
         });
     }
@@ -22,6 +25,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('imr_finishes');
+        Schema::dropIfExists('material_stocks');
     }
 };

@@ -40,20 +40,22 @@ class EditPurchaseOrder extends EditRecord
 
     $this->form->fill($data);
 }
-    protected function mutateFormDataBeforeSave(array $data): array
-{
-    $this->items = $data['items'] ?? [];
-    unset($data['items']);
+    protected function getHeaderActions(): array
+    {
+        $canModify = app(\App\Services\PurchaseOrder\PurchaseOrderService::class)->canModify($this->record);
 
-    return $data;
-}
-protected function afterSave(): void
-{
-    // 🔥 hapus dulu biar tidak numpuk
-    $this->record->items()->delete();
-
-    foreach ($this->items as $item) {
-        $this->record->items()->create($item);
+        return [
+            \Filament\Actions\DeleteAction::make()
+                ->disabled(! $canModify)
+                ->tooltip(! $canModify ? 'Tidak dapat dihapus karena sudah memiliki Penerimaan Barang atau Faktur' : null),
+        ];
     }
-}
+
+    protected function handleRecordUpdate(\Illuminate\Database\Eloquent\Model $record, array $data): \Illuminate\Database\Eloquent\Model
+    {
+        $items = $data['items'] ?? [];
+        unset($data['items']);
+
+        return app(\App\Services\PurchaseOrder\PurchaseOrderService::class)->updatePurchaseOrder($record, $data, $items);
+    }
 }

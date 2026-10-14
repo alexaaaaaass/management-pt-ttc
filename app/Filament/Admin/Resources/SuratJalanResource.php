@@ -105,7 +105,8 @@ class SuratJalanResource extends Resource
                                 $set('items', $rows);
                             }),
 
-                        Forms\Components\Hidden::make('order_type'),
+                        Forms\Components\Hidden::make('order_type')
+                            ->default(fn (?SuratJalan $record) => $record?->salesOrder?->mode),
 
                         // ===== INFORMASI STOCK (Hanya untuk SPK & SINGLE_MATERIAL) =====
                         Forms\Components\Section::make('Informasi Stock')
@@ -327,8 +328,23 @@ class SuratJalanResource extends Resource
             ->actions([
                 Tables\Actions\ActionGroup::make([
                     Tables\Actions\ViewAction::make(),
-                    Tables\Actions\EditAction::make(),
-                    Tables\Actions\DeleteAction::make(),
+                    Tables\Actions\EditAction::make()
+                        ->disabled(fn ($record) => ! app(\App\Services\Dispatch\SuratJalanService::class)->canModify($record))
+                        ->tooltip(fn ($record) => ! app(\App\Services\Dispatch\SuratJalanService::class)->canModify($record) ? 'Surat Jalan terkunci karena sudah memiliki Invoice' : null),
+                    Tables\Actions\Action::make('preview_pdf')
+                        ->label('Preview PDF')
+                        ->icon('heroicon-o-eye')
+                        ->color('info')
+                        ->url(fn ($record) => route('surat-jalan.preview', $record))
+                        ->openUrlInNewTab(),
+                    Tables\Actions\Action::make('download_pdf')
+                        ->label('Download PDF')
+                        ->icon('heroicon-o-arrow-down-tray')
+                        ->color('success')
+                        ->url(fn ($record) => route('surat-jalan.download', $record)),
+                    Tables\Actions\DeleteAction::make()
+                        ->disabled(fn ($record) => ! app(\App\Services\Dispatch\SuratJalanService::class)->canModify($record))
+                        ->tooltip(fn ($record) => ! app(\App\Services\Dispatch\SuratJalanService::class)->canModify($record) ? 'Tidak dapat dihapus karena sudah memiliki Invoice' : null),
                 ])
             ])
             ->bulkActions([

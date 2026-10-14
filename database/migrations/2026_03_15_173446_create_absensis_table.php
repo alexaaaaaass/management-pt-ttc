@@ -13,6 +13,17 @@ return new class extends Migration
     {
         Schema::create('absensis', function (Blueprint $table) {
             $table->id();
+            $table->foreignId('karyawan_id')->nullable()->constrained('karyawans')->onDelete('set null');
+            $table->string('nip', 50)->nullable();
+            $table->string('pin', 50)->nullable();
+            $table->string('jabatan', 100)->nullable();
+            $table->string('departemen', 100)->nullable();
+            $table->string('kantor', 100)->nullable();
+            $table->dateTime('tanggal_scan')->nullable();
+            $table->string('sn', 100)->nullable();
+            $table->string('mesin', 100)->nullable();
+            $table->string('workcode', 50)->nullable();
+            $table->enum('io', ['Masuk', 'Keluar'])->nullable();
             $table->timestamps();
         });
     }

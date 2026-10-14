@@ -13,6 +13,8 @@ return new class extends Migration
     {
         Schema::create('metode_bayars', function (Blueprint $table) {
             $table->id();
+            $table->string('kode_pembayaran', 50)->unique();
+            $table->string('metode_pembayaran', 100);
             $table->timestamps();
         });
     }

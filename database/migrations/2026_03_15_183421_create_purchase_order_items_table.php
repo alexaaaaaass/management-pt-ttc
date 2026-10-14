@@ -20,10 +20,16 @@ return new class extends Migration
       ->cascadeOnDelete();
     $table->foreignId('item_id')->constrained('master_items');
 
-            // $table->integer('qty');
+            $table->integer('qty_pr')->nullable();
+            $table->integer('qty_po')->nullable();
+            $table->integer('qty_konversi')->nullable();
+            $table->decimal('price', 15, 2)->default(0.00);
+            $table->decimal('discount', 5, 2)->default(0.00);
+            $table->decimal('total', 15, 2)->default(0.00);
             $table->string('satuan')->nullable();
             $table->date('eta')->nullable();
             $table->text('catatan')->nullable();
+            $table->decimal('qty_received', 18, 2)->default(0.00);
 
             $table->timestamps();
         });

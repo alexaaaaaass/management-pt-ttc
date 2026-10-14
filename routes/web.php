@@ -37,6 +37,16 @@ Route::get(
     [SalesOrderPdfController::class, 'download']
 )->name('sales-order.download');
 
+Route::get(
+    '/surat-jalan/{suratJalan}/preview',
+    [\App\Http\Controllers\SuratJalanPdfController::class, 'preview']
+)->name('surat-jalan.preview');
+
+Route::get(
+    '/surat-jalan/{suratJalan}/download',
+    [\App\Http\Controllers\SuratJalanPdfController::class, 'download']
+)->name('surat-jalan.download');
+
 Route::get('/dashboard', function () {
     return view('dashboard');
 })->middleware(['auth', 'verified'])->name('dashboard');

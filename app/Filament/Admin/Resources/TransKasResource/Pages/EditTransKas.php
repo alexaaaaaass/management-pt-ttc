@@ -3,8 +3,10 @@
 namespace App\Filament\Admin\Resources\TransKasResource\Pages;
 
 use App\Filament\Admin\Resources\TransKasResource;
+use App\Services\Finance\TreasuryService;
 use Filament\Actions;
 use Filament\Resources\Pages\EditRecord;
+use Illuminate\Database\Eloquent\Model;
 
 class EditTransKas extends EditRecord
 {
@@ -13,13 +15,13 @@ class EditTransKas extends EditRecord
     protected function getHeaderActions(): array
     {
         return [
-            Actions\DeleteAction::make(),
+            Actions\DeleteAction::make()
+                ->using(fn ($record) => app(TreasuryService::class)->deleteKas($record)),
         ];
     }
-//     public function mount($record): void
-// {
-//     parent::mount($record);
 
-//     dd($this->record->tipe_transaksi);
-// }
+    protected function handleRecordUpdate(Model $record, array $data): Model
+    {
+        return app(TreasuryService::class)->updateKas($record, $data);
+    }
 }
