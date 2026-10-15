@@ -31,6 +31,7 @@ public static function form(Form $form): Form
                         ->relationship('spk', 'no_spk')
                         ->searchable()
                         ->preload()
+                        ->reactive()
                         ->required(),
 
                     Forms\Components\Hidden::make('kode_packaging'),
@@ -49,10 +50,34 @@ public static function form(Form $form): Form
                             'label_kuning' => 'Label Kuning',
                             'blokir' => 'Blokir',
                         ])
+                        ->default('barang_hasil_baik')
                         ->required(),
 
                     Forms\Components\DatePicker::make('tgl_transfer')
+                        ->default(now())
                         ->required(),
+
+                    Forms\Components\Section::make('Informasi Kebutuhan SPK')
+                        ->schema([
+                            Forms\Components\Placeholder::make('info_order_qty')
+                                ->label('Target Qty Order')
+                                ->content(fn ($get) => optional(\App\Models\MasterSpk::find($get('spk_id')))->order_qty ? number_format(\App\Models\MasterSpk::find($get('spk_id'))->order_qty, 0, ',', '.') . ' pcs' : '-'),
+
+                            Forms\Components\Placeholder::make('info_already_packed')
+                                ->label('Sudah Ter-packing (Hasil Baik)')
+                                ->content(fn ($get) => optional(\App\Models\MasterSpk::find($get('spk_id')))->total_good_packed !== null ? number_format(\App\Models\MasterSpk::find($get('spk_id'))->total_good_packed, 0, ',', '.') . ' pcs' : '-'),
+
+                            Forms\Components\Placeholder::make('info_sisa')
+                                ->label('Sisa Target Belum Packing')
+                                ->content(function ($get) {
+                                    $spk = \App\Models\MasterSpk::find($get('spk_id'));
+                                    if (!$spk) return '-';
+                                    $sisa = max(0, $spk->order_qty - $spk->total_good_packed);
+                                    return number_format($sisa, 0, ',', '.') . ' pcs';
+                                }),
+                        ])
+                        ->columns(3)
+                        ->visible(fn ($get) => filled($get('spk_id'))),
 
                 ])
                 ->columns(2),
@@ -217,7 +242,8 @@ public static function form(Form $form): Form
                 Tables\Actions\EditAction::make(),
 
                 Tables\Actions\DeleteAction::make()
-                    ->requiresConfirmation(),
+                    ->requiresConfirmation()
+                    ->using(fn ($record) => app(\App\Services\Production\ProductionService::class)->deletePackaging($record)),
 
             ])
         ])

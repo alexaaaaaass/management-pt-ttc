@@ -9,35 +9,25 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('invoices', function (Blueprint $table) {
-
             $table->id();
-
             $table->string('kode_invoice')->unique();
-
-            $table->foreignId('surat_jalan_id')
-                ->constrained()
-                ->cascadeOnDelete();
-
+            $table->foreignId('surat_jalan_id')->constrained('surat_jalans')->cascadeOnDelete();
+            $table->foreignId('customer_id')->nullable()->constrained('customers');
+            $table->foreignId('sales_order_id')->nullable()->constrained('sales_orders');
+            $table->string('no_po_customer', 100)->nullable();
             $table->date('tanggal_invoice');
-
             $table->date('tanggal_jatuh_tempo');
-
-            $table->double('subtotal')->default(0);
-
-            $table->double('diskon')->default(0);
-
-            $table->double('ppn')->default(0);
-
-            $table->double('ongkir')->default(0);
-
-            $table->double('uang_muka')->default(0);
-
-            $table->double('grand_total')->default(0);
-
-            $table->double('sisa_tagihan')->default(0);
-
+            $table->bigInteger('subtotal')->default(0);
+            $table->decimal('diskon', 5, 2)->default(0.00);
+            $table->decimal('ppn', 5, 2)->default(0.00);
+            $table->bigInteger('ongkir')->default(0);
+            $table->bigInteger('uang_muka')->default(0);
+            $table->bigInteger('grand_total')->default(0);
+            $table->decimal('total_payment', 18, 2)->default(0.00);
+            $table->bigInteger('sisa_tagihan')->default(0);
+            $table->enum('status', ['Draft', 'Unpaid', 'Partial', 'Paid', 'Cancelled'])->default('Draft');
+            $table->boolean('is_printed')->default(false);
             $table->text('catatan')->nullable();
-
             $table->timestamps();
         });
     }

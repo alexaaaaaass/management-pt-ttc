@@ -3,45 +3,40 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Carbon\Carbon;
+use App\Services\Finance\InvoiceService;
 
 class Invoice extends Model
 {
     protected $fillable = [
         'kode_invoice',
-        'order_id',
         'surat_jalan_id',
         'customer_id',
         'sales_order_id',
         'no_po_customer',
         'tanggal_invoice',
         'tanggal_jatuh_tempo',
-        'dibuat_oleh',
-        'kepada',
         'subtotal',
         'diskon',
-        'potongan',
         'ppn',
         'ongkir',
         'uang_muka',
         'grand_total',
-        'sisa_tagihan',
-        'catatan',
-        'terms_conditions',
-        'bank_accounts',
-        'terbilang_override',
         'total_payment',
+        'sisa_tagihan',
         'status',
         'is_printed',
+        'catatan',
     ];
 
     protected $casts = [
         'subtotal' => 'float',
         'diskon' => 'float',
-        'potongan' => 'float',
         'ppn' => 'float',
         'ongkir' => 'float',
         'uang_muka' => 'float',
         'grand_total' => 'float',
+        'total_payment' => 'float',
         'sisa_tagihan' => 'float',
     ];
 
@@ -54,6 +49,14 @@ class Invoice extends Model
     public function suratJalan()
     {
         return $this->belongsTo(SuratJalan::class);
+    }
+
+    public function payments()
+    {
+        return $this->hasMany(
+            InvPayment::class,
+            'invoice_id'
+        );
     }
 
     public function customer()
@@ -124,49 +127,27 @@ class Invoice extends Model
 
     /*
     |--------------------------------------------------------------------------
-    | AUTO GENERATE INVOICE
+    | BOOTED & MODEL HOOKS
     |--------------------------------------------------------------------------
     */
 
     protected static function booted()
     {
         static::creating(function ($model) {
-            if (empty($model->kode_invoice)) {
-                $count = self::count() + 1;
-                $model->kode_invoice =
-                    str_pad($count, 6, '0', STR_PAD_LEFT)
-                    . '/INV/'
-                    . now()->format('mY');
+            if (empty($model->kode_invoice) || $model->kode_invoice === 'AUTO') {
+                $model->kode_invoice = app(InvoiceService::class)->generateKodeInvoice();
+            }
+        });
+
+        static::deleting(function ($model) {
+            if ($model->payments()->exists()) {
+                throw new \Exception('Tidak dapat menghapus Invoice karena sudah memiliki riwayat pembayaran.');
             }
         });
     }
 
-     public function refreshPayment(): void
+    public function refreshPayment(): void
     {
-        $totalPayment = $this->payments()
-            ->sum('nominal_bayar');
-
-        $this->total_payment = $totalPayment;
-
-        $this->sisa_tagihan =
-            max(
-                0,
-                $this->grand_total - $totalPayment
-            );
-
-        if ($totalPayment <= 0) {
-
-            $this->status = 'Unpaid';
-
-        } elseif ($totalPayment < $this->grand_total) {
-
-            $this->status = 'Partial';
-
-        } else {
-
-            $this->status = 'Paid';
-        }
-
-        $this->saveQuietly();
+        app(InvoiceService::class)->refreshInvoicePayment($this);
     }
 }

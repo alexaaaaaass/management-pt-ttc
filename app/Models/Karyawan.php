@@ -9,6 +9,8 @@ class Karyawan extends Model
 {
     use HasFactory;
 
+    protected $table = 'karyawans';
+
     protected $fillable = [
         'nama',
         'nip',
@@ -44,19 +46,71 @@ class Karyawan extends Model
 
         'nama_bpjs',
         'bpjs_kesehatan',
-        'bpjs_ketenagakerjaan'
+        'bpjs_ketenagakerjaan',
+    ];
+
+    protected $casts = [
+        'tanggal_lahir'         => 'date',
+        'tanggal_masuk_kerja'   => 'date',
+        'tangal_akhir_kontrak'  => 'date',
+        'gaji_pokok'            => 'float',
+        'tunjangan_kompetensi'  => 'float',
+        'tunjangan_jabatan'     => 'float',
+        'tunjangan_intensif'    => 'float',
     ];
 
     public function departemen()
     {
         return $this->belongsTo(MasterDepartemen::class, 'departemen_id');
     }
+
+    public function gajis()
+    {
+        return $this->hasMany(Gaji::class, 'karyawan_id');
+    }
+
+    public function lemburs()
+    {
+        return $this->hasMany(Lembur::class, 'karyawan_id');
+    }
+
+    public function cutis()
+    {
+        return $this->hasMany(Cuti::class, 'karyawan_id');
+    }
+
+    public function izins()
+    {
+        return $this->hasMany(Izin::class, 'karyawan_id');
+    }
+
+    public function absensis()
+    {
+        return $this->hasMany(Absensi::class, 'karyawan_id');
+    }
+
+    public function bonuses()
+    {
+        return $this->hasMany(BonusKaryawan::class, 'karyawan_id');
+    }
+
+    public function potonganTunjangans()
+    {
+        return $this->hasMany(PotTunjangan::class, 'karyawan_id');
+    }
+
+    public function pinjamans()
+    {
+        return $this->hasMany(PengPinjaman::class, 'karyawan_id');
+    }
+
     public function coas()
-{
-    return $this->hasMany(MasterCOA::class, 'karyawan_id');
-}
-public function coaClasses()
-{
-    return $this->hasMany(CoaClass::class, 'karyawan_id');
-}
+    {
+        return $this->hasMany(MasterCOA::class, 'karyawan_id');
+    }
+
+    public function coaClasses()
+    {
+        return $this->hasMany(CoaClass::class, 'karyawan_id');
+    }
 }

@@ -26,8 +26,11 @@ return new class extends Migration
             $table->date('tanggal_entri');
 
             $table->enum('proses_printing', [
-                'potong',
-                'printing'
+                'color-printing',
+                'cold-foil',
+                'spot-uv',
+                'furnish-uv',
+                'drip-off'
             ]);
 
             $table->enum('tahap_printing', [
@@ -39,6 +42,7 @@ return new class extends Migration
             $table->integer('hasil_baik')->default(0);
             $table->integer('hasil_rusak')->default(0);
             $table->integer('semi_waste')->default(0);
+            $table->foreignId('error_production_id')->nullable()->constrained('error_productions')->nullOnDelete();
 
             $table->enum('note_waste', [
                 'CETAK_LUNTUR',

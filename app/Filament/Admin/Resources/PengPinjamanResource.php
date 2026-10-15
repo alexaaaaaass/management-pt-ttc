@@ -48,12 +48,19 @@ class PengPinjamanResource extends Resource
                     ->label('Nilai Pinjaman')
                     ->numeric()
                     ->prefix('Rp')
-                    ->required(),
+                    ->minValue(1)
+                    ->required()
+                    ->live(onBlur: true)
+                    ->afterStateUpdated(fn ($state, callable $get, callable $set) => self::hitungCicilan($get, $set)),
 
                 Forms\Components\TextInput::make('jangka_waktu')
                     ->label('Jangka Waktu (Bulan)')
                     ->numeric()
-                    ->required(),
+                    ->minValue(1)
+                    ->default(1)
+                    ->required()
+                    ->live(onBlur: true)
+                    ->afterStateUpdated(fn ($state, callable $get, callable $set) => self::hitungCicilan($get, $set)),
 
                 Forms\Components\TextInput::make('cicilan_per_bulan')
                     ->label('Cicilan Per Bulan')
@@ -67,6 +74,16 @@ class PengPinjamanResource extends Resource
                     ->columnSpanFull(),
 
             ]);
+    }
+
+    public static function hitungCicilan(callable $get, callable $set): void
+    {
+        $nilai = (float) ($get('nilai_pinjaman') ?? 0);
+        $waktu = (int) ($get('jangka_waktu') ?? 0);
+
+        if ($nilai > 0 && $waktu > 0) {
+            $set('cicilan_per_bulan', round($nilai / $waktu, 2));
+        }
     }
 
     public static function table(Table $table): Table

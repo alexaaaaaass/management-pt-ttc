@@ -4,6 +4,7 @@ namespace App\Filament\Admin\Resources;
 
 use App\Filament\Admin\Resources\TransKasResource\Pages;
 use App\Models\TransKas;
+use App\Services\Finance\TreasuryService;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
@@ -22,70 +23,46 @@ class TransKasResource extends Resource
     protected static ?string $model = TransKas::class;
     protected static ?string $navigationGroup = 'Finance';
     protected static ?int $navigationSort = 8;
-    protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
+    protected static ?string $navigationIcon = 'heroicon-o-banknotes';
+
+    public static function getNavigationLabel(): string
+    {
+        return 'Trans Kas';
+    }
 
     public static function form(Form $form): Form
     {
         return $form
             ->schema([
-               Section::make('Transaksi Kas')
-
-    ->extraAttributes(fn ($get) => [
-
-        'class' =>
-
-            $get('tipe_transaksi') === 'KAS_MASUK'
-
-                ?
-
-                '
-                border-s-8
-                border-success-500
-                dark:border-success-400
-
-                rounded-2xl
-
-                bg-white
-                dark:bg-gray-900
-                '
-
-                :
-
-                '
-                border-s-8
-                border-danger-500
-                dark:border-danger-400
-
-                rounded-2xl
-
-                bg-white
-                dark:bg-gray-900
-                '
-
-    ])
+                Section::make('Transaksi Kas')
+                    ->extraAttributes(fn ($get) => [
+                        'class' => $get('tipe_transaksi') === 'KAS_MASUK'
+                            ? 'border-s-8 border-success-500 dark:border-success-400 rounded-2xl bg-white dark:bg-gray-900'
+                            : 'border-s-8 border-danger-500 dark:border-danger-400 rounded-2xl bg-white dark:bg-gray-900'
+                    ])
                     ->schema([
-
                         Placeholder::make('tipe_transaksi_placeholder')
                             ->label('Tipe Transaksi')
                             ->content(fn ($get) => 
                                 $get('tipe_transaksi') === 'KAS_MASUK'
-                                    ? '🟢 Kas Masuk'
-                                    : ($get('tipe_transaksi') === 'KAS_KELUAR' ? '🔴 Kas Keluar' : '—')
+                                    ? '🟢 Kas Masuk (Penerimaan Tunai)'
+                                    : ($get('tipe_transaksi') === 'KAS_KELUAR' ? '🔴 Kas Keluar (Pengeluaran Tunai)' : '—')
                             ),
 
                         Grid::make(2)
                             ->schema([
-                                // Tambah ->live() di sini agar Placeholder di atas ikut berubah secara real-time
-                        Hidden::make('tipe_transaksi')
-    ->dehydrated(true),
+                                Hidden::make('tipe_transaksi')
+                                    ->dehydrated(true),
                                 TextInput::make('kode_transaksi')
+                                    ->label('Kode Transaksi')
                                     ->disabled()
                                     ->default('AUTO'),
                             ]),
 
                         Grid::make(2)
                             ->schema([
-                                TextInput::make('gudang'),
+                                TextInput::make('gudang')
+                                    ->default('UGRMS'),
                                 DatePicker::make('tanggal_transaksi')
                                     ->default(now())
                                     ->required(),
@@ -97,6 +74,7 @@ class TransKasResource extends Resource
                                     ->default(now()->format('F Y')),
 
                                 Select::make('karyawan_id')
+                                    ->label('Karyawan / Penanggung Jawab')
                                     ->relationship('karyawan', 'nama')
                                     ->searchable()
                                     ->preload(),
@@ -104,26 +82,40 @@ class TransKasResource extends Resource
 
                         Grid::make(2)
                             ->schema([
-                                Select::make('account_bank_id')
-                                    ->label('Account Bank')
-                                    ->relationship('accountBank', 'nama_akun')
-                                    ->searchable()
-                                    ->preload(),
-
                                 Select::make('account_kas_id')
-                                    ->label('Account Kas')
+                                    ->label(fn ($get) => $get('tipe_transaksi') === 'KAS_MASUK'
+                                        ? 'Akun Kas (Penerima Masuk)'
+                                        : 'Akun Kas (Pengeluaran)'
+                                    )
                                     ->relationship('accountKas', 'nama_akun')
+                                    ->searchable()
+                                    ->preload()
+                                    ->required(),
+
+                                Select::make('account_bank_id')
+                                    ->label(fn ($get) => $get('tipe_transaksi') === 'KAS_MASUK'
+                                        ? 'Akun Lawan / Sumber Dana (Bank/Modal)'
+                                        : 'Akun Lawan / Tujuan Setoran (Bank/Beban)'
+                                    )
+                                    ->relationship('accountBank', 'nama_akun')
                                     ->searchable()
                                     ->preload(),
                             ]),
 
                         Grid::make(2)
                             ->schema([
-                                TextInput::make('customer_id')
-                                    ->numeric(),
+                                Select::make('customer_id')
+                                    ->label('Customer (Opsional)')
+                                    ->relationship('customer', 'nama_customer')
+                                    ->searchable()
+                                    ->preload()
+                                    ->placeholder('Pilih Customer jika ada'),
 
                                 TextInput::make('nominal')
+                                    ->label('Nominal Transaksi')
                                     ->numeric()
+                                    ->prefix('Rp')
+                                    ->minValue(1)
                                     ->required(),
                             ]),
 
@@ -139,6 +131,7 @@ class TransKasResource extends Resource
 
                         Textarea::make('keterangan')
                             ->rows(4)
+                            ->placeholder('Keterangan transaksi kas...'),
                     ])
             ]);
     }
@@ -148,30 +141,40 @@ class TransKasResource extends Resource
         return $table
             ->columns([
                 Tables\Columns\TextColumn::make('kode_transaksi')
-                    ->searchable(),
+                    ->label('Kode')
+                    ->searchable()
+                    ->badge()
+                    ->color('primary'),
 
                 Tables\Columns\BadgeColumn::make('tipe_transaksi')
+                    ->label('Tipe')
                     ->colors([
                         'success' => 'KAS_MASUK',
-                        'danger' => 'KAS_KELUAR',
+                        'danger'  => 'KAS_KELUAR',
                     ]),
 
                 Tables\Columns\TextColumn::make('tanggal_transaksi')
-                    ->date('d/m/Y'),
+                    ->label('Tanggal')
+                    ->date('d/m/Y')
+                    ->sortable(),
 
                 Tables\Columns\TextColumn::make('nominal')
-                    ->money('IDR'),
-
-                Tables\Columns\TextColumn::make('accountBank.nama_akun')
-                    ->label('Bank'),
+                    ->label('Nominal')
+                    ->money('IDR')
+                    ->sortable(),
 
                 Tables\Columns\TextColumn::make('accountKas.nama_akun')
-                    ->label('Kas'),
+                    ->label('Akun Kas')
+                    ->searchable(),
+
+                Tables\Columns\TextColumn::make('accountBank.nama_akun')
+                    ->label('Akun Lawan')
+                    ->searchable(),
 
                 Tables\Columns\BadgeColumn::make('status')
                     ->colors([
                         'success' => 'ACTIVE',
-                        'danger' => 'INACTIVE',
+                        'danger'  => 'INACTIVE',
                     ]),
             ])
             ->headerActions([
@@ -188,7 +191,10 @@ class TransKasResource extends Resource
                     ->url(fn () => static::getUrl('create', ['type' => 'KAS_KELUAR'])),
             ])
             ->actions([
+                Tables\Actions\ViewAction::make(),
                 Tables\Actions\EditAction::make(),
+                Tables\Actions\DeleteAction::make()
+                    ->using(fn ($record) => app(TreasuryService::class)->deleteKas($record)),
             ]);
     }
 
@@ -200,9 +206,9 @@ class TransKasResource extends Resource
     public static function getPages(): array
     {
         return [
-            'index' => Pages\ListTransKas::route('/'),
+            'index'  => Pages\ListTransKas::route('/'),
             'create' => Pages\CreateTransKas::route('/create'),
-            'edit' => Pages\EditTransKas::route('/{record}/edit'),
+            'edit'   => Pages\EditTransKas::route('/{record}/edit'),
         ];
     }
 }

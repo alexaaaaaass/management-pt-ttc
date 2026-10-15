@@ -11,8 +11,13 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('mesin_finis', function (Blueprint $table) {
+        Schema::create('mesin_finishing', function (Blueprint $table) {
             $table->id();
+            $table->string('nama_mesin', 255);
+            $table->string('jenis_mesin', 255);
+            $table->integer('kapasitas')->nullable();
+            $table->string('proses', 255)->nullable();
+            $table->boolean('status')->default(true);
             $table->timestamps();
         });
     }
@@ -22,6 +27,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('mesin_finis');
+        Schema::dropIfExists('mesin_finishing');
     }
 };

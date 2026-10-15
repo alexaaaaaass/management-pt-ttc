@@ -9,14 +9,20 @@ class BonusKaryawan extends Model
 {
     use HasFactory;
 
-    protected $table = 'bonus_karyawan';
+    protected $table = 'bonus_karyawans';
 
     protected $fillable = [
         'kode_gudang',
         'karyawan_id',
         'tanggal_bonus',
+        'periode',
         'nilai_bonus',
         'keterangan',
+    ];
+
+    protected $casts = [
+        'tanggal_bonus' => 'date',
+        'nilai_bonus'   => 'float',
     ];
 
     public function karyawan()

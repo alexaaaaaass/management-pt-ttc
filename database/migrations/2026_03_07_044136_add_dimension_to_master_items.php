@@ -11,16 +11,13 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('master_printings', function (Blueprint $table) {
-            $table->id();
-            $table->string('nama_mesin');
-            $table->string('jenis_mesin');
-            $table->integer('kapasitas')->nullable();
-            $table->string('proses')->nullable();
-            $table->boolean('status')->default(true);
-            $table->timestamps();
-    
-});
+        Schema::table('master_items', function (Blueprint $table) {
+            $table->integer('qty')->nullable();
+            $table->decimal('panjang', 10, 2)->nullable();
+            $table->decimal('lebar', 10, 2)->nullable();
+            $table->decimal('tinggi', 10, 2)->nullable();
+            $table->decimal('berat', 10, 2)->nullable();
+        });
     }
 
     /**
@@ -29,7 +26,7 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('master_items', function (Blueprint $table) {
-            //
+            $table->dropColumn(['qty', 'panjang', 'lebar', 'tinggi', 'berat']);
         });
     }
 };

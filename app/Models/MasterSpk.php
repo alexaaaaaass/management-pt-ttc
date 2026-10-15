@@ -27,14 +27,20 @@ class MasterSpk extends Model
     'spesifikasi_kertas',
 ];
 
-    // 🔥 RELASI
+    // 🔥 RELASI LENGKAP STASIUN PRODUKSI
     public function salesOrder()
     {
         return $this->belongsTo(SalesOrder::class);
     }
-    public function packagings()
+
+    public function pracetaks()
     {
-        return $this->hasMany(Packaging::class, 'spk_id');
+        return $this->hasMany(PracetakProcess::class, 'spk_id');
+    }
+
+    public function diemakings()
+    {
+        return $this->hasMany(Diemaking::class, 'spk_id');
     }
 
     public function printings()
@@ -47,39 +53,94 @@ class MasterSpk extends Model
         return $this->hasMany(MasterFinishing::class, 'spk_id');
     }
 
+    public function packagings()
+    {
+        return $this->hasMany(Packaging::class, 'spk_id');
+    }
+
     public function suratJalans()
     {
         return $this->hasMany(SuratJalan::class, 'spk_id');
     }
 
-    public function getOnHandStockAttribute()
+    /*
+    |--------------------------------------------------------------------------
+    | ACCESSORS & HITUNGAN STOK
+    |--------------------------------------------------------------------------
+    */
+
+    public function getOrderQtyAttribute(): int
     {
-        $totalPackaging = $this->packagings()->sum('grand_total');
-
-        $totalKirim = $this->suratJalans()->sum('qty_pengiriman');
-
-        return $totalPackaging - $totalKirim;
+        return (int) ($this->salesOrder?->qty ?? 0);
     }
 
-    // 🔥 AUTO GENERATE NO SPK
-   protected static function booted()
-{
-    static::creating(function ($model) {
+    public function getTotalGoodPackedAttribute(): int
+    {
+        return (int) $this->packagings()
+            ->where('jenis_transfer', '!=', 'blokir')
+            ->sum('grand_total');
+    }
 
-        $so = SalesOrder::find($model->sales_order_id);
+    public function getTotalBlockedPackedAttribute(): int
+    {
+        return (int) $this->packagings()
+            ->where('jenis_transfer', 'blokir')
+            ->sum('grand_total');
+    }
 
-        if ($so) {
-            $model->tanggal_po = $so->tanggal_po;
+    public function getTotalShippedAttribute(): int
+    {
+        return (int) $this->suratJalans()->sum('qty_pengiriman');
+    }
+
+    public function getOnHandStockAttribute(): int
+    {
+        return max(0, $this->total_good_packed - $this->total_shipped);
+    }
+
+    public function getCompletionRateAttribute(): float
+    {
+        $orderQty = $this->order_qty;
+        if ($orderQty <= 0) {
+            return 0.0;
         }
 
-        $count = self::count() + 1;
-        $bulanTahun = Carbon::now()->format('mY');
+        return round(min(100.0, ($this->total_good_packed / $orderQty) * 100), 1);
+    }
 
-        $model->no_spk = str_pad($count, 4, '0', STR_PAD_LEFT)
-            . '/SPK-IK' . $model->kode_ik
-            . '/' . $bulanTahun;
-    });
-}
+    public function getProductionProgressAttribute(): array
+    {
+        return app(\App\Services\Production\ProductionService::class)->getProductionProgress($this);
+    }
+
+    // 🔥 MODEL HOOKS & VALIDASI PROTEKSI
+    protected static function booted()
+    {
+        static::creating(function ($model) {
+            if (empty($model->no_spk)) {
+                $model->no_spk = app(\App\Services\Production\ProductionService::class)->generateNoSpk($model->kode_ik ?: '01');
+            }
+
+            if (empty($model->tanggal_po) && $model->sales_order_id) {
+                $so = SalesOrder::find($model->sales_order_id);
+                if ($so) {
+                    $model->tanggal_po = $so->tanggal_po;
+                }
+            }
+        });
+
+        static::deleting(function (MasterSpk $spk) {
+            if ($spk->suratJalans()->exists()) {
+                throw new \Exception("SPK {$spk->no_spk} tidak dapat dihapus karena sudah memiliki riwayat Surat Jalan.");
+            }
+            if ($spk->packagings()->exists()) {
+                throw new \Exception("SPK {$spk->no_spk} tidak dapat dihapus karena sudah ada hasil produksi packaging.");
+            }
+            if ($spk->finishings()->exists() || $spk->printings()->exists() || $spk->pracetaks()->exists()) {
+                throw new \Exception("SPK {$spk->no_spk} tidak dapat dihapus karena sudah masuk antrean proses kerja lantai pabrik.");
+            }
+        });
+    }
 
     
 }

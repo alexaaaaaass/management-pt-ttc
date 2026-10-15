@@ -14,100 +14,138 @@ use Carbon\Carbon;
 class CutiResource extends Resource
 {
     protected static ?string $model = Cuti::class;
-     protected static ?string $navigationGroup = 'HRD';
-    protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
+    protected static ?string $navigationGroup = 'HRD';
+    protected static ?string $navigationIcon = 'heroicon-o-calendar';
     protected static ?int $navigationSort = 7;
 
-  public static function form(Form $form): Form
-{
-    return $form->schema([
+    public static function getNavigationLabel(): string
+    {
+        return 'Cuti';
+    }
 
-        Forms\Components\Section::make('Pengajuan Cuti')
-            ->schema([
+    public static function form(Form $form): Form
+    {
+        return $form->schema([
+            Forms\Components\Section::make('Pengajuan Cuti')
+                ->schema([
+                    Forms\Components\Select::make('karyawan_id')
+                        ->label('Karyawan')
+                        ->relationship('karyawan', 'nama')
+                        ->searchable()
+                        ->preload()
+                        ->required(),
 
-                Forms\Components\Select::make('karyawan_id')
-                    ->relationship('karyawan', 'nama')
-                    ->searchable()
-                    ->required(),
+                    Forms\Components\Select::make('jenis_cuti')
+                        ->label('Jenis Cuti')
+                        ->options([
+                            'Cuti Tahunan'   => 'Cuti Tahunan',
+                            'Cuti Menikah'   => 'Cuti Menikah',
+                            'Cuti Melahirkan'=> 'Cuti Melahirkan',
+                            'Cuti Sakit'     => 'Cuti Sakit',
+                            'Cuti Khusus'    => 'Cuti Khusus',
+                        ])
+                        ->searchable()
+                        ->required(),
 
-            Forms\Components\Select::make('jenis_cuti')
-    ->label('Jenis Cuti')
-    ->options([
-        'Cuti Tahunan' => 'Cuti Tahunan',
-        'Cuti Menikah' => 'Cuti Menikah',
-        'Cuti Melahirkan' => 'Cuti Melahirkan',
-        'Cuti Sakit' => 'Cuti Sakit',
-        'Cuti Khusus' => 'Cuti Khusus',
-    ])
-    ->searchable()
-    ->required(),
+                    Forms\Components\DatePicker::make('tanggal_mulai')
+                        ->label('Tanggal Mulai')
+                        ->required()
+                        ->live()
+                        ->afterStateUpdated(fn ($state, callable $set, callable $get) => self::hitungHariCuti($get, $set)),
 
-               Forms\Components\DatePicker::make('tanggal_mulai')
-    ->required()
-    ->live(),
+                    Forms\Components\DatePicker::make('tanggal_selesai')
+                        ->label('Tanggal Selesai')
+                        ->required()
+                        ->live()
+                        ->afterStateUpdated(fn ($state, callable $set, callable $get) => self::hitungHariCuti($get, $set)),
 
-Forms\Components\DatePicker::make('tanggal_selesai')
-    ->required()
-    ->live()
-    ->afterStateUpdated(function ($state, callable $set, callable $get) {
+                    Forms\Components\TextInput::make('jumlah_hari')
+                        ->label('Jumlah Hari')
+                        ->disabled()
+                        ->dehydrated()
+                        ->numeric()
+                        ->default(0),
 
-        if (!$get('tanggal_mulai') || !$state) {
+                    Forms\Components\FileUpload::make('lampiran')
+                        ->directory('cuti')
+                        ->image()
+                        ->downloadable()
+                        ->openable(),
+
+                    Forms\Components\Textarea::make('keterangan')
+                        ->label('Keterangan Cuti')
+                        ->columnSpanFull(),
+                ])
+                ->columns(2),
+        ]);
+    }
+
+    public static function hitungHariCuti(callable $get, callable $set): void
+    {
+        $mulai = $get('tanggal_mulai');
+        $selesai = $get('tanggal_selesai');
+
+        if (!$mulai || !$selesai) {
             return;
         }
 
-        $jumlahHari = Carbon::parse($get('tanggal_mulai'))
-            ->diffInDays(Carbon::parse($state)) + 1;
+        $startDate = Carbon::parse($mulai);
+        $endDate = Carbon::parse($selesai);
 
-        $set('jumlah_hari', $jumlahHari);
-    }),
+        if ($endDate->lessThan($startDate)) {
+            $set('jumlah_hari', 0);
+            return;
+        }
 
-Forms\Components\TextInput::make('jumlah_hari')
-    ->disabled()
-    ->dehydrated()
-    ->numeric(),
+        $set('jumlah_hari', $startDate->diffInDays($endDate) + 1);
+    }
 
-                Forms\Components\FileUpload::make('lampiran')
-                    ->directory('cuti')
-                    ->image()
-                    ->downloadable()
-                    ->openable(),
+    public static function table(Table $table): Table
+    {
+        return $table
+            ->columns([
+                Tables\Columns\TextColumn::make('karyawan.nama')
+                    ->label('Karyawan')
+                    ->searchable()
+                    ->sortable()
+                    ->weight('bold'),
 
-                Forms\Components\Textarea::make('keterangan')
-                    ->columnSpanFull(),
+                Tables\Columns\BadgeColumn::make('jenis_cuti')
+                    ->label('Jenis Cuti')
+                    ->colors([
+                        'primary' => 'Cuti Tahunan',
+                        'success' => 'Cuti Menikah',
+                        'info'    => 'Cuti Melahirkan',
+                        'danger'  => 'Cuti Sakit',
+                        'warning' => 'Cuti Khusus',
+                    ]),
 
+                Tables\Columns\TextColumn::make('tanggal_mulai')
+                    ->label('Tgl Mulai')
+                    ->date('d/m/Y')
+                    ->sortable(),
+
+                Tables\Columns\TextColumn::make('tanggal_selesai')
+                    ->label('Tgl Selesai')
+                    ->date('d/m/Y')
+                    ->sortable(),
+
+                Tables\Columns\TextColumn::make('jumlah_hari')
+                    ->label('Hari')
+                    ->suffix(' Hari')
+                    ->alignRight()
+                    ->weight('bold'),
+
+                Tables\Columns\TextColumn::make('keterangan')
+                    ->label('Keterangan')
+                    ->limit(40),
             ])
-            ->columns(2),
-    ]);
-}
-
-public static function getNavigationLabel(): string
-{
-    return 'Cuti';
-}
-    
-    
-  public static function table(Table $table): Table
-{
-    return $table
-        ->columns([
-
-            Tables\Columns\TextColumn::make('karyawan.nama')
-                ->label('Karyawan')
-                ->searchable(),
-
-            Tables\Columns\TextColumn::make('tanggal_mulai')
-                ->label('Tanggal Cuti')
-                ->date(),
-
-           Tables\Columns\TextColumn::make('jenis_cuti')
-    ->label('Jenis Cuti'),  
-        
-            Tables\Columns\TextColumn::make('keterangan')
-                ->limit(50),
-
-          
-        ]);
-}
+            ->defaultSort('id', 'desc')
+            ->actions([
+                Tables\Actions\EditAction::make(),
+                Tables\Actions\DeleteAction::make(),
+            ]);
+    }
 
     public static function getRelations(): array
     {
@@ -117,9 +155,9 @@ public static function getNavigationLabel(): string
     public static function getPages(): array
     {
         return [
-            'index' => Pages\ListCutis::route('/'),
+            'index'  => Pages\ListCutis::route('/'),
             'create' => Pages\CreateCuti::route('/create'),
-            'edit' => Pages\EditCuti::route('/{record}/edit'),
+            'edit'   => Pages\EditCuti::route('/{record}/edit'),
         ];
     }
 }

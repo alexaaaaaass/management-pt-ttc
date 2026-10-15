@@ -4,8 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Carbon\Carbon;
-
+use App\Services\Subcontract\SubcontractService;
 
 class SubcountOut extends Model
 {
@@ -35,73 +34,23 @@ class SubcountOut extends Model
         return $this->hasMany(SubcountOutItem::class);
     }
 
- protected static function booted()
-{
-    // Generate nomor surat jalan subcount
-    static::creating(function ($model) {
+    public function subcountInItems()
+    {
+        return $this->hasMany(SubcountInItem::class);
+    }
 
-        $bulanTahun = Carbon::now()->format('m-Y');
-
-        $last = self::whereYear('created_at', Carbon::now()->year)
-            ->whereMonth('created_at', Carbon::now()->month)
-            ->latest('id')
-            ->first();
-
-        if ($last && $last->surat_jalan_subcount) {
-
-            $lastNumber = (int) substr(
-                $last->surat_jalan_subcount,
-                -6
-            );
-
-            $nextNumber = $lastNumber + 1;
-
-        } else {
-
-            $nextNumber = 1;
-        }
-
-        $model->surat_jalan_subcount =
-            'SUB-OUT/' .
-            $bulanTahun .
-            '/' .
-            str_pad($nextNumber, 6, '0', STR_PAD_LEFT);
-    });
-
-
-    // Update stock material
-    static::created(function ($subcount) {
-
-        foreach ($subcount->items as $item) {
-
-            if ($item->sumber_item == 'material') {
-
-                $stock = MaterialStock::where(
-                    'item_id',
-                    $item->item_id
-                )->first();
-
-                if ($stock) {
-
-                    $stock->decrement(
-                        'on_hand',
-                        $item->qty
-                    );
-
-                    $stock->increment(
-                        'allocation',
-                        $item->qty
-                    );
-                }
+    protected static function booted()
+    {
+        static::creating(function ($model) {
+            if (empty($model->surat_jalan_subcount) || $model->surat_jalan_subcount === 'AUTO') {
+                $model->surat_jalan_subcount = app(SubcontractService::class)->generateSubcountOutNumber();
             }
-        }
-    });
-}
+        });
 
-public function subcountInItems()
-{
-    return $this->hasMany(SubcountInItem::class);
-}
-
-
+        static::deleting(function ($model) {
+            if ($model->subcountInItems()->exists()) {
+                throw new \Exception('Tidak dapat menghapus Subcount Out karena sudah memiliki catatan penerimaan (Subcount In).');
+            }
+        });
+    }
 }

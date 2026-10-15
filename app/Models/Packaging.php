@@ -78,5 +78,17 @@ class Packaging extends Model
             $model->total_satuan_penuh
             + $model->total_satuan_sisa;
     });
+
+    static::deleting(function (Packaging $model) {
+        $spk = $model->spk;
+        if ($spk && $model->jenis_transfer !== 'blokir') {
+            $currentGood = $spk->total_good_packed;
+            $totalShipped = $spk->total_shipped;
+
+            if (($currentGood - $model->grand_total) < $totalShipped) {
+                throw new \Exception("Packaging {$model->kode_packaging} tidak dapat dihapus karena barang sudah terkirim via Surat Jalan (Total terkirim: {$totalShipped} pcs, sisa stok jika dihapus: " . ($currentGood - $model->grand_total) . " pcs).");
+            }
+        }
+    });
 }
 }

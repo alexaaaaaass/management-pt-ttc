@@ -26,6 +26,8 @@ return new class extends Migration
     $table->string('nama_barang')->nullable();
     $table->text('deskripsi')->nullable();
     $table->text('spesifikasi_kertas')->nullable();
+    $table->string('gramasi', 100)->nullable();
+    $table->string('tebal_kertas', 100)->nullable();
 
     // UP
     $table->string('up_satu')->nullable();
@@ -43,6 +45,7 @@ return new class extends Migration
     $table->string('berat_kotor')->nullable();
     $table->string('berat_bersih')->nullable();
 
+    $table->softDeletes();
     $table->timestamps();
 });
     }

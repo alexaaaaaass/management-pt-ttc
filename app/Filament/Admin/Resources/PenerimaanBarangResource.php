@@ -247,9 +247,14 @@ class PenerimaanBarangResource extends Resource
     ->url(fn (PenerimaanBarang $record) => route('pb.download', [
         'id' => $record->id,
     ])),
-        Tables\Actions\EditAction::make(),
 
-        Tables\Actions\DeleteAction::make(),
+        Tables\Actions\EditAction::make()
+            ->disabled(fn ($record) => ! app(\App\Services\PurchaseOrder\PenerimaanBarangService::class)->canModify($record))
+            ->tooltip(fn ($record) => ! app(\App\Services\PurchaseOrder\PenerimaanBarangService::class)->canModify($record) ? 'Penerimaan Barang terkunci karena sudah memiliki Retur Eksternal' : null),
+
+        Tables\Actions\DeleteAction::make()
+            ->disabled(fn ($record) => ! app(\App\Services\PurchaseOrder\PenerimaanBarangService::class)->canModify($record))
+            ->tooltip(fn ($record) => ! app(\App\Services\PurchaseOrder\PenerimaanBarangService::class)->canModify($record) ? 'Tidak dapat dihapus karena sudah memiliki Retur Eksternal terkait' : null),
 
     ])
 

@@ -6,7 +6,7 @@
 
     $sj = $invoice->suratJalan;
 
-    $so = $sj?->salesOrder;
+$paid = (float) ($invoice->total_payment ?? ($invoice->uang_muka + $invoice->payments->sum('nominal_bayar')));
 
     $spk = $sj?->spk;
 
@@ -26,6 +26,26 @@
 
         {{-- HEADER SECTION --}}
         <x-filament::section>
+            <div class="flex flex-col md:flex-row md:items-start md:justify-between gap-6">
+                {{-- Info Utama --}}
+                <div class="space-y-3">
+                    <div class="flex flex-wrap items-center gap-3">
+                        <h1 class="text-2xl md:text-3xl font-bold tracking-tight text-gray-900 dark:text-white">
+                            Invoice {{ $invoice->kode_invoice }}
+                        </h1>
+                        <x-filament::badge
+                            :color="match($invoice->status){
+                                'Paid' => 'success',
+                                'Partial' => 'warning',
+                                'Unpaid' => 'danger',
+                                'Cancelled' => 'gray',
+                                default => 'gray',
+                            }"
+                            size="md"
+                        >
+                            {{ strtoupper($invoice->status ?? 'DRAFT') }}
+                        </x-filament::badge>
+                    </div>
 
             <div class="flex justify-between items-start">
 

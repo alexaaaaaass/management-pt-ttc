@@ -49,6 +49,7 @@ class PembPinjamanResource extends Resource
 
                         if ($pinjaman) {
                             $set('karyawan_id', $pinjaman->karyawan_id);
+                            $set('nominal_pembayaran', $pinjaman->cicilan_per_bulan);
                         }
                     }),
 

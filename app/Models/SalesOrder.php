@@ -28,10 +28,48 @@ class SalesOrder extends Model
     'dipesan_via',
     'tipe_pesanan',
     'toleransi_pengiriman',
+    'lead_time',
+    'diskon',
+    'jenis',
+    'komponen',
+    'isi',
+    'kertas',
+    'warna',
+    'finishing',
     'catatan',
     'catatan_colour_range',
     'order_type',
 ];
+
+    public function getEffectiveJenisAttribute(): string
+    {
+        return $this->jenis ?: ($this->itemable?->jenis ?? '-');
+    }
+
+    public function getEffectiveKomponenAttribute(): string
+    {
+        return $this->komponen ?: ($this->itemable?->komponen ?? ($this->itemable?->typeItem?->nama_type_item ?? '-'));
+    }
+
+    public function getEffectiveIsiAttribute(): string
+    {
+        return $this->isi ?: ($this->itemable?->isi ?? '-');
+    }
+
+    public function getEffectiveKertasAttribute(): string
+    {
+        return $this->kertas ?: ($this->itemable?->spesifikasi_kertas ?? '-');
+    }
+
+    public function getEffectiveWarnaAttribute(): string
+    {
+        return $this->warna ?: ($this->itemable?->warna ?? '-');
+    }
+
+    public function getEffectiveFinishingAttribute(): string
+    {
+        return $this->finishing ?: ($this->itemable?->finishing ?? '-');
+    }
 
     public function itemable()
     {
@@ -200,23 +238,42 @@ public function getCurrentStockAttribute()
     )->on_hand ?? 0;
 }
 
+    public function spk()
+    {
+        return $this->hasOne(MasterSpk::class, 'sales_order_id');
+    }
+
     public function suratJalans()
     {
-        
         return $this->hasMany(SuratJalan::class);
     }
+
+    public function getFulfillmentAttribute(): array
+    {
+        return app(\App\Services\Sales\SalesOrderService::class)->getFulfillmentStatus($this);
+    }
+
+    public function getFinancialTotalsAttribute(): array
+    {
+        return app(\App\Services\Sales\SalesOrderService::class)->calculateTotals($this);
+    }
+
     protected static function booted()
     {
-    static::creating(function ($model) {
-        $model->no_sales_order = 'TEMP-' . uniqid();
-    });
+        static::creating(function ($model) {
+            if (empty($model->no_sales_order) || str_starts_with($model->no_sales_order, 'TEMP-')) {
+                $model->no_sales_order = app(\App\Services\Sales\SalesOrderService::class)->generateNoSalesOrder();
+            }
+        });
 
-    static::created(function ($model) {
-        $model->no_sales_order =
-            str_pad($model->id, 4, '0', STR_PAD_LEFT)
-            . '/IK-10/' . now()->format('mY');
+        static::deleting(function (SalesOrder $so) {
+            if ($so->suratJalans()->exists()) {
+                throw new \Exception('Sales Order tidak dapat dihapus karena sudah memiliki Surat Jalan.');
+            }
 
-        $model->saveQuietly();
-    });
+            if ($so->spk()->exists()) {
+                throw new \Exception('Sales Order tidak dapat dihapus karena sudah memiliki SPK produksi terkait.');
+            }
+        });
     }
 }

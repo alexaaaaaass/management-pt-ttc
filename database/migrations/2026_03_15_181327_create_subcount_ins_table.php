@@ -13,6 +13,13 @@ return new class extends Migration
     {
         Schema::create('subcount_ins', function (Blueprint $table) {
             $table->id();
+            $table->string('no_subcount', 50)->unique()->nullable();
+            $table->date('tanggal_subcount');
+            $table->string('surat_jalan_pengiriman', 100)->unique()->nullable();
+            $table->string('admin_produksi', 100)->nullable();
+            $table->string('supervisor', 100)->nullable();
+            $table->string('admin_mainstore', 100)->nullable();
+            $table->text('keterangan')->nullable();
             $table->timestamps();
         });
     }

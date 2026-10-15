@@ -22,6 +22,7 @@ return new class extends Migration
 
         $table->string('kode_group');
         $table->string('nama_group');
+        $table->string('nama_pic')->nullable();
 
         $table->timestamps();
     });

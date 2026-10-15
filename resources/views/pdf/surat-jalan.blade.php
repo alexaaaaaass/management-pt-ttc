@@ -1,325 +1,386 @@
 <!DOCTYPE html>
-<html lang="id">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <title>Surat Jalan - {{ $suratJalan->kode_surat_jalan }}</title>
-    <style>
-        @page {
-            size: A4 portrait;
-            margin: 12mm 10mm 8mm 10mm;
-        }
+<meta charset="utf-8">
+<title>Surat Jalan - {{ $suratJalan->kode_surat_jalan }}</title>
 
-        body {
-            font-family: Arial, Helvetica, sans-serif;
-            font-size: 12px;
-            color: #111;
-            margin: 0;
-            padding: 0;
-            background: #fff;
-        }
+<style>
+@page {
+    margin: 25px 30px 25px 30px;
+}
 
-        * { box-sizing: border-box; }
+body {
+    font-family: Arial, Helvetica, sans-serif;
+    font-size: 11px;
+    color: #000;
+    line-height: 1.3;
+}
 
-        table {
-            border-collapse: collapse;
-            width: 100%;
-        }
+.top-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 12px;
+}
 
-        .page {
-            width: 100%;
-            min-height: 100vh;
-            background: #fff;
-        }
+.top-table td {
+    border: none;
+    padding: 0;
+    vertical-align: top;
+}
 
-        .topbar {
-            width: 100%;
-            margin-bottom: 10px;
-        }
+.company-title {
+    font-size: 12.5px;
+    font-weight: bold;
+    color: #000;
+    margin-bottom: 2px;
+}
 
-        .company {
-            width: 60%;
-            vertical-align: top;
-            padding-top: 4px;
-        }
+.company-desc {
+    font-size: 10px;
+    font-style: italic;
+    color: #222;
+    line-height: 1.35;
+}
 
-        .company-name {
-            font-size: 15px;
-            font-weight: bold;
-            letter-spacing: 0.2px;
-            margin-bottom: 2px;
-        }
+/* OUTLINE BOX FOR SURAT JALAN & RECIPIENT INFO */
+.header-box {
+    width: 100%;
+    border: 2px solid #000;
+    border-collapse: collapse;
+    margin-bottom: 8px;
+}
 
-        .company-info {
-            font-size: 10px;
-            line-height: 1.5;
-            color: #222;
-        }
+.title-bar {
+    text-align: center;
+    font-size: 14px;
+    font-weight: bold;
+    letter-spacing: 0.5px;
+    padding: 6px;
+    border-bottom: 2px solid #000;
+}
 
-        .logo-cell {
-            width: 40%;
-            text-align: right;
-            vertical-align: middle;
-        }
+.info-table {
+    width: 100%;
+    border-collapse: collapse;
+}
 
-        .logo-img {
-            max-height: 80px;
-            width: auto;
-            display: inline-block;
-        }
+.info-table td {
+    padding: 4px 6px;
+    vertical-align: top;
+    font-size: 11px;
+}
 
-        .title-box {
-            border: 2px solid #000;
-            background: #fff;
-            text-align: center;
-            font-size: 22px;
-            font-weight: bold;
-            letter-spacing: 1px;
-            padding: 10px 6px;
-            margin-bottom: 8px;
-        }
+.right-meta-table {
+    width: 100%;
+    border-collapse: collapse;
+}
 
-        .meta-box {
-            border: 1.5px solid #000;
-            width: 100%;
-        }
+.right-meta-table td {
+    padding: 2px 4px;
+    font-size: 11px;
+    border: none;
+}
 
-        .meta-box td {
-            vertical-align: top;
-            padding: 6px 8px;
-            border: 1px solid #000;
-        }
+.right-meta-table tr td:first-child {
+    font-weight: bold;
+    width: 80px;
+}
 
-        .meta-left {
-            width: 62%;
-            font-size: 11px;
-        }
+/* TABLE OF ITEMS */
+.items-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 10px;
+    margin-bottom: 10px;
+}
 
-        .meta-right {
-            width: 38%;
-            font-weight: bold;
-            font-size: 11px;
-        }
+.items-table th {
+    background-color: #2b5fa8;
+    color: #ffffff;
+    font-weight: bold;
+    text-align: center;
+    padding: 6px 4px;
+    border: 1px solid #000;
+    font-size: 10px;
+}
 
-        .meta-label {
-            font-weight: bold;
-            width: 90px;
-        }
+.items-table td {
+    border: 1px solid #333;
+    padding: 4px 5px;
+    height: 15px;
+    vertical-align: middle;
+}
 
-        .item-table {
-            border: 1.5px solid #000;
-            margin-top: 8px;
-        }
+.items-table tr.striped {
+    background-color: #e9f1fb;
+}
 
-        .item-table th {
-            background: #dfe7f5;
-            color: #000;
-            border: 1px solid #000;
-            font-size: 11px;
-            font-weight: bold;
-            padding: 6px 4px;
-            text-align: center;
-        }
+.items-table tfoot td {
+    font-weight: bold;
+    border: 1px solid #000;
+    padding: 5px;
+    font-size: 10.5px;
+    background-color: #ffffff;
+}
 
-        .item-table td {
-            border: 1px solid #000;
-            font-size: 11px;
-            padding: 5px 6px;
-            background: #fff;
-            vertical-align: top;
-        }
+/* SIGNATURES SECTION */
+.footer-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 15px;
+}
 
-        .item-table .right {
-            text-align: right;
-        }
+.footer-table td {
+    border: none;
+    vertical-align: top;
+}
 
-        .item-table .center {
-            text-align: center;
-        }
+.notice-bold {
+    font-weight: bold;
+    font-style: italic;
+    font-size: 10px;
+}
 
-        .total-row td {
-            font-weight: bold;
-            background: #eef3ff;
-        }
+.notice-sub {
+    font-style: italic;
+    font-size: 9.5px;
+    margin-bottom: 15px;
+}
 
-        .summary-row {
-            font-size: 13px;
-            font-weight: bold;
-        }
+.sig-name {
+    font-weight: normal;
+    font-size: 11px;
+    margin-bottom: 50px;
+}
 
-        .statement {
-            margin-top: 14px;
-            text-align: center;
-            font-size: 12px;
-            font-weight: bold;
-            font-style: italic;
-        }
-
-        .signature-table {
-            width: 100%;
-            margin-top: 18px;
-        }
-
-        .signature-table td {
-            width: 50%;
-            text-align: center;
-            font-size: 12px;
-            padding: 0 18px;
-            vertical-align: bottom;
-        }
-
-        .signature-line {
-            border-bottom: 1.5px solid #000;
-            width: 100%;
-            height: 44px;
-            margin: 0 auto 6px auto;
-        }
-
-        .muted {
-            color: #333;
-        }
-    </style>
+.sig-line {
+    font-size: 11px;
+    letter-spacing: -1px;
+}
+</style>
 </head>
 <body>
+
+<!-- TOP HEADER -->
+<table class="top-table">
+<tr>
+    <td width="70%">
+        <div class="company-title">PT Teknografi Tri Cawanaska</div>
+        <div class="company-desc">
+            Pergudangan Sentral Singosari<br>
+            Ardimulyo, Singosari, Malang<br>
+            teknografitricawanaska@gmail.com<br>
+            +62895 3391 07709
+        </div>
+    </td>
+    <td width="30%" align="right">
+        @if(file_exists(public_path('images/logo.png')))
+            <img src="{{ public_path('images/logo.png') }}" style="max-height: 60px; width: auto;">
+        @endif
+    </td>
+</tr>
+</table>
+
+<!-- SURAT JALAN & RECIPIENT BOX -->
+<table class="header-box">
+<tr>
+    <td colspan="2" class="title-bar">
+        SURAT JALAN
+    </td>
+</tr>
+<tr>
+    <td width="60%" style="padding: 6px 10px; border-right: 1.5px solid #000; vertical-align: top;">
+        <div style="font-size: 11px;">Yth</div>
+        <div style="font-size: 11.5px; font-weight: bold; margin: 3px 0;">
+            {{ $suratJalan->salesOrder?->customer?->nama_customer ?? 'Customer' }}
+        </div>
+        <div style="font-size: 10.5px; color: #222;">
+            di tempat
+        </div>
+    </td>
+    <td width="40%" style="padding: 4px 6px; vertical-align: middle;">
+        @php
+            $noInvoice = $suratJalan->invoice?->no_invoice 
+                         ?: ($suratJalan->salesOrder?->no_sales_order ?? '-');
+            $tanggal = $suratJalan->tanggal_surat_jalan 
+                       ? date('d M Y', strtotime($suratJalan->tanggal_surat_jalan)) 
+                       : date('d M Y');
+            $ekspedisi = $suratJalan->transportasi 
+                         ? ($suratJalan->transportasi . ($suratJalan->no_polisi ? ' - ' . $suratJalan->no_polisi : '')) 
+                         : ($suratJalan->driver ?: '-');
+        @endphp
+        <table class="right-meta-table">
+            <tr>
+                <td>No Invoice</td>
+                <td>: {{ $noInvoice }}</td>
+            </tr>
+            <tr>
+                <td>Tanggal</td>
+                <td>: {{ $tanggal }}</td>
+            </tr>
+            <tr>
+                <td>Ekspedisi</td>
+                <td>: {{ $ekspedisi }}</td>
+            </tr>
+        </table>
+    </td>
+</tr>
+</table>
+
+<!-- TABLE OF ITEMS -->
+@php
+    $rows = [];
+    $totalQty = 0;
+
+    // 1. Cek apakah SPK memiliki detail Packaging
+    if ($suratJalan->spk && $suratJalan->spk->packagings()->count() > 0) {
+        $itemName = $suratJalan->salesOrder?->itemable?->nama_barang 
+                    ?? $suratJalan->salesOrder?->product_name 
+                    ?? '-';
+
+        foreach ($suratJalan->spk->packagings as $pkg) {
+            if ($pkg->jumlah_satuan_penuh > 0 && $pkg->qty_per_satuan_penuh > 0) {
+                $sub = (float) ($pkg->total_satuan_penuh ?: ($pkg->jumlah_satuan_penuh * $pkg->qty_per_satuan_penuh));
+                $rows[] = [
+                    'nama_item' => $itemName,
+                    'qty_pcs'   => (float) $pkg->qty_per_satuan_penuh,
+                    'kemasan'   => $pkg->satuan_transfer ?? 'Box',
+                    'jumlah'    => (int) $pkg->jumlah_satuan_penuh,
+                    'total'     => $sub,
+                    'keterangan'=> '',
+                ];
+                $totalQty += $sub;
+            }
+
+            if ($pkg->jumlah_satuan_sisa > 0 && $pkg->qty_per_satuan_sisa > 0) {
+                $sub = (float) ($pkg->total_satuan_sisa ?: ($pkg->jumlah_satuan_sisa * $pkg->qty_per_satuan_sisa));
+                $rows[] = [
+                    'nama_item' => $itemName,
+                    'qty_pcs'   => (float) $pkg->qty_per_satuan_sisa,
+                    'kemasan'   => $pkg->satuan_transfer ?? 'Box',
+                    'jumlah'    => (int) $pkg->jumlah_satuan_sisa,
+                    'total'     => $sub,
+                    'keterangan'=> '',
+                ];
+                $totalQty += $sub;
+            }
+        }
+    }
+
+    // 2. Jika tipe MULTI_MATERIAL atau ada items di surat_jalan_items
+    if (empty($rows) && $suratJalan->items && $suratJalan->items->count() > 0) {
+        foreach ($suratJalan->items as $it) {
+            $sub = (float) ($it->qty_kirim ?? 0);
+            $satuan = $it->material?->satuan?->nama_satuan ?? 'Pcs';
+            $rows[] = [
+                'nama_item' => $it->material?->nama_master_item ?? '-',
+                'qty_pcs'   => $sub,
+                'kemasan'   => $satuan,
+                'jumlah'    => 1,
+                'total'     => $sub,
+                'keterangan'=> ($suratJalan->keterangan && $suratJalan->keterangan !== '-') ? $suratJalan->keterangan : '',
+            ];
+            $totalQty += $sub;
+        }
+    }
+
+    // 3. Fallback jika SPK tunggal atau material tunggal tanpa repeater
+    if (empty($rows)) {
+        $sub = (float) ($suratJalan->qty_pengiriman ?: 0);
+        $itemName = $suratJalan->salesOrder?->itemable?->nama_barang 
+                    ?? $suratJalan->salesOrder?->product_name 
+                    ?? '-';
+        $rows[] = [
+            'nama_item' => $itemName,
+            'qty_pcs'   => $sub,
+            'kemasan'   => 'Box',
+            'jumlah'    => 1,
+            'total'     => $sub,
+            'keterangan'=> ($suratJalan->keterangan && $suratJalan->keterangan !== '-') ? $suratJalan->keterangan : '',
+        ];
+        $totalQty += $sub;
+    }
+
+    $rowCount = 0;
+@endphp
+
+<table class="items-table">
+    <thead>
+        <tr>
+            <th width="4%">No</th>
+            <th width="30%">Nama Item</th>
+            <th width="12%">Q'ty (pcs)</th>
+            <th width="11%">Kemasan</th>
+            <th width="9%">Jumlah</th>
+            <th width="14%">Total</th>
+            <th width="20%">Keterangan</th>
+        </tr>
+    </thead>
+    <tbody>
+    @foreach($rows as $row)
+        @php
+            $rowCount++;
+            $isStriped = ($rowCount % 2 == 0);
+        @endphp
+        <tr class="{{ $isStriped ? 'striped' : '' }}">
+            <td align="center">{{ $rowCount }}</td>
+            <td>{{ $row['nama_item'] }}</td>
+            <td align="center">{{ number_format($row['qty_pcs'], 0, ',', '.') }}</td>
+            <td align="center">{{ $row['kemasan'] }}</td>
+            <td align="center">{{ number_format($row['jumlah'], 0, ',', '.') }}</td>
+            <td align="right">{{ number_format($row['total'], 0, ',', '.') }}</td>
+            <td>{{ $row['keterangan'] }}</td>
+        </tr>
+    @endforeach
+
+    {{-- Baris kosong bergaris (zebra stripes) seperti dokumen asli TTC --}}
     @php
-        $customer = $suratJalan->salesOrder?->customer;
-        $itemable = $suratJalan->salesOrder?->itemable;
-        $itemName = $itemable?->nama_barang ?? $itemable?->nama_master_item ?? 'Barang';
-        $qty = (float) ($suratJalan->qty_pengiriman ?? 0);
-        $amount = (float) ($suratJalan->salesOrder?->harga_pcs ?? 0);
-        $total = $qty * $amount;
-        $invoiceNo = $suratJalan->invoice?->kode_invoice ?? '-';
-        $tanggal = $suratJalan->tanggal_surat_jalan ? \Carbon\Carbon::parse($suratJalan->tanggal_surat_jalan)->format('d/m/Y') : '-';
+        $minRows = 8;
+        $emptyRows = max(1, $minRows - $rowCount);
     @endphp
 
-    <div class="page">
-        <table class="topbar">
-            <tr>
-                <td class="company">
-                    <div class="company-name">PT Teknografi Tri Cawanaska</div>
-                    <div class="company-info">
-                        Pergudangan Sentra Singosari<br>
-                        Ardimulyo, Singosari, Malang<br>
-                        teknografitricawanaska@gmail.com<br>
-                        +62895 3391 07709
-                    </div>
-                </td>
-                <td class="logo-cell">
-                    @if(!empty($logoBase64))
-                        <img src="{{ $logoBase64 }}" alt="Logo TTC" class="logo-img">
-                    @else
-                        <div style="font-size: 28px; font-weight: bold; color: #1d4ed8;">TTC</div>
-                    @endif
-                </td>
-            </tr>
-        </table>
+    @for($i = 0; $i < $emptyRows; $i++)
+        @php
+            $rowCount++;
+            $isStriped = ($rowCount % 2 == 0);
+        @endphp
+        <tr class="{{ $isStriped ? 'striped' : '' }}">
+            <td align="center">&nbsp;</td>
+            <td>&nbsp;</td>
+            <td>&nbsp;</td>
+            <td>&nbsp;</td>
+            <td>&nbsp;</td>
+            <td>&nbsp;</td>
+            <td>&nbsp;</td>
+        </tr>
+    @endfor
+    </tbody>
 
-        <div class="title-box">SURAT JALAN</div>
+    <tfoot>
+        <tr>
+            <td colspan="5" align="right" style="padding-right: 15px;">Total</td>
+            <td align="right">{{ number_format($totalQty, 0, ',', '.') }}</td>
+            <td>&nbsp;</td>
+        </tr>
+    </tfoot>
+</table>
 
-        <table class="meta-box">
-            <tr>
-                <td class="meta-left">
-                    <table style="width:100%;">
-                        <tr>
-                            <td class="meta-label">Yth</td>
-                            <td style="font-weight:bold;">{{ strtoupper($customer?->nama_customer ?? 'Customer') }}</td>
-                        </tr>
-                        <tr>
-                            <td></td>
-                            <td>{{ $customer?->alamat ?? 'di tempat' }}</td>
-                        </tr>
-                    </table>
-                </td>
-                <td class="meta-right">
-                    <table style="width:100%;">
-                        <tr>
-                            <td style="width: 45%;">No Invoice</td>
-                            <td>: {{ $invoiceNo }}</td>
-                        </tr>
-                        <tr>
-                            <td>Tanggal</td>
-                            <td>: {{ $tanggal }}</td>
-                        </tr>
-                        <tr>
-                            <td>Ekspedisi</td>
-                            <td>: {{ $suratJalan->transportasi ?? '-' }}</td>
-                        </tr>
-                    </table>
-                </td>
-            </tr>
-        </table>
+<!-- BOTTOM NOTICE & SIGNATURE -->
+<table class="footer-table">
+<tr>
+    <td width="60%">
+        <div class="notice-bold">BARANG SUDAH DITERIMA DALAM KEADAAN BAIK DAN SESUAI</div>
+        <div class="notice-sub">(tanda tangan dan cap perusahaan)</div>
+        <div class="sig-name">Penerima</div>
+        <div class="sig-line">_________________________________</div>
+    </td>
+    <td width="40%" align="center">
+        <div style="height: 28px;">&nbsp;</div>
+        <div class="sig-name" style="text-align: center;">Pengirim</div>
+        <div class="sig-line" style="text-align: center;">_________________________________</div>
+    </td>
+</tr>
+</table>
 
-        <table class="item-table">
-            <thead>
-                <tr>
-                    <th style="width: 6%;">No</th>
-                    <th style="width: 35%;">Nama Item</th>
-                    <th style="width: 12%;">Q'ty (pcs)</th>
-                    <th style="width: 12%;">Kemasan</th>
-                    <th style="width: 12%;">Jumlah</th>
-                    <th style="width: 14%;">Total</th>
-                    <th style="width: 9%;">Keterangan</th>
-                </tr>
-            </thead>
-            <tbody>
-                @php
-                    $rows = [
-                        [
-                            'name' => $itemName,
-                            'qty' => $qty,
-                            'packing' => 'Box',
-                            'amount' => number_format($qty, 0, ',', '.'),
-                            'total' => 'Rp ' . number_format($total, 0, ',', '.'),
-                            'note' => '-' 
-                        ],
-                    ];
-                @endphp
-
-                @foreach($rows as $i => $row)
-                    <tr>
-                        <td class="center">{{ $i + 1 }}</td>
-                        <td>{{ $row['name'] }}</td>
-                        <td class="right">{{ $row['qty'] }}</td>
-                        <td class="center">{{ $row['packing'] }}</td>
-                        <td class="right">{{ $row['amount'] }}</td>
-                        <td class="right">{{ $row['total'] }}</td>
-                        <td class="center">{{ $row['note'] }}</td>
-                    </tr>
-                @endforeach
-
-                @for($i = count($rows); $i < 4; $i++)
-                    <tr>
-                        <td class="center">{{ $i + 1 }}</td>
-                        <td>&nbsp;</td>
-                        <td>&nbsp;</td>
-                        <td>&nbsp;</td>
-                        <td>&nbsp;</td>
-                        <td>&nbsp;</td>
-                        <td>&nbsp;</td>
-                    </tr>
-                @endfor
-
-                <tr class="total-row summary-row">
-                    <td colspan="5" class="right">Total</td>
-                    <td class="right">Rp {{ number_format($total, 0, ',', '.') }}</td>
-                    <td></td>
-                </tr>
-            </tbody>
-        </table>
-
-        <div class="statement">BARANG SUDAH DITERIMA DALAM KEADAAN BAIK DAN SESUAI</div>
-
-        <table class="signature-table">
-            <tr>
-                <td>
-                    <div>Penerima</div>
-                    <div class="signature-line"></div>
-                </td>
-                <td>
-                    <div>Pengirim</div>
-                    <div class="signature-line"></div>
-                </td>
-            </tr>
-        </table>
-    </div>
 </body>
 </html>

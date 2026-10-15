@@ -13,17 +13,7 @@ class ListFinishGoodItems extends ListRecords
     protected function getHeaderActions(): array
     {
         return [
-
-            Actions\Action::make('calculator')
-                ->label('Kalkulator Etiket')
-                ->icon('heroicon-o-calculator')
-                ->color('success')
-                ->url(
-                    FinishGoodItemResource::getUrl('calculator')
-                ),
-
             Actions\CreateAction::make(),
-
         ];
     }
 }

@@ -48,54 +48,28 @@ protected static ?int $navigationSort = 12;
                             ->required()
                             ->default(now()),
 
-                        Select::make(
-                            'po_billing_id'
-                        )
-
-                            ->label(
-                                'Billing Reference'
-                            )
-
-                            ->relationship(
-                                'poBilling',
-                                'kode_tagihan'
-                            )
-
+                        Select::make('po_billing_id')
+                            ->label('Billing Reference')
+                            ->options(function () {
+                                return PoBilling::with(['supplier'])->get()->mapWithKeys(function ($bill) {
+                                    $label = $bill->kode_tagihan . ' • ' . ($bill->supplier?->nama_supplier ?? '-') . ' (Sisa: Rp ' . number_format($bill->sisa_tagihan, 0, ',', '.') . ')';
+                                    return [$bill->id => $label];
+                                });
+                            })
                             ->searchable()
-
+                            ->preload()
+                            ->required()
                             ->live()
-
-                            ->afterStateUpdated(
-                                function (
-                                    $state,
-                                    Set $set
-                                ) {
-
-                                    $bill =
-                                        PoBilling::find(
-                                            $state
-                                        );
-
-                                    if (!$bill) {
-                                        return;
-                                    }
-
-                                    $set(
-                                        'gudang',
-                                        'UGRMS'
-                                    );
-
-                                    $set(
-                                        'periode',
-                                        $bill->periode
-                                    );
-
-                                    $set(
-                                        'total_tagihan',
-                                        $bill->grand_total
-                                    );
+                            ->afterStateUpdated(function ($state, Set $set) {
+                                $bill = PoBilling::find($state);
+                                if (!$bill) {
+                                    return;
                                 }
-                            ),
+
+                                $set('gudang', 'UGRMS');
+                                $set('periode', $bill->periode);
+                                $set('total_tagihan', $bill->sisa_tagihan);
+                            }),
 
                         TextInput::make(
                             'gudang'
@@ -335,6 +309,8 @@ protected static ?int $navigationSort = 12;
         ])
         ->actions([
             Tables\Actions\EditAction::make(),
+            Tables\Actions\DeleteAction::make()
+                ->using(fn ($record) => app(\App\Services\Finance\PoBillPayService::class)->deletePayment($record)),
         ])
         ->bulkActions([
             Tables\Actions\BulkActionGroup::make([
