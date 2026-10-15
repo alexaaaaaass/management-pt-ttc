@@ -14,6 +14,7 @@ use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Components\Repeater;
+use Filament\Forms\Components\Wizard;
 use Filament\Forms\Get;
 use Filament\Forms\Set;
 use Filament\Resources\Resource;
@@ -31,321 +32,319 @@ class InvoiceResource extends Resource
     {
         return $form
             ->schema([
-                Section::make('Tambah Invoice')
-                    ->schema([
-                        Grid::make(2)
-                            ->schema([
-                                Select::make('surat_jalan_id')
-                                    ->label('Surat Jalan')
-                                    ->relationship(
-                                        'suratJalan',
-                                        'kode_surat_jalan',
-                                        fn ($query, ?Invoice $record) => $query->where(function ($q) use ($record) {
-                                            $q->whereDoesntHave('invoice');
-                                            if ($record && $record->surat_jalan_id) {
-                                                $q->orWhere('id', $record->surat_jalan_id);
+                Wizard::make([
+
+                    // ==========================================
+                    // 🔥 TAHAP 1: SURAT JALAN & DETAIL ORDER
+                    // ==========================================
+                    Wizard\Step::make('Surat Jalan & Detail Order')
+                        ->icon('heroicon-o-document-text')
+                        ->description('Pilih Surat Jalan terkirim dan tinjau item pengiriman')
+                        ->schema([
+                            Grid::make(2)
+                                ->schema([
+                                    Select::make('surat_jalan_id')
+                                        ->label('Surat Jalan')
+                                        ->relationship(
+                                            'suratJalan',
+                                            'kode_surat_jalan',
+                                            fn ($query, ?Invoice $record) => $query->where(function ($q) use ($record) {
+                                                $q->whereDoesntHave('invoice');
+                                                if ($record && $record->surat_jalan_id) {
+                                                    $q->orWhere('id', $record->surat_jalan_id);
+                                                }
+                                            })
+                                        )
+                                        ->disabled(fn (string $operation) => $operation === 'edit')
+                                        ->searchable()
+                                        ->preload()
+                                        ->required()
+                                        ->live()
+                                        ->afterStateUpdated(function ($state, Set $set) {
+                                            $sj = SuratJalan::with([
+                                                'salesOrder.customer',
+                                                'salesOrder.itemable',
+                                                'salesOrder.items.material',
+                                                'items.salesOrderItem',
+                                            ])->find($state);
+
+                                            if (!$sj) {
+                                                $set('preview_items', []);
+                                                return;
                                             }
-                                        })
-                                    )
-                                    ->disabled(fn (string $operation) => $operation === 'edit')
-                                    ->searchable()
-                                    ->preload()
-                                    ->required()
-                                    ->live()
-                                    ->afterStateUpdated(function ($state, Set $set) {
-                                        $sj = SuratJalan::with([
-                                            'salesOrder.customer',
-                                            'salesOrder.itemable',
-                                            'salesOrder.items.material',
-                                            'items.salesOrderItem',
-                                        ])->find($state);
 
-                                        if (!$sj) {
-                                            $set('preview_items', []);
-                                            return;
-                                        }
+                                            $so = $sj->salesOrder;
 
-                                        $so = $sj->salesOrder;
-
-                                        // Set Preview Items
-                                        if ($so && $so->mode === 'MULTI_MATERIAL') {
-                                            $rows = [];
-                                            foreach ($so->items as $item) {
-                                                $rows[] = [
-                                                    'material' => $item->material?->nama_master_item,
-                                                    'qty'      => $item->qty,
-                                                    'harga'    => $item->harga,
-                                                ];
+                                            // Set Preview Items
+                                            if ($so && $so->mode === 'MULTI_MATERIAL') {
+                                                $rows = [];
+                                                foreach ($so->items as $item) {
+                                                    $rows[] = [
+                                                        'material' => $item->material?->nama_master_item,
+                                                        'qty'      => $item->qty,
+                                                        'harga'    => $item->harga,
+                                                    ];
+                                                }
+                                                $set('preview_items', $rows);
+                                            } else {
+                                                $set('preview_items', []);
                                             }
-                                            $set('preview_items', $rows);
-                                        } else {
-                                            $set('preview_items', []);
-                                        }
 
-                                        // Perhitungan Subtotal via InvoiceService
-                                        $subtotal = app(\App\Services\Finance\InvoiceService::class)->calculateSubtotal($sj);
+                                            // Perhitungan Subtotal via InvoiceService
+                                            $subtotal = app(\App\Services\Finance\InvoiceService::class)->calculateSubtotal($sj);
 
-                                        $set('subtotal', $subtotal);
+                                            $set('subtotal', $subtotal);
 
-                                        $set('ongkir', $so?->harga_kirim ?? 0);
+                                            $set('ongkir', $so?->harga_kirim ?? 0);
 
-                                        /*
-                                        |--------------------------------------------------------------------------
-                                        | Hidden data
-                                        |--------------------------------------------------------------------------
-                                        */
-                                        $set('customer_id', $so?->customer_id);
-                                        $set('sales_order_id', $so?->id);
-                                        $set('no_po_customer', $so?->no_po_customer);
-                                    }),
+                                            /*
+                                            |--------------------------------------------------------------------------
+                                            | Hidden data
+                                            |--------------------------------------------------------------------------
+                                            */
+                                            $set('customer_id', $so?->customer_id);
+                                            $set('sales_order_id', $so?->id);
+                                            $set('no_po_customer', $so?->no_po_customer);
+                                        }),
 
-                                TextInput::make('kode_invoice')
-                                    ->disabled()
-                                    ->dehydrated(false)
-                                    ->default('AUTO'),
-                            ]),
+                                    TextInput::make('kode_invoice')
+                                        ->label('Kode Invoice')
+                                        ->disabled()
+                                        ->dehydrated(false)
+                                        ->default('AUTO'),
+                                ]),
 
-                        Section::make('Informasi Order')
-                            ->schema([
-                                Placeholder::make('customer_info')
-                                    ->label('Customer')
-                                    ->content(function (Get $get) {
-                                        $sj = SuratJalan::with('salesOrder.customer')
-                                            ->find($get('surat_jalan_id'));
-                                        return $sj?->salesOrder?->customer?->nama_customer ?? '-';
-                                    }),
+                            Section::make('Informasi Order Terkait')
+                                ->schema([
+                                    Placeholder::make('customer_info')
+                                        ->label('Customer')
+                                        ->content(function (Get $get) {
+                                            $sj = SuratJalan::with('salesOrder.customer')
+                                                ->find($get('surat_jalan_id'));
+                                            return $sj?->salesOrder?->customer?->nama_customer ?? '-';
+                                        }),
 
-                                Placeholder::make('sales_order_info')
-                                    ->label('Sales Order')
-                                    ->content(function (Get $get) {
-                                        $sj = SuratJalan::with('salesOrder')
-                                            ->find($get('surat_jalan_id'));
-                                        return $sj?->salesOrder?->no_sales_order ?? '-';
-                                    }),
+                                    Placeholder::make('sales_order_info')
+                                        ->label('Sales Order')
+                                        ->content(function (Get $get) {
+                                            $sj = SuratJalan::with('salesOrder')
+                                                ->find($get('surat_jalan_id'));
+                                            return $sj?->salesOrder?->no_sales_order ?? '-';
+                                        }),
 
-                                Placeholder::make('po_customer_info')
-                                    ->label('PO Customer')
-                                    ->content(function (Get $get) {
-                                        $sj = SuratJalan::with('salesOrder')
-                                            ->find($get('surat_jalan_id'));
-                                        return $sj?->salesOrder?->no_po_customer ?? '-';
-                                    }),
+                                    Placeholder::make('po_customer_info')
+                                        ->label('PO Customer')
+                                        ->content(function (Get $get) {
+                                            $sj = SuratJalan::with('salesOrder')
+                                                ->find($get('surat_jalan_id'));
+                                            return $sj?->salesOrder?->no_po_customer ?? '-';
+                                        }),
 
-                              Placeholder::make('produk_info')
-                                    ->label('Produk')
-                                    ->content(function (Get $get) {
+                                    Placeholder::make('produk_info')
+                                        ->label('Produk')
+                                        ->content(function (Get $get) {
+                                            $sj = SuratJalan::with([
+                                                'salesOrder.itemable',
+                                                'salesOrder.items.material',
+                                            ])->find($get('surat_jalan_id'));
 
-                                        $sj = SuratJalan::with([
-                                            'salesOrder.itemable',
-                                            'salesOrder.items.material',
-                                        ])->find($get('surat_jalan_id'));
+                                            if (! $sj) {
+                                                return '-';
+                                            }
 
-                                        if (! $sj) {
-                                            return '-';
-                                        }
+                                            $so = $sj->salesOrder;
 
-                                        $so = $sj->salesOrder;
+                                            if (! $so) {
+                                                return '-';
+                                            }
 
-                                        if (! $so) {
-                                            return '-';
-                                        }
+                                            return match ($so->mode) {
+                                                'SPK' =>
+                                                    $so->itemable?->nama_barang ?? '-',
+                                                'SINGLE_MATERIAL' =>
+                                                    $so->items->first()?->material?->nama_master_item ?? '-',
+                                                'MULTI_MATERIAL' =>
+                                                    $so->items->pluck('material.nama_master_item')->filter()->implode(', '),
+                                                default => '-',
+                                            };
+                                        }),
 
-                                        return match ($so->mode) {
+                                    Placeholder::make('qty_kirim_info')
+                                        ->label('Qty Kirim')
+                                        ->content(function (Get $get) {
+                                            $sj = SuratJalan::find($get('surat_jalan_id'));
+                                            return number_format($sj?->qty_pengiriman ?? 0);
+                                        }),
 
-                                            'SPK' =>
+                                    Placeholder::make('harga_info')
+                                        ->label('Harga / PCS')
+                                        ->content(function (Get $get) {
+                                            $sj = SuratJalan::with('salesOrder')
+                                                ->find($get('surat_jalan_id'));
+                                            return 'Rp ' . number_format($sj?->salesOrder?->harga_pcs ?? 0, 0, ',', '.');
+                                        }),
+                                ])
+                                ->columns(3)
+                                ->visible(fn(Get $get) => filled($get('surat_jalan_id'))),
 
-                                                $so->itemable?->nama_barang
-                                                ?? '-',
+                            // Section Detail Material untuk Mode MULTI_MATERIAL
+                            Section::make('Detail Material')
+                                ->visible(function (Get $get) {
+                                    $sj = SuratJalan::with('salesOrder.items')->find($get('surat_jalan_id'));
+                                    if (!$sj || !$sj->salesOrder) {
+                                        return false;
+                                    }
+                                    return $sj->salesOrder->mode === 'MULTI_MATERIAL';
+                                })
+                                ->schema([
+                                    Repeater::make('preview_items')
+                                        ->dehydrated(false)
+                                        ->addable(false)
+                                        ->deletable(false)
+                                        ->reorderable(false)
+                                        ->columns(4)
+                                        ->schema([
+                                            TextInput::make('material')
+                                                ->disabled(),
 
-                                            'SINGLE_MATERIAL' =>
+                                            TextInput::make('qty')
+                                                ->disabled(),
 
-                                                $so->items
-                                                    ->first()
-                                                    ?->material
-                                                    ?->nama_master_item
-                                                ?? '-',
+                                            TextInput::make('harga')
+                                                ->prefix('Rp')
+                                                ->disabled(),
 
-                                            'MULTI_MATERIAL' =>
+                                            Placeholder::make('subtotal')
+                                                ->content(fn(Get $get) =>
+                                                    'Rp ' . number_format(
+                                                        ((float)($get('qty') ?? 0)) * ((float)($get('harga') ?? 0)),
+                                                        0,
+                                                        ',',
+                                                        '.'
+                                                    )
+                                                ),
+                                        ]),
+                                ]),
 
-                                                $so->items
-                                                    ->pluck('material.nama_master_item')
-                                                    ->filter()
-                                                    ->implode(', '),
+                            Forms\Components\Hidden::make('customer_id'),
+                            Forms\Components\Hidden::make('sales_order_id'),
+                            Forms\Components\Hidden::make('no_po_customer'),
+                        ]),
 
-                                            default => '-',
+                    // ==========================================
+                    // 🔥 TAHAP 2: BIAYA, DISKON & TOTAL TAGIHAN
+                    // ==========================================
+                    Wizard\Step::make('Biaya & Tagihan')
+                        ->icon('heroicon-o-banknotes')
+                        ->description('Tanggal invoice, jatuh tempo, diskon, PPN, dan rincian nominal tagihan')
+                        ->schema([
+                            Grid::make(2)
+                                ->schema([
+                                    DatePicker::make('tanggal_invoice')
+                                        ->label('Tanggal Invoice')
+                                        ->default(now())
+                                        ->required(),
 
-                                        };
+                                    DatePicker::make('tanggal_jatuh_tempo')
+                                        ->label('Tanggal Jatuh Tempo')
+                                        ->default(now()->addDays(30))
+                                        ->required(),
+                                ]),
 
-                                    }),
+                            Grid::make(3)
+                                ->schema([
+                                    TextInput::make('subtotal')
+                                        ->label('Subtotal (DPP)')
+                                        ->prefix('Rp')
+                                        ->mask(\Filament\Support\RawJs::make('$money($input, ",", ".", 0)'))
+                                        ->stripCharacters('.')
+                                        ->readOnly()
+                                        ->default(0)
+                                        ->dehydrated(true),
 
-                                Placeholder::make('qty_kirim_info')
-                                    ->label('Qty Kirim')
-                                    ->content(function (Get $get) {
-                                        $sj = SuratJalan::find($get('surat_jalan_id'));
-                                        return number_format($sj?->qty_pengiriman ?? 0);
-                                    }),
+                                    TextInput::make('diskon')
+                                        ->label('Diskon (%)')
+                                        ->numeric()
+                                        ->inputMode('decimal')
+                                        ->suffix('%')
+                                        ->default(0)
+                                        ->live(),
 
-                                Placeholder::make('harga_info')
-                                    ->label('Harga / PCS')
-                                    ->content(function (Get $get) {
-                                        $sj = SuratJalan::with('salesOrder')
-                                            ->find($get('surat_jalan_id'));
-                                        return 'Rp ' . number_format($sj?->salesOrder?->harga_pcs ?? 0, 0, ',', '.');
-                                    }),
-                            ])
-                            ->columns(3)
-                            ->visible(fn(Get $get) => filled($get('surat_jalan_id'))),
+                                    TextInput::make('ppn')
+                                        ->label('PPN (%)')
+                                        ->numeric()
+                                        ->inputMode('decimal')
+                                        ->suffix('%')
+                                        ->default(0)
+                                        ->live(),
+                                ]),
 
-                        // Section Detail Material untuk Mode MULTI_MATERIAL
-                        Section::make('Detail Material')
-                            ->visible(function (Get $get) {
-                                $sj = SuratJalan::with('salesOrder.items')->find($get('surat_jalan_id'));
+                            Grid::make(2)
+                                ->schema([
+                                    TextInput::make('ongkir')
+                                        ->label('Ongkos Kirim')
+                                        ->prefix('Rp')
+                                        ->mask(\Filament\Support\RawJs::make('$money($input, ",", ".", 0)'))
+                                        ->stripCharacters('.')
+                                        ->default(0)
+                                        ->live(),
 
-                                if (!$sj || !$sj->salesOrder) {
-                                    return false;
-                                }
+                                    TextInput::make('uang_muka')
+                                        ->label('Uang Muka (DP)')
+                                        ->prefix('Rp')
+                                        ->mask(\Filament\Support\RawJs::make('$money($input, ",", ".", 0)'))
+                                        ->stripCharacters('.')
+                                        ->default(0)
+                                        ->live(),
+                                ]),
 
-                                return $sj->salesOrder->mode === 'MULTI_MATERIAL';
-                            })
-                            ->schema([
-                                Repeater::make('preview_items')
-                                    ->dehydrated(false)
-                                    ->addable(false)
-                                    ->deletable(false)
-                                    ->reorderable(false)
-                                    ->columns(4) // Membagi menjadi 4 kolom agar rapi
-                                    ->schema([
-                                        TextInput::make('material')
-                                            ->disabled(),
+                            Section::make('Ringkasan Biaya Tagihan')
+                                ->schema([
+                                    Placeholder::make('subtotal_view')
+                                        ->label('Subtotal')
+                                        ->content(function (Get $get) {
+                                            return 'Rp ' . number_format((float) ($get('subtotal') ?? 0), 0, ',', '.');
+                                        }),
 
-                                        TextInput::make('qty')
-                                            ->disabled(),
+                                    Placeholder::make('diskon_view')
+                                        ->label('Diskon')
+                                        ->content(function (Get $get) {
+                                            $subtotal = (float) ($get('subtotal') ?? 0);
+                                            $diskonPersen = (float) ($get('diskon') ?? 0);
+                                            $diskonNominal = ($subtotal * $diskonPersen) / 100;
+                                            return $diskonPersen . '% = Rp ' . number_format($diskonNominal, 0, ',', '.');
+                                        }),
 
-                                        TextInput::make('harga')
-                                            ->prefix('Rp')
-                                            ->disabled(),
+                                    Placeholder::make('ppn_view')
+                                        ->label('PPN')
+                                        ->content(function (Get $get) {
+                                            $subtotal = (float) ($get('subtotal') ?? 0);
+                                            $ppnPersen = (float) ($get('ppn') ?? 0);
+                                            $ppnNominal = ($subtotal * $ppnPersen) / 100;
+                                            return $ppnPersen . '% = Rp ' . number_format($ppnNominal, 0, ',', '.');
+                                        }),
 
-                                        Placeholder::make('subtotal')
-                                            ->content(fn(Get $get) =>
-                                                'Rp ' . number_format(
-                                                    ((float)($get('qty') ?? 0)) * ((float)($get('harga') ?? 0)),
-                                                    0,
-                                                    ',',
-                                                    '.'
-                                                )
-                                            ),
-                                    ]),
-                            ]),
+                                    Placeholder::make('grand_total_view')
+                                        ->label('Grand Total Tagihan')
+                                        ->extraAttributes(['class' => 'text-lg font-bold', 'style' => 'color: #007bff; font-size: 2.25rem;'])
+                                        ->content(function (Get $get) {
+                                            $subtotal = (float) ($get('subtotal') ?? 0);
+                                            $diskon = (float) ($get('diskon') ?? 0);
+                                            $ppn = (float) ($get('ppn') ?? 0);
+                                            $ongkir = (float) ($get('ongkir') ?? 0);
 
-                        Grid::make(2)
-                            ->schema([
-                                DatePicker::make('tanggal_invoice')
-                                    ->required(),
+                                            $diskonNominal = ($subtotal * $diskon) / 100;
+                                            $ppnNominal = ($subtotal * $ppn) / 100;
+                                            $grandTotal = $subtotal - $diskonNominal + $ppnNominal + $ongkir;
 
-                                DatePicker::make('tanggal_jatuh_tempo')
-                                    ->required(),
-                            ]),
-
-                        Grid::make(2)
-                            ->schema([
-                                TextInput::make('diskon')
-                                    ->numeric()
-                                    ->inputMode('decimal')
-                                    ->suffix('%')
-                                    ->default(0)
-                                    ->live(),
-
-                                TextInput::make('ppn')
-                                    ->numeric()
-                                    ->inputMode('decimal')
-                                    ->suffix('%')
-                                    ->default(0)
-                                    ->live(),
-
-                                Placeholder::make('customer')
-                                    ->label('Customer')
-                                    ->content(function (Get $get) {
-                                        $sj = SuratJalan::with('salesOrder.customer')
-                                            ->find($get('surat_jalan_id'));
-                                        return $sj?->salesOrder?->customer?->nama_customer ?? '-';
-                                    }),
-
-                                TextInput::make('subtotal')
-                                    ->label('Subtotal')
-                                    ->prefix('Rp')
-                                    ->mask(\Filament\Support\RawJs::make('$money($input, ",", ".", 0)'))
-                                    ->stripCharacters('.')
-                                    ->readOnly()
-                                    ->default(0)
-                                    ->dehydrated(true),
-
-                                Forms\Components\Hidden::make('customer_id'),
-                                Forms\Components\Hidden::make('sales_order_id'),
-                                Forms\Components\Hidden::make('no_po_customer'),
-                            ]),
-
-                        Grid::make(2)
-                            ->schema([
-                                TextInput::make('ongkir')
-                                    ->label('Ongkos Kirim')
-                                    ->prefix('Rp')
-                                    ->mask(\Filament\Support\RawJs::make('$money($input, ",", ".", 0)'))
-                                    ->stripCharacters('.')
-                                    ->default(0)
-                                    ->live(),
-
-                                TextInput::make('uang_muka')
-                                    ->label('Uang Muka')
-                                    ->prefix('Rp')
-                                    ->mask(\Filament\Support\RawJs::make('$money($input, ",", ".", 0)'))
-                                    ->stripCharacters('.')
-                                    ->default(0)
-                                    ->live(),
-                            ]),
-
-                        Section::make('Ringkasan Biaya')
-                            ->schema([
-                                Placeholder::make('subtotal_view')
-                                    ->label('Subtotal')
-                                    ->content(function (Get $get) {
-                                        return 'Rp ' . number_format((float) ($get('subtotal') ?? 0), 0, ',', '.');
-                                    }),
-
-                                Placeholder::make('diskon_view')
-                                    ->label('Diskon')
-                                    ->content(function (Get $get) {
-                                        $subtotal = (float) ($get('subtotal') ?? 0);
-                                        $diskonPersen = (float) ($get('diskon') ?? 0);
-                                        $diskonNominal = ($subtotal * $diskonPersen) / 100;
-                                        return $diskonPersen . '% = Rp ' . number_format($diskonNominal, 0, ',', '.');
-                                    }),
-
-                                Placeholder::make('ppn_view')
-                                    ->label('PPN')
-                                    ->content(function (Get $get) {
-                                        $subtotal = (float) ($get('subtotal') ?? 0);
-                                        $ppnPersen = (float) ($get('ppn') ?? 0);
-                                        $ppnNominal = ($subtotal * $ppnPersen) / 100;
-                                        return $ppnPersen . '% = Rp ' . number_format($ppnNominal, 0, ',', '.');
-                                    }),
-
-                                Placeholder::make('grand_total_view')
-                                    ->label('Grand Total')
-                                    ->extraAttributes(['class' => 'text-lg font-bold', 'style' => 'color: #007bff; font-size: 2.25rem;'])
-                                    ->content(function (Get $get) {
-                                        $subtotal = (float) ($get('subtotal') ?? 0);
-                                        $diskon = (float) ($get('diskon') ?? 0);
-                                        $ppn = (float) ($get('ppn') ?? 0);
-                                        $ongkir = (float) ($get('ongkir') ?? 0);
-
-                                        $diskonNominal = ($subtotal * $diskon) / 100;
-                                        $ppnNominal = ($subtotal * $ppn) / 100;
-                                        $grandTotal = $subtotal - $diskonNominal + $ppnNominal + $ongkir;
-
-                                        return 'Rp ' . number_format($grandTotal, 0, ',', '.');
-                                    }),
-                            ])
-                    ])
+                                            return 'Rp ' . number_format($grandTotal, 0, ',', '.');
+                                        }),
+                                ])
+                                ->columns(2),
+                        ]),
+                ])
+                ->skippable()
+                ->columnSpanFull(),
             ]);
     }
 

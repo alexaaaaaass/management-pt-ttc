@@ -57,10 +57,32 @@ class SuratJalanService
             }
 
             // Hubungkan SPK secara otomatis jika order berbasis SPK
+            $spk = null;
             if ($salesOrder->mode === 'SPK' || empty($data['spk_id'])) {
                 $spk = MasterSpk::where('sales_order_id', $salesOrder->id)->first();
                 if ($spk) {
                     $data['spk_id'] = $spk->id;
+                }
+            } elseif (!empty($data['spk_id'])) {
+                $spk = MasterSpk::find($data['spk_id']);
+            }
+
+            // Validasi stok barang jadi SPK sebelum simpan
+            if ($salesOrder->mode === 'SPK') {
+                $qtyKirim = (float) ($data['qty_pengiriman'] ?? 0);
+                if ($qtyKirim <= 0) {
+                    throw ValidationException::withMessages([
+                        'qty_pengiriman' => 'Qty pengiriman SPK harus lebih besar dari 0.',
+                    ]);
+                }
+
+                if ($spk) {
+                    $available = $spk->on_hand_stock;
+                    if ($qtyKirim > $available) {
+                        throw ValidationException::withMessages([
+                            'qty_pengiriman' => "Stok barang jadi SPK tidak mencukupi untuk dikirim (Tersedia siap kirim: " . number_format($available, 0, ',', '.') . " pcs, diminta: " . number_format($qtyKirim, 0, ',', '.') . " pcs).",
+                        ]);
+                    }
                 }
             }
 
@@ -70,13 +92,7 @@ class SuratJalanService
             // Proses pemotongan stok & detail berdasarkan mode Sales Order
             switch ($salesOrder->mode) {
                 case 'SPK':
-                    $qtyKirim = (float) ($data['qty_pengiriman'] ?? 0);
-                    if ($qtyKirim <= 0) {
-                        throw ValidationException::withMessages([
-                            'qty_pengiriman' => 'Qty pengiriman SPK harus lebih besar dari 0.',
-                        ]);
-                    }
-                    // on_hand_stock pada MasterSpk otomatis terhitung melalui relasi suratJalans
+                    // On-hand stock SPK otomatis tersinkron
                     break;
 
                 case 'SINGLE_MATERIAL':
@@ -172,10 +188,33 @@ class SuratJalanService
             $salesOrderId = $data['sales_order_id'] ?? $suratJalan->sales_order_id;
             $salesOrder = SalesOrder::with(['items', 'itemable'])->findOrFail($salesOrderId);
 
+            $spk = null;
             if ($salesOrder->mode === 'SPK' || empty($data['spk_id'])) {
                 $spk = MasterSpk::where('sales_order_id', $salesOrder->id)->first();
                 if ($spk) {
                     $data['spk_id'] = $spk->id;
+                }
+            } elseif (!empty($data['spk_id'])) {
+                $spk = MasterSpk::find($data['spk_id']);
+            }
+
+            // Validasi stok barang jadi SPK saat update
+            if ($salesOrder->mode === 'SPK') {
+                $qtyKirim = (float) ($data['qty_pengiriman'] ?? $suratJalan->qty_pengiriman);
+                if ($qtyKirim <= 0) {
+                    throw ValidationException::withMessages([
+                        'qty_pengiriman' => 'Qty pengiriman SPK harus lebih besar dari 0.',
+                    ]);
+                }
+
+                if ($spk) {
+                    $oldQty = (float) $suratJalan->qty_pengiriman;
+                    $available = $spk->on_hand_stock + $oldQty;
+                    if ($qtyKirim > $available) {
+                        throw ValidationException::withMessages([
+                            'qty_pengiriman' => "Stok barang jadi SPK tidak mencukupi untuk dikirim (Tersedia siap kirim: " . number_format($available, 0, ',', '.') . " pcs, diminta: " . number_format($qtyKirim, 0, ',', '.') . " pcs).",
+                        ]);
+                    }
                 }
             }
 
