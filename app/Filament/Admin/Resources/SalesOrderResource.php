@@ -24,6 +24,7 @@ class SalesOrderResource extends Resource
 {
     protected static ?string $model = SalesOrder::class;
     protected static ?string $navigationGroup = 'Marketing';
+    protected static ?int $navigationSort = 5;
     protected static ?string $navigationIcon = 'heroicon-o-shopping-cart';
 
     public static function form(Form $form): Form
@@ -40,6 +41,7 @@ class SalesOrderResource extends Resource
                     ->schema([
                         Forms\Components\Grid::make(3)->schema([
                             Forms\Components\Hidden::make('material_item_id'),
+                            Forms\Components\Hidden::make('order_confirmation_id'),
                             
                             Forms\Components\Select::make('order_type')
                                 ->label('Order Type')
@@ -83,6 +85,7 @@ class SalesOrderResource extends Resource
                                     if (!$state) {
                                         $set('itemable_id', null);
                                         $set('kode_material', null);
+                                        $set('bom_items', []);
                                         return;
                                     }
 
@@ -100,6 +103,11 @@ class SalesOrderResource extends Resource
                                         $set('kertas', $item?->spesifikasi_kertas);
                                         $set('warna', $item?->warna);
                                         $set('finishing', $item?->finishing);
+
+                                        // Otomatis tarik Bill of Material (BOM)
+                                        $qtyPesanan = (float) ($get('qty') ?? 0);
+                                        $bom = app(\App\Services\Sales\SalesOrderService::class)->getBomPreview((int) $state, $qtyPesanan);
+                                        $set('bom_items', $bom);
                                     } else {
                                         $item = \App\Models\MasterItem::find($state);
 
@@ -107,6 +115,7 @@ class SalesOrderResource extends Resource
                                         $set('itemable_id', $item?->id);
                                         $set('material_item_id', $item?->id);
                                         $set('kode_material', $item?->kode_master_item);
+                                        $set('bom_items', []);
                                     }
                                 }),
 
@@ -125,8 +134,9 @@ class SalesOrderResource extends Resource
                                 ->required(),
 
                             Forms\Components\TextInput::make('no_sales_order')
-                                ->disabled()
-                                ->placeholder('Otomatis setelah disimpan'),
+                                ->disabled(fn (string $operation) => $operation === 'edit')
+                                ->dehydrated()
+                                ->placeholder('Otomatis jika dikosongkan'),
 
                             Forms\Components\TextInput::make('no_po_customer'),
 
@@ -164,7 +174,14 @@ class SalesOrderResource extends Resource
                                 ->required(fn(Get $get) => $get('order_type') == 'SPK')
                                 ->label('Jumlah Pesanan')
                                 ->numeric()
-                                ->live() // Diperlukan agar tombol BOM bisa langsung membaca Qty terbaru
+                                ->live(debounce: 500)
+                                ->afterStateUpdated(function ($state, callable $set, callable $get) {
+                                    $fgId = $get('item_source');
+                                    if ($fgId && $get('order_type') === 'SPK') {
+                                        $bom = app(\App\Services\Sales\SalesOrderService::class)->getBomPreview((int) $fgId, (float) ($state ?? 0));
+                                        $set('bom_items', $bom);
+                                    }
+                                })
                                 ->rule(function ($get) {
                                     if ($get('order_type') === 'MATERIAL') {
                                         return null;
@@ -290,7 +307,7 @@ class SalesOrderResource extends Resource
                                 ->icon('heroicon-o-arrow-down-tray')
                                 ->color('success')
                                 ->action(function ($get, $set) {
-                                    $id = $get('item_source');
+                                    $id = $get('item_source') ?: $get('itemable_id');
                                     if (! $id || $get('order_type') !== 'SPK') {
                                         $set('bom_items', []);
                                         return;
@@ -310,14 +327,23 @@ class SalesOrderResource extends Resource
                             ])
                             ->visible(fn ($get) => $get('order_type') === 'SPK')
                             ->schema([
+                                Forms\Components\Placeholder::make('bom_empty_notice')
+                                    ->hiddenLabel()
+                                    ->content(new \Illuminate\Support\HtmlString('
+                                        <div class="p-3 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg text-amber-800 dark:text-amber-200 text-xs">
+                                            ⚠️ <strong>Perhatian:</strong> Item Finish Good ini belum memiliki komponen Bill of Material (BOM). Silakan lengkapi data BOM pada master Finish Good jika diperlukan.
+                                        </div>
+                                    '))
+                                    ->visible(fn (Get $get) => empty($get('bom_items')) && (!empty($get('item_source')) || !empty($get('itemable_id')))),
+
                                 Forms\Components\Repeater::make('bom_items')
                                     ->live()
                                     ->label(function ($get) {
-                                        $id = $get('item_source');
+                                        $id = $get('item_source') ?: $get('itemable_id');
                                         if (!$id || $get('order_type') !== 'SPK') return 'Bill Of Material';
                                         
                                         $item = \App\Models\FinishGoodItem::find($id);
-                                        return $item ? 'Bill Of Material - ' . $item->nama_barang : 'Bill Of Material';
+                                        return $item ? 'Daftar Bill Of Material (BOM) - ' . $item->nama_barang : 'Bill Of Material';
                                     })
                                     ->itemLabel(function ($state) {
                                         $nama = $state['nama_material'] ?? 'Material';
@@ -327,20 +353,12 @@ class SalesOrderResource extends Resource
                                     })
                                     ->schema([
                                         Forms\Components\TextInput::make('nama_material')
-                                            ->label('Material')
-                                            ->disabled(),
+                                            ->label('Nama Bahan / Material')
+                                            ->disabled()
+                                            ->columnSpan(2),
 
                                         Forms\Components\TextInput::make('departemen')
                                             ->label('Departemen')
-                                            ->disabled(),
-
-                                        Forms\Components\TextInput::make('satuan')
-                                            ->label('Satuan')
-                                            ->disabled(),
-
-                                        Forms\Components\TextInput::make('waste')
-                                            ->label('Waste')
-                                            ->numeric()
                                             ->disabled(),
 
                                         Forms\Components\TextInput::make('qty_master')
@@ -350,11 +368,22 @@ class SalesOrderResource extends Resource
                                         Forms\Components\TextInput::make('qty_produksi')
                                             ->label('Total Qty Produksi')
                                             ->disabled(),
+
+                                        Forms\Components\TextInput::make('satuan')
+                                            ->label('Satuan')
+                                            ->disabled(),
+
+                                        Forms\Components\TextInput::make('waste')
+                                            ->label('Waste (%)')
+                                            ->numeric()
+                                            ->disabled(),
                                     ])
-                                    ->columns(3)
+                                    ->columns(7)
                                     ->defaultItems(0)
-                                    ->collapsible()
+                                    ->collapsed(false)
                                     ->addable(false)
+                                    ->deletable(false)
+                                    ->reorderable(false)
                                     ->dehydrated(false),
                             ])
                             ->columnSpanFull(),
@@ -464,6 +493,33 @@ class SalesOrderResource extends Resource
                     ->badge()
                     ->getStateUsing(fn ($record) => $record->fulfillment['status'])
                     ->color(fn ($record) => $record->fulfillment['color']),
+            ])
+            ->filters([
+                Tables\Filters\SelectFilter::make('order_type')
+                    ->label('Tipe Pesanan')
+                    ->options([
+                        'SPK'      => 'Produksi (SPK)',
+                        'MATERIAL' => 'Penjualan Material',
+                    ]),
+
+                Tables\Filters\SelectFilter::make('status_pengiriman')
+                    ->label('Status Pengiriman')
+                    ->options([
+                        'BELUM DIKIRIM'    => 'Belum Dikirim',
+                        'DIKIRIM SEBAGIAN' => 'Dikirim Sebagian',
+                        'SELESAI'          => 'Selesai Dikirim',
+                    ])
+                    ->query(function ($query, array $data) {
+                        if (!empty($data['value'])) {
+                            $query->whereFulfillmentStatus($data['value']);
+                        }
+                    }),
+
+                Tables\Filters\SelectFilter::make('customer_id')
+                    ->label('Customer')
+                    ->relationship('customer', 'nama_customer')
+                    ->searchable()
+                    ->preload(),
             ])
             ->actions([
                 Tables\Actions\ActionGroup::make([

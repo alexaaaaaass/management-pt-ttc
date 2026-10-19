@@ -16,4 +16,9 @@ class CreateSuratPerintahKerja extends CreateRecord
     {
         return app(ProductionService::class)->createSpk($data);
     }
+
+    protected function getRedirectUrl(): string
+    {
+        return $this->getResource()::getUrl('index');
+    }
 }

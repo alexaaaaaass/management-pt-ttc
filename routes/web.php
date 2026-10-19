@@ -37,6 +37,29 @@ Route::get(
     [SalesOrderPdfController::class, 'download']
 )->name('sales-order.download');
 
+// ------------- PDF APPROVAL FORM ----------------
+Route::get(
+    '/approval-form/{approvalForm}/preview',
+    [\App\Http\Controllers\ApprovalFormPdfController::class, 'preview']
+)->name('approval-form.preview');
+
+Route::get(
+    '/approval-form/{approvalForm}/download',
+    [\App\Http\Controllers\ApprovalFormPdfController::class, 'download']
+)->name('approval-form.download');
+
+// ------------- PDF ORDER CONFIRMATION ----------------
+Route::get(
+    '/order-confirmation/{orderConfirmation}/preview',
+    [\App\Http\Controllers\OrderConfirmationPdfController::class, 'preview']
+)->name('order-confirmation.preview');
+
+Route::get(
+    '/order-confirmation/{orderConfirmation}/download',
+    [\App\Http\Controllers\OrderConfirmationPdfController::class, 'download']
+)->name('order-confirmation.download');
+
+
 Route::get(
     '/surat-jalan/{suratJalan}/preview',
     [\App\Http\Controllers\SuratJalanPdfController::class, 'preview']

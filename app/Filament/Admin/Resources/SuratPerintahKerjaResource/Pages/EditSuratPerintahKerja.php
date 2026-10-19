@@ -24,4 +24,9 @@ class EditSuratPerintahKerja extends EditRecord
     {
         return app(ProductionService::class)->updateSpk($record, $data);
     }
+
+    protected function getRedirectUrl(): string
+    {
+        return $this->getResource()::getUrl('index');
+    }
 }

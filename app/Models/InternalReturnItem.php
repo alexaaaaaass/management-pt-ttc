@@ -9,18 +9,30 @@ class InternalReturnItem extends Model
 {
     use HasFactory;
 
-    public function internalReturn()
-{
-    return $this->belongsTo(
-        InternalReturn::class
-    );
-}
+    protected $fillable = [
+        'internal_return_id',
+        'imr_printing_item_id',
+        'item_id',
+        'qty_return',
+        'catatan',
+    ];
 
-public function imrItem()
-{
-    return $this->belongsTo(
-        ImrPrintingItem::class,
-        'imr_printing_item_id'
-    );
-}
+    protected $casts = [
+        'qty_return' => 'decimal:2',
+    ];
+
+    public function internalReturn()
+    {
+        return $this->belongsTo(InternalReturn::class);
+    }
+
+    public function imrItem()
+    {
+        return $this->belongsTo(ImrPrintingItem::class, 'imr_printing_item_id');
+    }
+
+    public function item()
+    {
+        return $this->belongsTo(MasterItem::class, 'item_id');
+    }
 }

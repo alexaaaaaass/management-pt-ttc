@@ -235,7 +235,7 @@ body {
         <table style="width:100%; border-collapse:collapse;">
             <tr>
                 <td class="meta-label">Doc No</td>
-                <td>: SC-{{ $salesOrder->no_sales_order }}</td>
+                <td>: {{ $salesOrder->no_sales_order }}</td>
             </tr>
             <tr>
                 <td class="meta-label">Lead Time</td>
@@ -250,10 +250,10 @@ body {
 </tr>
 </table>
 
-<!-- ORDER CONFIRMATION TABLE WRAPPER -->
+<!-- SALES ORDER TABLE WRAPPER -->
 <div style="border: 2px solid #000; margin-bottom: 5px;">
     <div class="order-title-bar">
-        ORDER CONFIRMATION
+        SALES ORDER
     </div>
 
     <table class="items-table">
@@ -278,7 +278,7 @@ body {
             $rowCount = 0;
         @endphp
 
-        @if($salesOrder->order_type === 'MATERIAL' || ($salesOrder->items && $salesOrder->items->count() > 0))
+        @if($salesOrder->order_type === 'MATERIAL')
             @foreach($salesOrder->items as $index => $item)
                 @php
                     $itemQty = (float) ($item->qty ?? 0);
@@ -304,13 +304,15 @@ body {
             @endforeach
         @else
             @php
-                $itemQty = (float) ($salesOrder->qty ?? 0);
+                $itemQty = (float) ($salesOrder->qty ?: ($salesOrder->order_qty ?: 0));
                 $itemHarga = (float) ($salesOrder->harga_pcs ?? 0);
                 $itemTotal = $itemQty * $itemHarga;
                 $subtotal = $itemTotal;
                 $rowCount++;
 
-                $namaItem = $salesOrder->itemable?->nama_barang ?? $salesOrder->product_name ?? $salesOrder->kode_material ?? '-';
+                $namaItem = $salesOrder->itemable?->nama_barang 
+                    ?: ($salesOrder->product_name 
+                    ?: ($salesOrder->kode_material ?: 'Etiket'));
                 $jenis = $salesOrder->effective_jenis;
                 $komponen = $salesOrder->effective_komponen;
                 $isi = $salesOrder->effective_isi;

@@ -18,6 +18,11 @@ class EditSalesOrder extends EditRecord
     {
         if ($this->record->order_type === 'SPK') {
             $data['item_source'] = $this->record->itemable_id;
+
+            $qty = (float) ($this->record->qty ?? 0);
+            if ($this->record->itemable_id) {
+                $data['bom_items'] = app(SalesOrderService::class)->getBomPreview((int) $this->record->itemable_id, $qty);
+            }
         }
 
         return $data;
@@ -52,5 +57,10 @@ class EditSalesOrder extends EditRecord
             $this->halt();
             throw $e;
         }
+    }
+
+    protected function getRedirectUrl(): string
+    {
+        return $this->getResource()::getUrl('index');
     }
 }
