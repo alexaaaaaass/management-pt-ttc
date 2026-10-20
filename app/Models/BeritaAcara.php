@@ -15,6 +15,8 @@ class BeritaAcara extends Model
         'tanggal',
         'no_surat_jalan_invoice',
         'customer_id',
+        'surat_jalan_id',
+        'invoice_id',
         'item_product',
         'foto_bukti',
         'kronologi',
@@ -36,6 +38,16 @@ class BeritaAcara extends Model
     public function customer()
     {
         return $this->belongsTo(Customer::class);
+    }
+
+    public function suratJalan()
+    {
+        return $this->belongsTo(SuratJalan::class);
+    }
+
+    public function invoice()
+    {
+        return $this->belongsTo(Invoice::class);
     }
 
     public static function generateNoBA(): string

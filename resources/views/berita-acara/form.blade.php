@@ -16,6 +16,18 @@
         <input type="date" name="tanggal" value="{{ old('tanggal', $beritaAcara?->tanggal?->format('Y-m-d') ?? now()->format('Y-m-d')) }}" required class="{{ $fieldClass }}">
         @error('tanggal')<span class="text-xs text-red-600">{{ $message }}</span>@enderror
     </label>
+    <label class="text-sm font-medium text-gray-700">Surat Jalan
+        <select name="surat_jalan_id" class="{{ $fieldClass }}"><option value="">Pilih Surat Jalan</option>
+            @foreach ($suratJalans as $suratJalan)<option value="{{ $suratJalan->id }}" @selected((string) old('surat_jalan_id', $beritaAcara?->surat_jalan_id) === (string) $suratJalan->id)>{{ $suratJalan->kode_surat_jalan }}</option>@endforeach
+        </select>
+        @error('surat_jalan_id')<span class="text-xs text-red-600">{{ $message }}</span>@enderror
+    </label>
+    <label class="text-sm font-medium text-gray-700">Invoice
+        <select name="invoice_id" class="{{ $fieldClass }}"><option value="">Pilih Invoice</option>
+            @foreach ($invoices as $invoice)<option value="{{ $invoice->id }}" @selected((string) old('invoice_id', $beritaAcara?->invoice_id) === (string) $invoice->id)>{{ $invoice->kode_invoice }}</option>@endforeach
+        </select>
+        @error('invoice_id')<span class="text-xs text-red-600">{{ $message }}</span>@enderror
+    </label>
     <label class="text-sm font-medium text-gray-700">Customer
         <select name="customer_id" class="{{ $fieldClass }}"><option value="">Pilih customer</option>
             @foreach ($customers as $customer)<option value="{{ $customer->id }}" @selected((string) old('customer_id', $beritaAcara?->customer_id) === (string) $customer->id)>{{ $customer->nama_customer }}</option>@endforeach

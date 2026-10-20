@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Models\BeritaAcara;
 use App\Models\Customer;
+use App\Models\Invoice;
+use App\Models\SuratJalan;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -40,7 +42,9 @@ class BeritaAcaraController extends Controller
     {
         return view('berita-acara.create', [
             'customers' => Customer::orderBy('nama_customer')->get(),
+            'invoices' => Invoice::orderByDesc('tanggal_invoice')->get(),
             'noBa' => BeritaAcara::generateNoBA(),
+            'suratJalans' => SuratJalan::orderByDesc('tanggal_surat_jalan')->get(),
         ]);
     }
 
@@ -50,6 +54,7 @@ class BeritaAcaraController extends Controller
         $uploads = $data['foto_bukti'] ?? [];
         unset($data['foto_bukti']);
 
+        $data = $this->syncSourceDocumentFields($data);
         $data['no_ba'] = $data['no_ba'] ?: BeritaAcara::generateNoBA();
         $data['foto_bukti'] = $this->storePhotos($uploads);
 
@@ -62,7 +67,7 @@ class BeritaAcaraController extends Controller
     public function show(BeritaAcara $beritaAcara): View
     {
         return view('berita-acara.show', [
-            'beritaAcara' => $beritaAcara->load('customer'),
+            'beritaAcara' => $beritaAcara->load(['customer', 'suratJalan', 'invoice']),
         ]);
     }
 
@@ -71,6 +76,8 @@ class BeritaAcaraController extends Controller
         return view('berita-acara.edit', [
             'beritaAcara' => $beritaAcara,
             'customers' => Customer::orderBy('nama_customer')->get(),
+            'invoices' => Invoice::orderByDesc('tanggal_invoice')->get(),
+            'suratJalans' => SuratJalan::orderByDesc('tanggal_surat_jalan')->get(),
         ]);
     }
 
@@ -80,6 +87,7 @@ class BeritaAcaraController extends Controller
         $uploads = $data['foto_bukti'] ?? [];
         unset($data['foto_bukti']);
 
+        $data = $this->syncSourceDocumentFields($data);
         $data['no_ba'] = $data['no_ba'] ?: $beritaAcara->no_ba;
         $data['foto_bukti'] = array_merge(
             $beritaAcara->foto_bukti ?? [],
@@ -113,6 +121,8 @@ class BeritaAcaraController extends Controller
             'tanggal' => ['required', 'date'],
             'no_surat_jalan_invoice' => ['nullable', 'string', 'max:255'],
             'customer_id' => ['nullable', 'exists:customers,id'],
+            'surat_jalan_id' => ['nullable', 'exists:surat_jalans,id'],
+            'invoice_id' => ['nullable', 'exists:invoices,id'],
             'item_product' => ['nullable', 'string', 'max:255'],
             'foto_bukti' => ['nullable', 'array', 'max:10'],
             'foto_bukti.*' => ['image', 'max:5120'],
@@ -134,5 +144,68 @@ class BeritaAcaraController extends Controller
             ->filter()
             ->map(fn ($photo) => $photo->store('berita-acara', 'public'))
             ->all();
+    }
+
+    private function syncSourceDocumentFields(array $data): array
+    {
+        $invoice = ! empty($data['invoice_id'])
+            ? Invoice::with([
+                'suratJalan.salesOrder.itemable',
+                'suratJalan.salesOrder.items.material',
+                'suratJalan.items.material',
+                'salesOrder.itemable',
+                'salesOrder.items.material',
+            ])->find($data['invoice_id'])
+            : null;
+
+        $suratJalan = $invoice?->suratJalan;
+
+        if (! $suratJalan && ! empty($data['surat_jalan_id'])) {
+            $suratJalan = SuratJalan::with([
+                'invoice',
+                'salesOrder.itemable',
+                'salesOrder.items.material',
+                'items.material',
+            ])->find($data['surat_jalan_id']);
+        }
+
+        $invoice ??= $suratJalan?->invoice;
+        $suratJalan ??= $invoice?->suratJalan;
+
+        if (! $suratJalan && ! $invoice) {
+            return $data;
+        }
+
+        $data['surat_jalan_id'] = $suratJalan?->id;
+        $data['invoice_id'] = $invoice?->id;
+        $data['customer_id'] = $invoice?->customer_id
+            ?? $suratJalan?->salesOrder?->customer_id
+            ?? $invoice?->salesOrder?->customer_id
+            ?? $data['customer_id']
+            ?? null;
+
+        $references = collect([$suratJalan?->kode_surat_jalan, $invoice?->kode_invoice])
+            ->filter()
+            ->unique()
+            ->implode(' / ');
+
+        if ($references !== '') {
+            $data['no_surat_jalan_invoice'] = $references;
+        }
+
+        $products = $suratJalan?->items
+            ->map(fn ($item) => $item->material?->nama_master_item)
+            ->filter()
+            ->unique();
+
+        $product = $products?->isNotEmpty()
+            ? $products->implode(', ')
+            : ($suratJalan?->salesOrder?->product_name ?? $invoice?->salesOrder?->product_name);
+
+        if ($product) {
+            $data['item_product'] = $product;
+        }
+
+        return $data;
     }
 }
