@@ -350,80 +350,67 @@ class InvoiceResource extends Resource
             ]);
     }
 
-        ]);
-}
     public static function getNavigationLabel(): string
     {
         return 'Invoice';
     }
 
-   public static function table(Table $table): Table
+
+public static function table(Table $table): Table
 {
     return $table
         ->columns([
-
             Tables\Columns\TextColumn::make('kode_invoice')
                 ->searchable(),
 
-            Tables\Columns\TextColumn::make(
-                'suratJalan.kode_surat_jalan'
-            ),
+            Tables\Columns\TextColumn::make('suratJalan.kode_surat_jalan'),
 
-            Tables\Columns\TextColumn::make(
-                'suratJalan.salesOrder.customer.nama_customer'
-            )
+            Tables\Columns\TextColumn::make('suratJalan.salesOrder.customer.nama_customer')
                 ->label('Customer'),
 
             Tables\Columns\TextColumn::make('grand_total')
                 ->money('IDR'),
 
-                Tables\Columns\TextColumn::make('status')
-                    ->badge()
-                    ->color(fn (string $state): string => match ($state) {
-                        'Paid' => 'success',
-                        'Partial' => 'warning',
-                        'Unpaid' => 'danger',
-                        default => 'gray',
-                    }),
+            Tables\Columns\TextColumn::make('status')
+                ->badge()
+                ->color(fn (string $state): string => match ($state) {
+                    'Paid' => 'success',
+                    'Partial' => 'warning',
+                    'Unpaid' => 'danger',
+                    default => 'gray',
+                }),
 
-                Tables\Columns\TextColumn::make('status_pembayaran')
-    ->label('Status')
-    ->badge()
-    ->getStateUsing(function ($record) {
+            Tables\Columns\TextColumn::make('status_pembayaran')
+                ->label('Status Pembayaran')
+                ->badge()
+                ->getStateUsing(fn ($record) =>
+                    $record->sisa_tagihan <= 0 ? 'Lunas' : 'Belum Lunas'
+                )
+                ->color(fn ($record) =>
+                    $record->sisa_tagihan <= 0 ? 'success' : 'danger'
+                ),
 
-                Tables\Actions\EditAction::make(),
-
-                Tables\Actions\DeleteAction::make()
-                    ->hidden(fn ($record) => !app(\App\Services\Finance\InvoiceService::class)->canDelete($record)),
-            ]);
-    }
-
-        return $record->sisa_tagihan <= 0
-            ? 'success'
-            : 'danger';
-    }),
-
-            Tables\Columns\TextColumn::make(
-                'tanggal_invoice'
-            )
+            Tables\Columns\TextColumn::make('tanggal_invoice')
                 ->date('d/m/Y'),
-
         ])
         ->actions([
-
-         Tables\Actions\Action::make('detail')
-    ->label('Detail')
-    ->icon('heroicon-o-eye')
-    ->url(fn ($record) =>
-        static::getUrl('view', [
-            'record' => $record
-        ])
-    ),
+            Tables\Actions\Action::make('detail')
+                ->label('Detail')
+                ->icon('heroicon-o-eye')
+                ->url(fn ($record) => static::getUrl('view', [
+                    'record' => $record,
+                ])),
 
             Tables\Actions\EditAction::make(),
 
+            Tables\Actions\DeleteAction::make()
+                ->hidden(fn ($record) =>
+                    ! app(\App\Services\Finance\InvoiceService::class)
+                        ->canDelete($record)
+                ),
         ]);
 }
+
     public static function getRelations(): array
     {
         return [];

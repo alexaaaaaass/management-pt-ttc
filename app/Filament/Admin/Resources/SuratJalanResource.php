@@ -363,17 +363,6 @@ class SuratJalanResource extends Resource
                     Tables\Actions\EditAction::make()
                         ->disabled(fn ($record) => ! app(\App\Services\Dispatch\SuratJalanService::class)->canModify($record))
                         ->tooltip(fn ($record) => ! app(\App\Services\Dispatch\SuratJalanService::class)->canModify($record) ? 'Surat Jalan terkunci karena sudah memiliki Invoice' : null),
-                    Tables\Actions\Action::make('preview_pdf')
-                        ->label('Preview PDF')
-                        ->icon('heroicon-o-eye')
-                        ->color('info')
-                        ->url(fn ($record) => route('surat-jalan.preview', $record))
-                        ->openUrlInNewTab(),
-                    Tables\Actions\Action::make('download_pdf')
-                        ->label('Download PDF')
-                        ->icon('heroicon-o-arrow-down-tray')
-                        ->color('success')
-                        ->url(fn ($record) => route('surat-jalan.download', $record)),
                     Tables\Actions\DeleteAction::make()
                         ->disabled(fn ($record) => ! app(\App\Services\Dispatch\SuratJalanService::class)->canModify($record))
                         ->tooltip(fn ($record) => ! app(\App\Services\Dispatch\SuratJalanService::class)->canModify($record) ? 'Tidak dapat dihapus karena sudah memiliki Invoice' : null),

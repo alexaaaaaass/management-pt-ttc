@@ -11,6 +11,7 @@ use App\Http\Controllers\SubcountOutPdfController;
 use App\Http\Controllers\ExternalReturnPdfController;
 use App\Http\Controllers\IMRPrintingPdfController;
 use App\Http\Controllers\BeritaAcaraController;
+use App\Http\Controllers\BeritaAcaraPdfController;
 use App\Models\PenerimaanBarang;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Support\Facades\Route;
@@ -73,21 +74,14 @@ Route::get(
     [SalesOrderPdfController::class, 'download']
 )->name('sales-order.download');
 
-Route::get(
-    '/surat-jalan/{suratJalan}/preview',
-    [\App\Http\Controllers\SuratJalanPdfController::class, 'preview']
-)->name('surat-jalan.preview');
-
-Route::get(
-    '/surat-jalan/{suratJalan}/download',
-    [\App\Http\Controllers\SuratJalanPdfController::class, 'download']
-)->name('surat-jalan.download');
-
 Route::get('/dashboard', function () {
     return view('dashboard');
 })->middleware(['auth', 'verified'])->name('dashboard');
 
 Route::middleware('auth')->group(function () {
+    Route::get('/berita-acaras/{beritaAcara}/pdf', [BeritaAcaraPdfController::class, 'preview'])
+        ->name('berita-acaras.pdf');
+
     Route::resource('berita-acaras', BeritaAcaraController::class);
 
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
