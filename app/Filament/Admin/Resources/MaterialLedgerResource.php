@@ -50,13 +50,6 @@ class MaterialLedgerResource extends Resource
         return MaterialLedgerTable::make($table);
     }
 
-    public static function getWidgets(): array
-    {
-        return [
-            \App\Filament\Admin\Widgets\MaterialLedgerOverview::class,
-        ];
-    }
-
     public static function getPages(): array
     {
         return [
