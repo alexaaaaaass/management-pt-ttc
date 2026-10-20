@@ -73,6 +73,58 @@ class Invoice extends Model
         );
     }
 
+    public function items()
+    {
+        return $this->hasMany(InvoiceItem::class);
+    }
+
+    public function payments()
+    {
+        return $this->hasMany(InvPayment::class);
+    }
+
+    public static function penyebut($nilai)
+    {
+        $nilai = abs($nilai);
+        $huruf = array("", "Satu", "Dua", "Tiga", "Empat", "Lima", "Enam", "Tujuh", "Delapan", "Sembilan", "Sepuluh", "Sebelas");
+        $temp = "";
+        if ($nilai < 12) {
+            $temp = " " . $huruf[$nilai];
+        } else if ($nilai < 20) {
+            $temp = self::penyebut($nilai - 10) . " Belas";
+        } else if ($nilai < 100) {
+            $temp = self::penyebut(floor($nilai / 10)) . " Puluh" . self::penyebut($nilai % 10);
+        } else if ($nilai < 200) {
+            $temp = " Seratus" . self::penyebut($nilai - 100);
+        } else if ($nilai < 1000) {
+            $temp = self::penyebut(floor($nilai / 100)) . " Ratus" . self::penyebut($nilai % 100);
+        } else if ($nilai < 2000) {
+            $temp = " Seribu" . self::penyebut($nilai - 1000);
+        } else if ($nilai < 1000000) {
+            $temp = self::penyebut(floor($nilai / 1000)) . " Ribu" . self::penyebut($nilai % 1000);
+        } else if ($nilai < 1000000000) {
+            $temp = self::penyebut(floor($nilai / 1000000)) . " Juta" . self::penyebut($nilai % 1000000);
+        } else if ($nilai < 1000000000000) {
+            $temp = self::penyebut(floor($nilai / 1000000000)) . " Milyar" . self::penyebut(fmod($nilai, 1000000000));
+        } else if ($nilai < 1000000000000000) {
+            $temp = self::penyebut(floor($nilai / 1000000000000)) . " Triliun" . self::penyebut(fmod($nilai, 1000000000000));
+        }
+        return $temp;
+    }
+
+    public function getTerbilangFormattedAttribute()
+    {
+        if (!empty($this->terbilang_override)) {
+            return $this->terbilang_override;
+        }
+
+        $target = $this->sisa_tagihan > 0 ? $this->sisa_tagihan : $this->grand_total;
+        if ($target <= 0) return 'Nol Rupiah';
+
+        $hasil = trim(self::penyebut($target));
+        return preg_replace('/\s+/', ' ', $hasil) . ' Rupiah';
+    }
+
     /*
     |--------------------------------------------------------------------------
     | BOOTED & MODEL HOOKS

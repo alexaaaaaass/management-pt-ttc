@@ -14,10 +14,4 @@ class ListMaterialLedgers extends ListRecords
         return [];
     }
 
-    protected function getHeaderWidgets(): array
-{
-    return [
-        \App\Filament\Admin\Widgets\MaterialLedgerOverview::class,
-    ];
-}
 }

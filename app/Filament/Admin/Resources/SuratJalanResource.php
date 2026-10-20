@@ -346,6 +346,19 @@ class SuratJalanResource extends Resource
             ])
             ->actions([
                 Tables\Actions\ActionGroup::make([
+                    Tables\Actions\Action::make('preview_pdf')
+                        ->label('Preview PDF')
+                        ->icon('heroicon-o-document')
+                        ->color('warning')
+                        ->url(fn ($record) => route('suratjalan.preview', $record))
+                        ->openUrlInNewTab(),
+
+                    Tables\Actions\Action::make('download_pdf')
+                        ->label('Download PDF')
+                        ->icon('heroicon-o-arrow-down-tray')
+                        ->color('success')
+                        ->url(fn ($record) => route('suratjalan.download', $record)),
+
                     Tables\Actions\ViewAction::make(),
                     Tables\Actions\EditAction::make()
                         ->disabled(fn ($record) => ! app(\App\Services\Dispatch\SuratJalanService::class)->canModify($record))

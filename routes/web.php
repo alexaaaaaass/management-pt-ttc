@@ -1,31 +1,67 @@
 <?php
 
 use App\Http\Controllers\ProfileController;
-use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\InvoicePdfController;
+use App\Http\Controllers\SuratJalanPdfController;
 use App\Http\Controllers\SalesOrderPdfController;
 use App\Http\Controllers\PurchaseRequestPdfController;
 use App\Http\Controllers\PurchaseOrderPdfController;
 use App\Http\Controllers\SubcountInPdfController;
-use App\Models\PenerimaanBarang;
-use App\Http\Controllers\IMRPrintingPdfController;
 use App\Http\Controllers\SubcountOutPdfController;
 use App\Http\Controllers\ExternalReturnPdfController;
+use App\Http\Controllers\IMRPrintingPdfController;
+use App\Http\Controllers\BeritaAcaraController;
+use App\Models\PenerimaanBarang;
 use Barryvdh\DomPDF\Facade\Pdf;
+use Illuminate\Support\Facades\Route;
 
 /*
 |--------------------------------------------------------------------------
 | Web Routes
 |--------------------------------------------------------------------------
-|
-| Here is where you can register web routes for your application. These
-| routes are loaded by the RouteServiceProvider and all of them will
-| be assigned to the "web" middleware group. Make something great!
-|
 */
 
 Route::get('/', function () {
     return view('welcome');
 });
+
+Route::get('/dashboard', function () {
+    return view('dashboard');
+})->middleware(['auth', 'verified'])->name('dashboard');
+
+/*
+|--------------------------------------------------------------------------
+| Invoice PDF
+|--------------------------------------------------------------------------
+*/
+
+Route::middleware('auth')->group(function () {
+    Route::get(
+        '/invoice/{invoice}/preview',
+        [InvoicePdfController::class, 'preview']
+    )->name('invoice.preview');
+
+    Route::get(
+        '/invoice/{invoice}/download',
+        [InvoicePdfController::class, 'download']
+    )->name('invoice.download');
+
+    Route::get(
+        '/surat-jalan/{suratJalan}/preview',
+        [SuratJalanPdfController::class, 'preview']
+    )->name('suratjalan.preview');
+
+    Route::get(
+        '/surat-jalan/{suratJalan}/download',
+        [SuratJalanPdfController::class, 'download']
+    )->name('suratjalan.download');
+});
+
+/*
+|--------------------------------------------------------------------------
+| Sales Order PDF
+|--------------------------------------------------------------------------
+*/
 
 Route::get(
     '/sales-order/{salesOrder}/preview',
@@ -75,6 +111,8 @@ Route::get('/dashboard', function () {
 })->middleware(['auth', 'verified'])->name('dashboard');
 
 Route::middleware('auth')->group(function () {
+    Route::resource('berita-acaras', BeritaAcaraController::class);
+
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
@@ -89,23 +127,37 @@ Route::get(
 
 
 Route::get(
-'/purchase-request/{purchaseRequest}/download',
-[PurchaseRequestPdfController::class,'download']
-)
-->name('purchase-request.download');
+    '/purchase-request/{purchaseRequest}/preview',
+    [PurchaseRequestPdfController::class, 'preview']
+)->name('purchase-request.preview');
 
-// ------------ PDF PURCHASE ORDER ----------------
 Route::get(
-'/purchase-order/{purchaseOrder}/preview',
-[PurchaseOrderPdfController::class,'preview']
+    '/purchase-request/{purchaseRequest}/download',
+    [PurchaseRequestPdfController::class, 'download']
+)->name('purchase-request.download');
+
+/*
+|--------------------------------------------------------------------------
+| Purchase Order PDF
+|--------------------------------------------------------------------------
+*/
+
+Route::get(
+    '/purchase-order/{purchaseOrder}/preview',
+    [PurchaseOrderPdfController::class, 'preview']
 )->name('purchase-order.preview');
 
 Route::get(
-'/purchase-order/{purchaseOrder}/download',
-[PurchaseOrderPdfController::class,'download']
+    '/purchase-order/{purchaseOrder}/download',
+    [PurchaseOrderPdfController::class, 'download']
 )->name('purchase-order.download');
 
-// ------------ PDF SUBCOUNT IN ----------------
+/*
+|--------------------------------------------------------------------------
+| Subcount In PDF
+|--------------------------------------------------------------------------
+*/
+
 Route::get(
     '/subcount-in/{subcountIn}/preview',
     [SubcountInPdfController::class, 'preview']
@@ -116,7 +168,11 @@ Route::get(
     [SubcountInPdfController::class, 'download']
 )->name('subcount-in.download');
 
-// ----------- PDF SUBCOUNT OUT ----------------
+/*
+|--------------------------------------------------------------------------
+| Subcount Out PDF
+|--------------------------------------------------------------------------
+*/
 
 Route::get(
     '/subcount-out/{subcountOut}/preview',
@@ -128,34 +184,39 @@ Route::get(
     [SubcountOutPdfController::class, 'download']
 )->name('subcount-out.download');
 
-// -------------- PDF PENERIMAAN BARANG -----------------
-Route::get('/penerimaan-barang/{id}/pdf', function ($id){
+/*
+|--------------------------------------------------------------------------
+| Penerimaan Barang PDF
+|--------------------------------------------------------------------------
+*/
 
+Route::get('/penerimaan-barang/{id}/pdf', function ($id) {
     $pb = PenerimaanBarang::with([
         'purchaseOrder.supplier',
-        'items.purchaseOrderItem.item.satuan'
+        'items.purchaseOrderItem.item.satuan',
     ])->findOrFail($id);
 
-    $pdf = Pdf::loadView(
-        'pdf.penerimaan-barang',
-        compact('pb')
-    );
+    $pdf = Pdf::loadView('pdf.penerimaan-barang', compact('pb'));
 
-    return $pdf->stream();
-
+    return $pdf->stream('penerimaan-barang-' . $pb->id . '.pdf');
 })->name('pb.preview');
 
 Route::get('/penerimaan-barang/{id}/download', function ($id) {
+    $pb = PenerimaanBarang::with([
+        'purchaseOrder.supplier',
+        'items.purchaseOrderItem.item.satuan',
+    ])->findOrFail($id);
 
-    $pb = PenerimaanBarang::findOrFail($id);
+    $pdf = Pdf::loadView('pdf.penerimaan-barang', compact('pb'));
 
-    dd([
-        'id' => $pb->id,
-        'no_penerimaan' => $pb->no_penerimaan,
-        'items_count' => $pb->items()->count(),
-    ]);
-
+    return $pdf->download('penerimaan-barang-' . $pb->id . '.pdf');
 })->name('pb.download');
+
+/*
+|--------------------------------------------------------------------------
+| External Return PDF
+|--------------------------------------------------------------------------
+*/
 
 Route::get(
     '/external-return/{externalReturn}/preview',
@@ -167,11 +228,38 @@ Route::get(
     [ExternalReturnPdfController::class, 'download']
 )->name('external-return.download');
 
+/*
+|--------------------------------------------------------------------------
+| IMR Printing PDF
+|--------------------------------------------------------------------------
+*/
 
 Route::get(
     '/imr/{imr}/preview',
     [IMRPrintingPdfController::class, 'preview']
 )->name('imr.preview');
 
+/*
+|--------------------------------------------------------------------------
+| Profile
+|--------------------------------------------------------------------------
+*/
 
-require __DIR__.'/auth.php';
+Route::middleware('auth')->group(function () {
+    Route::get(
+        '/profile',
+        [ProfileController::class, 'edit']
+    )->name('profile.edit');
+
+    Route::patch(
+        '/profile',
+        [ProfileController::class, 'update']
+    )->name('profile.update');
+
+    Route::delete(
+        '/profile',
+        [ProfileController::class, 'destroy']
+    )->name('profile.destroy');
+});
+
+require __DIR__ . '/auth.php';
