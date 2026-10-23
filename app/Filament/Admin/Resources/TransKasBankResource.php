@@ -51,8 +51,8 @@ class TransKasBankResource extends Resource
                     Placeholder::make('info_tipe')
                         ->label('Tipe Transaksi')
                         ->content(fn ($get) => $get('tipe_transaksi') === 'BANK_KELUAR'
-                            ? '🔴 Bank Keluar (Pengeluaran via Rekening Bank)'
-                            : '🟢 Bank Masuk (Penerimaan via Rekening Bank)'
+                            ? 'ðŸ”´ Bank Keluar (Pengeluaran via Rekening Bank)'
+                            : 'ðŸŸ¢ Bank Masuk (Penerimaan via Rekening Bank)'
                         ),
 
                     Grid::make(2)
@@ -201,6 +201,18 @@ class TransKasBankResource extends Resource
                     ->icon('heroicon-o-arrow-up-circle')
                     ->color('danger')
                     ->url(fn () => static::getUrl('create', ['type' => 'BANK_KELUAR'])),
+            ])
+            ->bulkActions([
+                Tables\Actions\BulkAction::make('infoDataTerpilih')
+                    ->label('Info Data Terpilih')
+                    ->icon('heroicon-o-check-circle')
+                    ->action(function (\Illuminate\Database\Eloquent\Collection $records): void {
+                        \Filament\Notifications\Notification::make()
+                            ->title($records->count() . ' data dipilih')
+                            ->success()
+                            ->send();
+                    })
+                    ->deselectRecordsAfterCompletion(),
             ])
             ->actions([
                 Tables\Actions\ViewAction::make(),

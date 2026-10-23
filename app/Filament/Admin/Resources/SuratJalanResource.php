@@ -350,14 +350,14 @@ class SuratJalanResource extends Resource
                         ->label('Preview PDF')
                         ->icon('heroicon-o-document')
                         ->color('warning')
-                        ->url(fn ($record) => route('suratjalan.preview', $record))
+                        ->url(fn ($record) => route('surat-jalan.download', $record))
                         ->openUrlInNewTab(),
 
                     Tables\Actions\Action::make('download_pdf')
                         ->label('Download PDF')
                         ->icon('heroicon-o-arrow-down-tray')
                         ->color('success')
-                        ->url(fn ($record) => route('suratjalan.download', $record)),
+                        ->url(fn ($record) => route('surat-jalan.download', $record)),
 
                     Tables\Actions\ViewAction::make(),
                     Tables\Actions\EditAction::make()

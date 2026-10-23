@@ -37,7 +37,7 @@ class TreasuryService
         }
 
         $coa = MasterCOA::find($coaId);
-        return $coa ? $coa->saldo_awal : 0.0;
+        return $coa ? ((float) $coa->saldo_debit - (float) $coa->saldo_kredit) : 0.0;
     }
 
     /**
@@ -108,7 +108,7 @@ class TreasuryService
             return;
         }
 
-        $runningBalance = (float) $coa->saldo_awal;
+        $runningBalance = (float) $coa->saldo_debit - (float) $coa->saldo_kredit;
 
         $movements = CoaMovement::where('coa_id', $coaId)
             ->orderBy('tanggal', 'asc')
@@ -618,8 +618,12 @@ class TreasuryService
 
     public function postInvPayment(InvPayment $payment): void
     {
+        // Hanya pembayaran berhasil yang boleh menambah mutasi kas/bank.
+if (strtoupper((string) $payment->status) !== 'SUCCESS') {
+    return;
+}    
         if (empty($payment->coa_id)) {
-            return;
+            return; 
         }
 
         $nominal = (float) $payment->nominal_bayar;

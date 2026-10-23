@@ -1,23 +1,20 @@
 <x-filament::page>
 
 @php
-
     $invoice = $this->record;
-
     $sj = $invoice->suratJalan;
+    $so = $sj?->salesOrder;
 
-$paid = (float) ($invoice->total_payment ?? ($invoice->uang_muka + $invoice->payments->sum('nominal_bayar')));
+    $paid = (float) (
+        $invoice->total_payment
+        ?? (($invoice->uang_muka ?? 0) + $invoice->payments->sum('nominal_bayar'))
+    );
 
     $spk = $sj?->spk;
-
     $customer = $so?->customer;
 
-    $diskonNominal =
-        ($invoice->subtotal * $invoice->diskon) / 100;
-
-    $ppnNominal =
-        ($invoice->subtotal * $invoice->ppn) / 100;
-
+    $diskonNominal = (($invoice->subtotal ?? 0) * ($invoice->diskon ?? 0)) / 100;
+    $ppnNominal = (($invoice->subtotal ?? 0) * ($invoice->ppn ?? 0)) / 100;
 @endphp
 <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
 

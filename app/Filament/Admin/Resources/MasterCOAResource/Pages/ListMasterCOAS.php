@@ -13,6 +13,12 @@ class ListMasterCOAS extends ListRecords
     protected function getHeaderActions(): array
     {
         return [
+            Actions\Action::make('importExcel')
+                ->label('Import Excel')
+                ->icon('heroicon-o-arrow-up-tray')
+                ->color('success')
+                ->url(fn (): string => MasterCOAResource::getUrl('import')),
+
             Actions\CreateAction::make(),
         ];
     }

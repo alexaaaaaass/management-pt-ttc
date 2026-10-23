@@ -3,7 +3,6 @@
 namespace App\Filament\Admin\Resources\ImrFinishResource\Pages;
 
 use App\Filament\Admin\Resources\ImrFinishResource;
-use Filament\Actions;
 use Filament\Resources\Pages\EditRecord;
 
 class EditImrFinish extends EditRecord
@@ -12,8 +11,11 @@ class EditImrFinish extends EditRecord
 
     protected function getHeaderActions(): array
     {
-        return [
-            Actions\DeleteAction::make(),
-        ];
+        return [];
+    }
+
+    protected function getFormActions(): array
+    {
+        return [];
     }
 }

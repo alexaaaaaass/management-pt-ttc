@@ -136,7 +136,9 @@ class InvoiceService
 
         $paymentsSum = 0.0;
         if ($invoice->exists) {
-            $paymentsSum = (float) $invoice->payments()->sum('nominal_bayar');
+            $paymentsSum = (float) $invoice->payments()
+    ->where('status', 'SUCCESS')
+    ->sum('nominal_bayar');
         }
 
         $totals = $this->calculateTotals(
@@ -227,7 +229,9 @@ class InvoiceService
      */
     public function refreshInvoicePayment(Invoice $invoice): void
     {
-        $paymentsSum = (float) $invoice->payments()->sum('nominal_bayar');
+       $paymentsSum = (float) $invoice->payments()
+            ->where('status', 'SUCCESS')
+            ->sum('nominal_bayar');
         $uangMuka = (float) ($invoice->uang_muka ?? 0);
         $totalPayment = round($uangMuka + $paymentsSum, 2);
         $grandTotal = (float) $invoice->grand_total;

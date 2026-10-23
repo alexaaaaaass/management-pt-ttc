@@ -28,7 +28,7 @@ class ViewSuratJalan extends ViewRecord
                 ->label('Download PDF')
                 ->icon('heroicon-o-arrow-down-tray')
                 ->color('success')
-                ->url(fn () => route('suratjalan.download', $this->record)),
+                ->url(fn () => route('surat-jalan.download', $this->record)),
 
             \Filament\Actions\EditAction::make(),
         ];

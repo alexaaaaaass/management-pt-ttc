@@ -45,8 +45,8 @@ class TransKasResource extends Resource
                             ->label('Tipe Transaksi')
                             ->content(fn ($get) => 
                                 $get('tipe_transaksi') === 'KAS_MASUK'
-                                    ? '🟢 Kas Masuk (Penerimaan Tunai)'
-                                    : ($get('tipe_transaksi') === 'KAS_KELUAR' ? '🔴 Kas Keluar (Pengeluaran Tunai)' : '—')
+                                    ? 'ðŸŸ¢ Kas Masuk (Penerimaan Tunai)'
+                                    : ($get('tipe_transaksi') === 'KAS_KELUAR' ? 'ðŸ”´ Kas Keluar (Pengeluaran Tunai)' : 'â€”')
                             ),
 
                         Grid::make(2)
@@ -189,6 +189,18 @@ class TransKasResource extends Resource
                     ->icon('heroicon-o-arrow-up-circle')
                     ->color('danger')
                     ->url(fn () => static::getUrl('create', ['type' => 'KAS_KELUAR'])),
+            ])
+            ->bulkActions([
+                Tables\Actions\BulkAction::make('infoDataTerpilih')
+                    ->label('Info Data Terpilih')
+                    ->icon('heroicon-o-check-circle')
+                    ->action(function (\Illuminate\Database\Eloquent\Collection $records): void {
+                        \Filament\Notifications\Notification::make()
+                            ->title($records->count() . ' data dipilih')
+                            ->success()
+                            ->send();
+                    })
+                    ->deselectRecordsAfterCompletion(),
             ])
             ->actions([
                 Tables\Actions\ViewAction::make(),

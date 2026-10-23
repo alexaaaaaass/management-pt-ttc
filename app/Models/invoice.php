@@ -134,11 +134,8 @@ class Invoice extends Model
             }
         });
 
-        static::deleting(function ($model) {
-            if ($model->payments()->exists()) {
-                throw new \Exception('Tidak dapat menghapus Invoice karena sudah memiliki riwayat pembayaran.');
-            }
-        });
+        // Proteksi hapus ditangani oleh InvoiceObserver::deleting()
+        // untuk menghindari duplikasi pengecekan.
     }
 
     public function refreshPayment(): void

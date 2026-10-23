@@ -12,13 +12,13 @@ class InvoicePdfController extends Controller
     {
         $invoice->load(['items', 'suratJalan.salesOrder.customer', 'suratJalan.spk']);
 
-        $logoPath = public_path('images/Logo PT Teknografi.png');
-        $logoBase64 = '';
-        if (file_exists($logoPath)) {
-            $logoData = file_get_contents($logoPath);
-            $logoBase64 = 'data:image/svg+xml;base64,' . base64_encode($logoData);
-        }
+$logoPath = public_path('images/Logo PT Teknografi.png');
+$logoBase64 = '';
 
+if (file_exists($logoPath)) {
+    $logoData = file_get_contents($logoPath);
+    $logoBase64 = 'data:image/png;base64,' . base64_encode($logoData);
+}
         $pdf = Pdf::loadView('pdf.invoice', [
             'invoice' => $invoice,
             'logoBase64' => $logoBase64,

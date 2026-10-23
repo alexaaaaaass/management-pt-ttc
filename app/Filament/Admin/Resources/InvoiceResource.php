@@ -37,7 +37,7 @@ class InvoiceResource extends Resource
                 Wizard::make([
 
                     // ==========================================
-                    // 🔥 TAHAP 1: SURAT JALAN & DETAIL ORDER
+                    // ðŸ”¥ TAHAP 1: SURAT JALAN & DETAIL ORDER
                     // ==========================================
                     Wizard\Step::make('Surat Jalan & Detail Order')
                         ->icon('heroicon-o-document-text')
@@ -234,7 +234,7 @@ class InvoiceResource extends Resource
                         ]),
 
                     // ==========================================
-                    // 🔥 TAHAP 2: BIAYA, DISKON & TOTAL TAGIHAN
+                    // ðŸ”¥ TAHAP 2: BIAYA, DISKON & TOTAL TAGIHAN
                     // ==========================================
                     Wizard\Step::make('Biaya & Tagihan')
                         ->icon('heroicon-o-banknotes')
@@ -356,6 +356,7 @@ class InvoiceResource extends Resource
     }
 
 
+
 public static function table(Table $table): Table
 {
     return $table
@@ -393,36 +394,68 @@ public static function table(Table $table): Table
             Tables\Columns\TextColumn::make('tanggal_invoice')
                 ->date('d/m/Y'),
         ])
+        ->bulkActions([
+            Tables\Actions\BulkAction::make('infoDataTerpilih')
+                ->label('Info Data Terpilih')
+                ->icon('heroicon-o-check-circle')
+                ->action(function (\Illuminate\Database\Eloquent\Collection $records): void {
+                    \Filament\Notifications\Notification::make()
+                        ->title($records->count() . ' data dipilih')
+                        ->success()
+                        ->send();
+                })
+                ->deselectRecordsAfterCompletion(),
+        ])
         ->actions([
-            Tables\Actions\Action::make('detail')
-                ->label('Detail')
-                ->icon('heroicon-o-eye')
-                ->url(fn ($record) => static::getUrl('view', [
-                    'record' => $record,
-                ])),
+            Tables\Actions\ActionGroup::make([
+                Tables\Actions\Action::make('detail')
+                    ->label('Detail')
+                    ->icon('heroicon-o-eye')
+                    ->url(fn ($record) => static::getUrl('view', [
+                        'record' => $record,
+                    ])),
 
-            Tables\Actions\EditAction::make(),
+                Tables\Actions\Action::make('preview_pdf')
+                    ->label('Preview PDF')
+                    ->icon('heroicon-o-document')
+                    ->url(fn ($record) => route('invoice.preview', $record))
+                    ->openUrlInNewTab(),
 
-            Tables\Actions\DeleteAction::make()
-                ->hidden(fn ($record) =>
-                    ! app(\App\Services\Finance\InvoiceService::class)
-                        ->canDelete($record)
-                ),
+                Tables\Actions\Action::make('download_pdf')
+                    ->label('Download PDF')
+                    ->icon('heroicon-o-arrow-down-tray')
+                    ->url(fn ($record) => route('invoice.download', $record)),
+
+                Tables\Actions\EditAction::make()
+                    ->label('Edit'),
+
+                Tables\Actions\DeleteAction::make()
+                    ->label('Hapus')
+                    ->hidden(fn ($record) =>
+                        ! app(\App\Services\Finance\InvoiceService::class)
+                            ->canDelete($record)
+                    ),
+            ])
+                ->label('Aksi')
+                ->icon('heroicon-m-ellipsis-vertical')
+                ->size('md')
+                ->color('gray')
+                ->button()
+                ->dropdownPlacement('bottom-end'),
         ]);
 }
 
-    public static function getRelations(): array
-    {
-        return [];
-    }
-
-    public static function getPages(): array
-    {
-        return [
-            'index' => Pages\ListInvoices::route('/'),
-            'create' => Pages\CreateInvoice::route('/create'),
-            'view' => Pages\ViewInvoice::route('/{record}'),
-            'edit' => Pages\EditInvoice::route('/{record}/edit'),
-        ];
-    }
+public static function getRelations(): array
+{
+    return [];
 }
+
+public static function getPages(): array
+{
+    return [
+        'index' => Pages\ListInvoices::route('/'),
+        'create' => Pages\CreateInvoice::route('/create'),
+        'view' => Pages\ViewInvoice::route('/{record}'),
+        'edit' => Pages\EditInvoice::route('/{record}/edit'),
+    ];
+}}

@@ -23,12 +23,23 @@ class MasterCOA extends Model
         'nominal_default',
         'keterangan',
         'status',
+
+        // Detail COA dari Excel
+        'parent_code',
+        'level',
+        'account_type',
+        'account_class',
+        'financial_statement',
+        'cash_flow_type',
+        'posting',
+        'normal_balance',
     ];
 
     protected $casts = [
         'saldo_debit'     => 'float',
         'saldo_kredit'    => 'float',
         'nominal_default' => 'float',
+        'level'           => 'integer',
     ];
 
     public function karyawan()
@@ -46,21 +57,18 @@ class MasterCOA extends Model
         return $this->hasMany(CoaMovement::class, 'coa_id');
     }
 
-    /**
-     * Saldo Awal (Debit - Kredit)
-     */
     public function getSaldoAwalAttribute(): float
     {
         return (float) ($this->saldo_debit - $this->saldo_kredit);
     }
 
-    /**
-     * Saldo Berjalan (Current Balance)
-     * Saldo Awal + Mutasi yang tercatat di coa_movements
-     */
     public function getSaldoBerjalanAttribute(): float
     {
-        $lastMovement = $this->movements()->orderByDesc('tanggal')->orderByDesc('id')->first();
+        $lastMovement = $this->movements()
+            ->orderByDesc('tanggal')
+            ->orderByDesc('id')
+            ->first();
+
         if ($lastMovement) {
             return (float) $lastMovement->balance_after;
         }

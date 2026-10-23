@@ -60,7 +60,7 @@ class InvPaymentResource extends Resource
                                         ->getOptionLabelFromRecordUsing(
                                             fn ($record) =>
                                                 $record->kode_invoice .
-                                                ' • ' .
+                                                ' â€¢ ' .
                                                 ($record->suratJalan?->salesOrder?->customer?->nama_customer ?? '-')
                                         )
                                         ->searchable()
@@ -301,6 +301,18 @@ class InvPaymentResource extends Resource
                     default => 'gray',
                 })
 
+        ])
+        ->bulkActions([
+            Tables\Actions\BulkAction::make('infoDataTerpilih')
+                ->label('Info Data Terpilih')
+                ->icon('heroicon-o-check-circle')
+                ->action(function (\Illuminate\Database\Eloquent\Collection $records): void {
+                    \Filament\Notifications\Notification::make()
+                        ->title($records->count() . ' data dipilih')
+                        ->success()
+                        ->send();
+                })
+                ->deselectRecordsAfterCompletion(),
         ])
         ->actions([
             Tables\Actions\EditAction::make(),
