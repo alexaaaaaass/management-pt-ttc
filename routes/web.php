@@ -48,14 +48,14 @@ Route::middleware('auth')->group(function () {
     )->name('invoice.download');
 
     Route::get(
-        '/surat-jalan/{suratJalan}/preview',
-        [SuratJalanPdfController::class, 'preview']
-    )->name('suratjalan.preview');
+    '/surat-jalan/{suratJalan}/preview',
+    [SuratJalanPdfController::class, 'preview']
+)->name('suratjalan.preview');
 
-    Route::get(
-        '/surat-jalan/{suratJalan}/download',
-        [SuratJalanPdfController::class, 'download']
-    )->name('suratjalan.download');
+Route::get(
+    '/surat-jalan/{suratJalan}/download',
+    [SuratJalanPdfController::class, 'download']
+)->name('surat-jalan.download');
 });
 
 /*
@@ -74,9 +74,27 @@ Route::get(
     [SalesOrderPdfController::class, 'download']
 )->name('sales-order.download');
 
-Route::get('/dashboard', function () {
-    return view('dashboard');
-})->middleware(['auth', 'verified'])->name('dashboard');
+// ------------- PDF APPROVAL FORM ----------------
+Route::get(
+    '/approval-form/{approvalForm}/preview',
+    [\App\Http\Controllers\ApprovalFormPdfController::class, 'preview']
+)->name('approval-form.preview');
+
+Route::get(
+    '/approval-form/{approvalForm}/download',
+    [\App\Http\Controllers\ApprovalFormPdfController::class, 'download']
+)->name('approval-form.download');
+
+// ------------- PDF ORDER CONFIRMATION ----------------
+Route::get(
+    '/order-confirmation/{orderConfirmation}/preview',
+    [\App\Http\Controllers\OrderConfirmationPdfController::class, 'preview']
+)->name('order-confirmation.preview');
+
+Route::get(
+    '/order-confirmation/{orderConfirmation}/download',
+    [\App\Http\Controllers\OrderConfirmationPdfController::class, 'download']
+)->name('order-confirmation.download');
 
 Route::middleware('auth')->group(function () {
     Route::get('/berita-acaras/{beritaAcara}/pdf', [BeritaAcaraPdfController::class, 'preview'])

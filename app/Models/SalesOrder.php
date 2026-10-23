@@ -258,6 +258,29 @@ public function getCurrentStockAttribute()
         return app(\App\Services\Sales\SalesOrderService::class)->calculateTotals($this);
     }
 
+    /**
+     * Scope query untuk filter status pemenuhan pengiriman (Fulfillment Status).
+     */
+    public function scopeWhereFulfillmentStatus($query, string $status)
+    {
+        $spkDelivered = "(SELECT COALESCE(SUM(qty_pengiriman), 0) FROM surat_jalans WHERE surat_jalans.sales_order_id = sales_orders.id)";
+        $materialOrder = "(SELECT COALESCE(SUM(qty), 0) FROM sales_order_items WHERE sales_order_items.sales_order_id = sales_orders.id)";
+        $materialDelivered = "(SELECT COALESCE(SUM(sji.qty_kirim), 0) FROM surat_jalan_items sji JOIN sales_order_items soi ON sji.sales_order_item_id = soi.id WHERE soi.sales_order_id = sales_orders.id)";
+
+        $effectiveDelivered = "CASE WHEN sales_orders.order_type = 'SPK' THEN $spkDelivered ELSE $materialDelivered END";
+        $effectiveOrder = "CASE WHEN sales_orders.order_type = 'SPK' THEN COALESCE(sales_orders.qty, 0) ELSE $materialOrder END";
+
+        if ($status === 'BELUM DIKIRIM') {
+            return $query->whereRaw("($effectiveDelivered) <= 0");
+        } elseif ($status === 'SELESAI') {
+            return $query->whereRaw("($effectiveDelivered) > 0 AND ($effectiveDelivered) >= ($effectiveOrder)");
+        } elseif ($status === 'DIKIRIM SEBAGIAN') {
+            return $query->whereRaw("($effectiveDelivered) > 0 AND ($effectiveDelivered) < ($effectiveOrder)");
+        }
+
+        return $query;
+    }
+
     protected static function booted()
     {
         static::creating(function ($model) {

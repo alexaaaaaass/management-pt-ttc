@@ -11,6 +11,18 @@ class EditSubcountIn extends EditRecord
 {
     protected static string $resource = SubcountInResource::class;
 
+    protected function getRedirectUrl(): string
+    {
+        return $this->getResource()::getUrl('index');
+    }
+
+    protected function mutateFormDataBeforeFill(array $data): array
+    {
+        $data['items'] = $this->record->items->toArray();
+
+        return $data;
+    }
+
     protected function getHeaderActions(): array
     {
         return [

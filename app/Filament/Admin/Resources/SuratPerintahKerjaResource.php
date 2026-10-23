@@ -211,16 +211,16 @@ public static function form(Form $form): Form
                     ->schema([
                         Forms\Components\Grid::make(3)->schema([
                             Forms\Components\TextInput::make('up_satu')
-                                ->label('UP 1')
+                                ->label('UP 1 (Opsional)')
                                 ->numeric()
                                 ->placeholder('Contoh: 4'),
 
                             Forms\Components\TextInput::make('up_dua')
-                                ->label('UP 2')
+                                ->label('UP 2 (Opsional)')
                                 ->numeric(),
 
                             Forms\Components\TextInput::make('up_tiga')
-                                ->label('UP 3')
+                                ->label('UP 3 (Opsional)')
                                 ->numeric(),
 
                             Forms\Components\TextInput::make('ukuran_potong')

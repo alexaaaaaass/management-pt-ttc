@@ -58,38 +58,53 @@ class SubcountOutResource extends Resource
                 ->schema([
 
                     Forms\Components\Repeater::make('items')
-                        ->relationship()
                         ->schema([
 
-                          Forms\Components\Radio::make('sumber_item')
-                            ->options([
-                                'spk' => 'SPK',
-                                'material' => 'Master Item (Material Production)',
-                            ])
-                            ->inline()
-                            ->live()
-                            ->required(),
+                            Forms\Components\Radio::make('sumber_item')
+                                ->options([
+                                    'spk' => 'SPK',
+                                    'material' => 'Master Item (Material Production)',
+                                ])
+                                ->inline()
+                                ->live()
+                                ->afterStateUpdated(function ($state, $set) {
+                                    $set('spk_id', null);
+                                    $set('item_id', null);
+                                    $set('nama_produk', null);
+                                    $set('satuan_id', null);
+                                })
+                                ->required(),
 
-                                                Forms\Components\Select::make('spk_id')
-                            ->label('No SPK')
-                            ->relationship('spk', 'no_spk')
-                            ->searchable()
-                            ->preload()
-                            ->visible(fn ($get) => $get('sumber_item') === 'spk')
-                            ->live()
-                            ->afterStateUpdated(function ($state, $set) {
+                            Forms\Components\Select::make('spk_id')
+                                ->label('No SPK')
+                                ->relationship('spk', 'no_spk')
+                                ->searchable()
+                                ->preload()
+                                ->visible(fn ($get) => $get('sumber_item') === 'spk')
+                                ->live()
+                                ->afterStateUpdated(function ($state, $set) {
+                                    if (! $state) {
+                                        $set('nama_produk', null);
+                                        $set('satuan_id', null);
+                                        return;
+                                    }
 
-                                $spk = \App\Models\MasterSpk::with(
-                                    'salesOrder.itemable'
-                                )->find($state);
+                                    $spk = \App\Models\MasterSpk::with(
+                                        'salesOrder.itemable.satuan'
+                                    )->find($state);
 
-                                $set(
-                                    'nama_produk',
-                                    $spk?->salesOrder?->itemable?->nama_barang
-                                );
-                            }),
+                                    $set(
+                                        'nama_produk',
+                                        $spk?->salesOrder?->itemable?->nama_barang
+                                    );
 
-                          Forms\Components\Select::make('item_id')
+                                    $set(
+                                        'satuan_id',
+                                        $spk?->salesOrder?->itemable?->satuan_id
+                                    );
+                                }),
+
+                            Forms\Components\Select::make('item_id')
                                 ->label('Material')
                                 ->relationship('item', 'nama_master_item')
                                 ->searchable()
@@ -97,6 +112,11 @@ class SubcountOutResource extends Resource
                                 ->visible(fn ($get) => $get('sumber_item') === 'material')
                                 ->live()
                                 ->afterStateUpdated(function ($state, $set) {
+                                    if (! $state) {
+                                        $set('nama_produk', null);
+                                        $set('satuan_id', null);
+                                        return;
+                                    }
 
                                     $item = \App\Models\MasterItem::with('satuan')
                                         ->find($state);
@@ -115,11 +135,14 @@ class SubcountOutResource extends Resource
                                 ->required(),
 
                             Forms\Components\Select::make('satuan_id')
-                                ->relationship('satuan','nama_satuan')
-                                ->disabled()
+                                ->label('Satuan')
+                                ->relationship('satuan', 'nama_satuan')
+                                ->searchable()
+                                ->preload()
                                 ->dehydrated(),
 
                             Forms\Components\TextInput::make('nama_produk')
+                                ->label('Nama Produk')
                                 ->disabled()
                                 ->dehydrated(),
 

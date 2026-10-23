@@ -109,7 +109,6 @@ class SubcountInResource extends Resource
                 ->schema([
 
                     Repeater::make('items')
-                        ->relationship()
                         ->schema([
 
                             Hidden::make('subcount_out_id'),
