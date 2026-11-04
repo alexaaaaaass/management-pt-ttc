@@ -122,53 +122,141 @@ class MarketingWorkflowService
     }
 
     /**
-     * Konversi Order Confirmation yang telah Deal menjadi Sales Order resmi
+     * Ambil rincian progres konversi item Order Confirmation ke Sales Order
      */
-    public function convertOrderConfirmationToSalesOrder(OrderConfirmation $oc): SalesOrder
+    public function getOrderConfirmationProgress(OrderConfirmation $oc): array
     {
-        return DB::transaction(function () use ($oc) {
-            $oc->loadMissing(['customer', 'items']);
+        $oc->loadMissing(['items.finishGoodItem', 'salesOrders']);
 
-            if ($oc->sales_order_id && $oc->salesOrder) {
-                return $oc->salesOrder;
+        $totalItems = $oc->items->count();
+        $existingSoFgIds = SalesOrder::where('order_confirmation_id', $oc->id)
+            ->pluck('itemable_id')
+            ->filter()
+            ->toArray();
+
+        $convertedCount = count(array_intersect(
+            $oc->items->pluck('finish_good_item_id')->filter()->toArray(),
+            $existingSoFgIds
+        ));
+
+        // Fallback jika FG ID belum terhubung langsung
+        if ($convertedCount === 0 && $oc->salesOrders->count() > 0) {
+            $convertedCount = min($oc->salesOrders->count(), $totalItems);
+        }
+
+        $unconvertedCount = max(0, $totalItems - $convertedCount);
+
+        $status = 'belum_so';
+        if ($convertedCount > 0 && $unconvertedCount > 0) {
+            $status = 'partial_so';
+        } elseif ($totalItems > 0 && $convertedCount >= $totalItems) {
+            $status = 'converted_to_so';
+        }
+
+        return [
+            'total_items'        => $totalItems,
+            'converted_count'    => $convertedCount,
+            'unconverted_count'  => $unconvertedCount,
+            'status'             => $status,
+            'existing_so_fg_ids' => $existingSoFgIds,
+        ];
+    }
+
+    /**
+     * Tentukan item pesanan Order Confirmation berikutnya yang perlu dibuatkan Sales Order
+     */
+    public function resolveTargetItemForSalesOrder(OrderConfirmation $oc, ?int $preferredItemId = null): ?OrderConfirmationItem
+    {
+        $oc->loadMissing(['items.finishGoodItem']);
+
+        if ($preferredItemId) {
+            $preferred = $oc->items->firstWhere('id', $preferredItemId);
+            if ($preferred) {
+                return $preferred;
+            }
+        }
+
+        $existingSoFgIds = SalesOrder::where('order_confirmation_id', $oc->id)
+            ->pluck('itemable_id')
+            ->filter()
+            ->toArray();
+
+        return $oc->items->first(function ($it) use ($existingSoFgIds) {
+            return $it->finish_good_item_id && ! in_array($it->finish_good_item_id, $existingSoFgIds);
+        }) ?? $oc->items->first();
+    }
+
+    /**
+     * Sinkronisasi status Order Confirmation berdasarkan progres Sales Order (1 SO = 1 SPK)
+     */
+    public function syncOrderConfirmationStatus(OrderConfirmation $oc, ?int $latestSalesOrderId = null): OrderConfirmation
+    {
+        $progress = $this->getOrderConfirmationProgress($oc);
+
+        $updateData = [];
+        if ($latestSalesOrderId) {
+            $updateData['sales_order_id'] = $latestSalesOrderId;
+        }
+
+        if ($progress['unconverted_count'] > 0 && $progress['converted_count'] > 0) {
+            $updateData['status'] = 'partial_so';
+        } elseif ($progress['total_items'] > 0 && $progress['converted_count'] >= $progress['total_items']) {
+            $updateData['status'] = 'converted_to_so';
+        }
+
+        if (! empty($updateData)) {
+            $oc->update($updateData);
+        }
+
+        return $oc->fresh();
+    }
+
+    /**
+     * Konversi Order Confirmation yang telah Deal menjadi Sales Order resmi (per item sesuai aturan 1 SO = 1 SPK)
+     */
+    public function convertOrderConfirmationToSalesOrder(OrderConfirmation $oc, ?int $targetItemId = null): SalesOrder
+    {
+        return DB::transaction(function () use ($oc, $targetItemId) {
+            $oc->loadMissing(['customer', 'items.finishGoodItem']);
+
+            $targetItem = $this->resolveTargetItemForSalesOrder($oc, $targetItemId);
+            if (! $targetItem) {
+                throw new \InvalidArgumentException("Order Confirmation {$oc->doc_no} tidak memiliki item penawaran.");
             }
 
-            $firstItem = $oc->items->first();
+            $fg = $targetItem->finishGoodItem;
+            if (! $fg && $targetItem->item_name) {
+                $fg = FinishGoodItem::where('nama_barang', $targetItem->item_name)->first();
+            }
 
             $salesOrder = SalesOrder::create([
+                'order_confirmation_id' => $oc->id,
                 'no_sales_order'        => $oc->order_id ?: ('SO-' . date('y') . '-' . str_pad($oc->id, 4, '0', STR_PAD_LEFT)),
                 'customer_id'           => $oc->customer_id,
-                'tanggal_po'            => $oc->tanggal,
-                'lead_time'             => $oc->lead_time,
-                'itemable_id'           => $firstItem?->finish_good_item_id,
-                'itemable_type'         => $firstItem?->finish_good_item_id ? \App\Models\FinishGoodItem::class : null,
-                'qty'                   => $oc->items->sum('qty'),
-                'harga_pcs'             => $firstItem?->harga ?? 0,
+                'tanggal_po'            => $oc->tanggal ?: now(),
+                'lead_time'             => $oc->lead_time ?: '21 Hari Kerja',
+                'order_type'            => 'SPK',
+                'itemable_id'           => $fg?->id,
+                'itemable_type'         => $fg ? FinishGoodItem::class : null,
+                'product_name'          => $targetItem->item_name ?: $fg?->nama_barang,
+                'qty'                   => (float) ($targetItem->qty ?? 0),
+                'harga_pcs'             => (float) ($targetItem->harga ?? 0),
                 'harga_kirim'           => 0,
-                'diskon'                => $oc->diskon ?? 0,
-                'jenis'                 => $firstItem?->jenis,
-                'komponen'              => $firstItem?->komponen,
-                'isi'                   => $firstItem?->isi,
-                'kertas'                => $firstItem?->kertas,
-                'warna'                 => $firstItem?->warna,
-                'finishing'             => $firstItem?->finishing,
+                'diskon'                => (float) ($oc->diskon ?? 0),
+                'jenis'                 => $targetItem->jenis ?: $fg?->jenis,
+                'komponen'              => $targetItem->komponen ?: ($fg?->komponen ?? $fg?->typeItem?->nama_type_item),
+                'isi'                   => $targetItem->isi ?: $fg?->isi,
+                'kertas'                => $targetItem->kertas ?: $fg?->spesifikasi_kertas,
+                'warna'                 => $targetItem->warna ?: $fg?->warna,
+                'finishing'             => $targetItem->finishing ?: $fg?->finishing,
+                'mata_uang'             => 'rupiah',
+                'syarat_pembayaran'     => '30 Hari setelah invoice',
+                'toleransi_pengiriman'  => 0,
+                'klaim_kertas'          => 'not_claim',
+                'catatan'               => $oc->catatan,
             ]);
 
-            // Buat Sales Order Items jika ada multiple item
-            foreach ($oc->items as $ocItem) {
-                SalesOrderItem::create([
-                    'sales_order_id' => $salesOrder->id,
-                    'qty'            => $ocItem->qty,
-                    'satuan'         => $ocItem->satuan ?: 'Pcs',
-                    'harga'          => $ocItem->harga,
-                    'total'          => $ocItem->total,
-                ]);
-            }
-
-            $oc->update([
-                'sales_order_id' => $salesOrder->id,
-                'status'         => 'deal',
-            ]);
+            $this->syncOrderConfirmationStatus($oc, $salesOrder->id);
 
             return $salesOrder;
         });

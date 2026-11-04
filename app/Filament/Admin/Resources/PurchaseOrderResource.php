@@ -11,6 +11,7 @@ use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
 use App\Filament\Admin\Resources\PurchaseOrderResource\RelationManagers;
 
 
@@ -427,6 +428,16 @@ public static function getNavigationLabel(): string
           return [
         RelationManagers\ItemsRelationManager::class,
     ];
+        }
+
+        public static function getEloquentQuery(): Builder
+        {
+            return parent::getEloquentQuery()
+                ->with([
+                    'purchaseRequest',
+                    'supplier',
+                    'items',
+                ]);
         }
 
         public static function getPages(): array

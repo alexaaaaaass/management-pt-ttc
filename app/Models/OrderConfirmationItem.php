@@ -25,12 +25,28 @@ class OrderConfirmationItem extends Model
         'harga',
         'total',
         'satuan',
+        'hpp_per_pcs',
+        'harga_jual_indikatif',
+        'total_biaya_order',
+        'biaya_bahan',
+        'biaya_proses',
+        'kebutuhan_kertas_kg',
+        'kebutuhan_kertas_meter',
+        'kalkulasi_hpp_data',
     ];
 
     protected $casts = [
         'qty' => 'decimal:2',
         'harga' => 'decimal:2',
         'total' => 'decimal:2',
+        'hpp_per_pcs' => 'decimal:2',
+        'harga_jual_indikatif' => 'decimal:2',
+        'total_biaya_order' => 'decimal:2',
+        'biaya_bahan' => 'decimal:2',
+        'biaya_proses' => 'decimal:2',
+        'kebutuhan_kertas_kg' => 'decimal:2',
+        'kebutuhan_kertas_meter' => 'decimal:2',
+        'kalkulasi_hpp_data' => 'array',
     ];
 
     public function orderConfirmation(): BelongsTo

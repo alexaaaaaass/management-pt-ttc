@@ -15,6 +15,7 @@ use Filament\Forms\Components\{
 };
 use App\Models\TypeItem;
 use Filament\Tables\Actions\ActionGroup;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\HtmlString;
 
 
@@ -151,125 +152,11 @@ public static function form(Form $form): Form
                     ]),
 
                 // ==========================================
-                // 🔥 TAHAP 3: SPESIFIKASI KERTAS & DIMENSI
-                // ==========================================
-                Wizard\Step::make('Kertas & Dimensi')
-                    ->icon('heroicon-o-scale')
-                    ->description('Spesifikasi kertas, ukuran potong, dan dimensi kemasan')
-                    ->schema([
-                        // Card 1: Spesifikasi Kertas Cetak (Multi-Item)
-                        Section::make('Spesifikasi Kertas Cetak')
-                            ->description('Spesifikasi lembaran kertas plano dan ukuran potong produksi. Anda dapat menambahkan lebih dari 1 jenis kertas jika kemasan menggunakan kombinasi beberapa bahan kertas (misal: Kertas Metalized & Ivory).')
-                            ->icon('heroicon-o-document-text')
-                            ->schema([
-                                Repeater::make('kertas_items')
-                                    ->label('Daftar Kertas Cetak / Material')
-                                    ->addActionLabel('+ Tambah Spesifikasi Kertas')
-                                    ->collapsible()
-                                    ->collapsed(false)
-                                    ->defaultItems(1)
-                                    ->itemLabel(function ($state, $uuid) {
-                                        $nama = $state['nama_kertas'] ?? $state['spesifikasi_kertas'] ?? null;
-                                        if (!$nama) {
-                                            return 'Kertas Cetak #' . (is_numeric($uuid) ? ((int)$uuid + 1) : '');
-                                        }
-                                        $gsm = !empty($state['gramasi']) ? " ({$state['gramasi']} GSM)" : '';
-                                        $bagian = !empty($state['bagian_kemasan']) ? " [{$state['bagian_kemasan']}]" : '';
-                                        return "{$nama}{$gsm}{$bagian}";
-                                    })
-                                    ->schema([
-                                        Grid::make(3)->schema([
-                                            TextInput::make('nama_kertas')
-                                                ->label('Spesifikasi Kertas / Material')
-                                                ->placeholder('Contoh: KERTAS METALIZED atau IVORY 230 GR 53 X 68.5')
-                                                ->required()
-                                                ->columnSpan(2),
-
-                                            TextInput::make('bagian_kemasan')
-                                                ->label('Bagian / Komponen (Opsional)')
-                                                ->placeholder('Contoh: Etiket Luar, Inner Frame, Sliding Box')
-                                                ->helperText('Peruntukan bagian kemasan rokok.'),
-
-                                            TextInput::make('gramasi')
-                                                ->label('Gramasi (GSM)')
-                                                ->placeholder('Contoh: 230'),
-
-                                            TextInput::make('tebal_kertas')
-                                                ->label('Tebal Kertas (mm)')
-                                                ->placeholder('Contoh: 0.35'),
-
-                                            TextInput::make('up')
-                                                ->label('Ukuran Potong Produksi (UP)')
-                                                ->placeholder('Contoh: 9')
-                                                ->suffix('pcs'),
-
-                                            TextInput::make('ukuran_cetak')
-                                                ->label('Ukuran Cetak / Plano')
-                                                ->placeholder('Contoh: 65 x 100 cm'),
-
-                                            TextInput::make('keterangan')
-                                                ->label('Catatan Kertas (Opsional)')
-                                                ->placeholder('Contoh: Kertas roll disheet dulu ke plano')
-                                                ->columnSpan(2),
-                                        ]),
-                                    ])
-                                    ->columns(1),
-                            ]),
-
-                        // Card 2: Dimensi Fisik Kemasan Rokok Jadi (3D)
-                        Section::make('Dimensi Kemasan Rokok Jadi (3D)')
-                            ->description('Ukuran fisik 1 kotak/bungkus rokok saat dilipat jadi (Acuan tim Pisau Pond / Diemaking). Satuan dalam Centimeter (cm).')
-                            ->icon('heroicon-o-cube')
-                            ->schema([
-                                Grid::make(3)->schema([
-                                    TextInput::make('panjang')
-                                        ->label('Panjang Kemasan (cm)')
-                                        ->numeric()
-                                        ->suffix('cm')
-                                        ->placeholder('Contoh: 5.5')
-                                        ->helperText('Tampak depan sisi bawah kotak.'),
-
-                                    TextInput::make('lebar')
-                                        ->label('Lebar / Tebal Kemasan (cm)')
-                                        ->numeric()
-                                        ->suffix('cm')
-                                        ->placeholder('Contoh: 2.2')
-                                        ->helperText('Sisi ketebalan samping kotak.'),
-
-                                    TextInput::make('tinggi')
-                                        ->label('Tinggi Kemasan (cm)')
-                                        ->numeric()
-                                        ->suffix('cm')
-                                        ->placeholder('Contoh: 9.0')
-                                        ->helperText('Tinggi kotak dari bawah ke atas.'),
-                                ]),
-                            ]),
-
-                        // Card 3: Estimasi Bobot Kemasan (Opsional)
-                        Section::make('Estimasi Berat Kemasan (Opsional)')
-                            ->description('Data berat untuk estimasi logistik pengiriman')
-                            ->icon('heroicon-o-scale')
-                            ->collapsible()
-                            ->collapsed(false)
-                            ->schema([
-                                Grid::make(2)->schema([
-                                    TextInput::make('berat_kotor')
-                                        ->label('Berat Kotor (Kg)')
-                                        ->placeholder('0.00'),
-
-                                    TextInput::make('berat_bersih')
-                                        ->label('Berat Bersih (Kg)')
-                                        ->placeholder('0.00'),
-                                ]),
-                            ]),
-                    ]),
-
-                // ==========================================
-                // 🔥 TAHAP 4: BILL OF MATERIALS (BOM)
+                // 🔥 TAHAP 3: BILL OF MATERIALS (BOM)
                 // ==========================================
                 Wizard\Step::make('Bill of Materials (BOM)')
                     ->icon('heroicon-o-queue-list')
-                    ->description('Daftar resep bahan baku & penolong (Kertas, Tinta, Lem, Kimia)')
+                    ->description('Daftar resep bahan baku & penolong produksi (Tinta, Lem, Kimia, dll)')
                     ->schema([
                         Placeholder::make('bom_guide')
                             ->hiddenLabel()
@@ -518,6 +405,11 @@ public static function getNavigationLabel(): string
             Tables\Filters\TrashedFilter::make(), // 🔥 penting untuk lihat data terhapus
         ]);
 }
+
+    public static function getEloquentQuery(): Builder
+    {
+        return parent::getEloquentQuery()->with(['customer', 'typeItem', 'satuan']);
+    }
 
     public static function getRelations(): array
     {

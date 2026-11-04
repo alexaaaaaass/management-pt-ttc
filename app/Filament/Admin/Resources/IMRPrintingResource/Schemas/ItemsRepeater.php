@@ -37,11 +37,17 @@ class ItemsRepeater
 
                         $nama = $state['nama_item'] ?? '-';
 
-                        $qty = $state['total_pesanan'] ?? 0;
+                        $bom = (float) ($state['total_pesanan'] ?? 0);
+
+                        $qty = (float) ($state['qty_input'] ?? ($state['qty_request'] ?? 0));
 
                         $satuan = $state['satuan'] ?? '';
 
-                        return "{$nama} ({$qty} {$satuan})";
+                        if ($bom > 0) {
+                            return "{$nama} (BOM: {$bom} {$satuan} | Req: {$qty} {$satuan})";
+                        }
+
+                        return "{$nama} [Bahan Penolong] (Req: {$qty} {$satuan})";
 
                     })
 
@@ -105,7 +111,10 @@ class ItemsRepeater
 
                             ->label('Qty BOM')
 
-                            ->numeric()
+                            ->formatStateUsing(function ($state) {
+                                $val = (float) ($state ?? 0);
+                                return $val > 0 ? (string) $val : 'Bahan Penolong (Bebas Request)';
+                            })
 
                             ->disabled()
 
@@ -135,7 +144,9 @@ class ItemsRepeater
 
                         Forms\Components\Hidden::make('qty_request')
 
-                            ->default(0),
+                            ->default(0)
+
+                            ->dehydrated(),
 
                         /*
                         |--------------------------------------------------------------------------
@@ -155,6 +166,13 @@ class ItemsRepeater
 
                             ->live(debounce: 500)
 
+                            ->afterStateHydrated(function ($state, callable $set, callable $get) {
+                                $req = (float) ($get('qty_request') ?? 0);
+                                if ($req > 0 && ! $state) {
+                                    $set('qty_input', $req);
+                                }
+                            })
+
                             ->afterStateUpdated(function (
 
                                 $state,
@@ -167,25 +185,23 @@ class ItemsRepeater
 
                                 $bom = (float) ($get('total_pesanan') ?? 0);
 
-                                $qty = (float) $state;
+                                $qty = max(0, (float) $state);
 
                                 /*
                                 |--------------------------------------------------------------------------
-                                | Tidak boleh minus
+                                | Jika BOM > 0, batasi tidak boleh melebihi BOM
+                                | Jika BOM = 0 (Bahan Penolong), bebas request sesuai kebutuhan mesin
                                 |--------------------------------------------------------------------------
                                 */
 
-                                if ($qty < 0) {
-
-                                    $qty = 0;
-
+                                if ($bom > 0 && $qty > $bom) {
+                                    $qty = $bom;
+                                    \Filament\Notifications\Notification::make()
+                                        ->title('Melebihi Kebutuhan BOM')
+                                        ->body("Bahan baku terhitung tidak boleh melebihi total pesanan BOM ({$bom}).")
+                                        ->warning()
+                                        ->send();
                                 }
-
-                                /*
-                                |--------------------------------------------------------------------------
-                                | Tidak boleh melebihi BOM
-                                |--------------------------------------------------------------------------
-                                */
 
                                 $set('qty_input', $qty);
 
@@ -193,11 +209,14 @@ class ItemsRepeater
 
                             })
 
-                            ->helperText(
-
-                                'Masukkan QTY Request.'
-
-                            ),
+                            ->helperText(function (callable $get) {
+                                $bom = (float) ($get('total_pesanan') ?? 0);
+                                $satuan = $get('satuan') ?? '';
+                                if ($bom > 0) {
+                                    return "Bahan Baku: Maksimal request sesuai BOM ({$bom} {$satuan}).";
+                                }
+                                return "Bahan Penolong: Bebas input request sesuai kebutuhan aktual di mesin.";
+                            }),
 
                         /*
                         |--------------------------------------------------------------------------

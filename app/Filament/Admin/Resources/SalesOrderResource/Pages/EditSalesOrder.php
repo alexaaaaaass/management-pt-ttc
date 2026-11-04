@@ -43,6 +43,8 @@ class EditSalesOrder extends EditRecord
     {
         $materialItems = $data['items'] ?? [];
         unset($data['items']);
+        unset($data['order_confirmation_item_id']);
+        unset($data['bom_items']);
 
         try {
             return app(SalesOrderService::class)->updateSalesOrder($record, $data, $materialItems);

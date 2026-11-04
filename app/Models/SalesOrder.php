@@ -12,6 +12,7 @@ class SalesOrder extends Model
 
  use SoftDeletes;
     protected $fillable = [
+    'order_confirmation_id',
     'itemable_type',
     'itemable_id',
     'kode_material',
@@ -40,6 +41,11 @@ class SalesOrder extends Model
     'catatan_colour_range',
     'order_type',
 ];
+
+    public function orderConfirmation()
+    {
+        return $this->belongsTo(OrderConfirmation::class);
+    }
 
     public function getEffectiveJenisAttribute(): string
     {

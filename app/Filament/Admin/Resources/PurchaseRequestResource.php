@@ -10,6 +10,7 @@ use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
 
 class PurchaseRequestResource extends Resource
 {
@@ -203,6 +204,11 @@ class PurchaseRequestResource extends Resource
             Tables\Actions\DeleteBulkAction::make(),
         ]);
 }
+
+    public static function getEloquentQuery(): Builder
+    {
+        return parent::getEloquentQuery()->with(['departemen']);
+    }
 
     public static function getPages(): array
     {

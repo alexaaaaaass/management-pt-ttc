@@ -83,7 +83,14 @@ class AdminPanelProvider extends PanelProvider
             NavigationGroup::make()
             ->label('Report')
             ->collapsed(),
+            NavigationGroup::make()
+            ->label('Manajemen Akses')
+            ->collapsed(),
 ])
+
+        ->plugins([
+            \BezhanSalleh\FilamentShield\FilamentShieldPlugin::make(),
+        ])
 
         
 

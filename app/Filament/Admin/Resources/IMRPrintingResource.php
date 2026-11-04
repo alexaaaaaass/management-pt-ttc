@@ -37,6 +37,16 @@ class IMRPrintingResource extends Resource
         return [];
     }
 
+    public static function getEloquentQuery(): \Illuminate\Database\Eloquent\Builder
+    {
+        return parent::getEloquentQuery()
+            ->with([
+                'spk',
+                'departemen',
+                'items',
+            ]);
+    }
+
     public static function getPages(): array
     {
         return [

@@ -78,11 +78,6 @@ class Invoice extends Model
         return $this->hasMany(InvoiceItem::class);
     }
 
-    public function payments()
-    {
-        return $this->hasMany(InvPayment::class);
-    }
-
     public static function penyebut($nilai)
     {
         $nilai = abs($nilai);

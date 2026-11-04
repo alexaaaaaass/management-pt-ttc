@@ -22,6 +22,7 @@ use Filament\Resources\Resource;
 use Filament\Support\RawJs;
 use Filament\Tables;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
 
 class InvoiceResource extends Resource
 {
@@ -350,32 +351,30 @@ class InvoiceResource extends Resource
             ]);
     }
 
-        ]);
-}
     public static function getNavigationLabel(): string
     {
         return 'Invoice';
     }
 
-   public static function table(Table $table): Table
-{
-    return $table
-        ->columns([
+    public static function table(Table $table): Table
+    {
+        return $table
+            ->columns([
 
-            Tables\Columns\TextColumn::make('kode_invoice')
-                ->searchable(),
+                Tables\Columns\TextColumn::make('kode_invoice')
+                    ->searchable(),
 
-            Tables\Columns\TextColumn::make(
-                'suratJalan.kode_surat_jalan'
-            ),
+                Tables\Columns\TextColumn::make(
+                    'suratJalan.kode_surat_jalan'
+                ),
 
-            Tables\Columns\TextColumn::make(
-                'suratJalan.salesOrder.customer.nama_customer'
-            )
-                ->label('Customer'),
+                Tables\Columns\TextColumn::make(
+                    'suratJalan.salesOrder.customer.nama_customer'
+                )
+                    ->label('Customer'),
 
-            Tables\Columns\TextColumn::make('grand_total')
-                ->money('IDR'),
+                Tables\Columns\TextColumn::make('grand_total')
+                    ->money('IDR'),
 
                 Tables\Columns\TextColumn::make('status')
                     ->badge()
@@ -386,47 +385,41 @@ class InvoiceResource extends Resource
                         default => 'gray',
                     }),
 
-                Tables\Columns\TextColumn::make('status_pembayaran')
-    ->label('Status')
-    ->badge()
-    ->getStateUsing(function ($record) {
+                Tables\Columns\TextColumn::make(
+                    'tanggal_invoice'
+                )
+                    ->date('d/m/Y'),
+
+            ])
+            ->actions([
+
+                Tables\Actions\Action::make('detail')
+                    ->label('Detail')
+                    ->icon('heroicon-o-eye')
+                    ->url(fn ($record) =>
+                        static::getUrl('view', [
+                            'record' => $record
+                        ])
+                    ),
 
                 Tables\Actions\EditAction::make(),
 
                 Tables\Actions\DeleteAction::make()
                     ->hidden(fn ($record) => !app(\App\Services\Finance\InvoiceService::class)->canDelete($record)),
+
             ]);
     }
-
-        return $record->sisa_tagihan <= 0
-            ? 'success'
-            : 'danger';
-    }),
-
-            Tables\Columns\TextColumn::make(
-                'tanggal_invoice'
-            )
-                ->date('d/m/Y'),
-
-        ])
-        ->actions([
-
-         Tables\Actions\Action::make('detail')
-    ->label('Detail')
-    ->icon('heroicon-o-eye')
-    ->url(fn ($record) =>
-        static::getUrl('view', [
-            'record' => $record
-        ])
-    ),
-
-            Tables\Actions\EditAction::make(),
-
-        ]);
-}
     public static function getRelations(): array
     {
         return [];
+    }
+
+    public static function getEloquentQuery(): Builder
+    {
+        return parent::getEloquentQuery()
+            ->with([
+                'suratJalan.salesOrder.customer',
+            ]);
     }
 
     public static function getPages(): array

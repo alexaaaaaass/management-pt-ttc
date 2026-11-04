@@ -15,6 +15,7 @@ use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Columns\BadgeColumn;
 use Filament\Forms\Components\Section;
 use Filament\Forms\Components\Wizard;
+use Illuminate\Database\Eloquent\Builder;
 
 class KaryawanResource extends Resource
 {
@@ -238,6 +239,11 @@ class KaryawanResource extends Resource
             Tables\Actions\DeleteAction::make(),
         ]);
 }
+    public static function getEloquentQuery(): Builder
+    {
+        return parent::getEloquentQuery()->with(['departemen']);
+    }
+
     public static function getRelations(): array
     {
         return [

@@ -55,6 +55,16 @@ Route::middleware('auth')->group(function () {
         '/surat-jalan/{suratJalan}/download',
         [SuratJalanPdfController::class, 'download']
     )->name('suratjalan.download');
+
+    Route::get(
+        '/surat-jalan-pdf/{suratJalan}/preview',
+        [SuratJalanPdfController::class, 'preview']
+    )->name('surat-jalan.preview');
+
+    Route::get(
+        '/surat-jalan-pdf/{suratJalan}/download',
+        [SuratJalanPdfController::class, 'download']
+    )->name('surat-jalan.download');
 });
 
 /*
@@ -95,21 +105,6 @@ Route::get(
     [\App\Http\Controllers\OrderConfirmationPdfController::class, 'download']
 )->name('order-confirmation.download');
 
-
-Route::get(
-    '/surat-jalan/{suratJalan}/preview',
-    [\App\Http\Controllers\SuratJalanPdfController::class, 'preview']
-)->name('surat-jalan.preview');
-
-Route::get(
-    '/surat-jalan/{suratJalan}/download',
-    [\App\Http\Controllers\SuratJalanPdfController::class, 'download']
-)->name('surat-jalan.download');
-
-Route::get('/dashboard', function () {
-    return view('dashboard');
-})->middleware(['auth', 'verified'])->name('dashboard');
-
 Route::middleware('auth')->group(function () {
     Route::resource('berita-acaras', BeritaAcaraController::class);
 
@@ -119,13 +114,6 @@ Route::middleware('auth')->group(function () {
 });
 
 // ------------- PDF PURCHASE REQUEST ----------------
-Route::get(
-'/purchase-request/{purchaseRequest}/preview',
-[PurchaseRequestPdfController::class,'preview']
-)
-->name('purchase-request.preview');
-
-
 Route::get(
     '/purchase-request/{purchaseRequest}/preview',
     [PurchaseRequestPdfController::class, 'preview']
