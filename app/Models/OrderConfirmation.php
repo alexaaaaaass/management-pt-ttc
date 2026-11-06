@@ -57,6 +57,42 @@ class OrderConfirmation extends Model
         return $this->belongsTo(SalesOrder::class);
     }
 
+    public function salesOrders(): HasMany
+    {
+        return $this->hasMany(SalesOrder::class, 'order_confirmation_id');
+    }
+
+    /**
+     * Hitung status progres penerbitan Sales Order untuk seluruh item penawaran
+     */
+    public function getSoConversionStatusAttribute(): array
+    {
+        $totalItems = $this->items()->count();
+        $totalSo = $this->salesOrders()->count();
+
+        if ($totalSo === 0) {
+            return [
+                'status' => 'belum_so',
+                'label'  => 'Belum Terbit SO',
+                'color'  => 'gray',
+            ];
+        }
+
+        if ($totalItems > 0 && $totalSo >= $totalItems) {
+            return [
+                'status' => 'full_so',
+                'label'  => "Semua SO Terbit ({$totalSo}/{$totalItems})",
+                'color'  => 'success',
+            ];
+        }
+
+        return [
+            'status' => 'partial_so',
+            'label'  => "Sebagian SO ({$totalSo}/{$totalItems})",
+            'color'  => 'warning',
+        ];
+    }
+
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');

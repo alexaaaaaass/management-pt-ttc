@@ -45,8 +45,8 @@ class TransKasResource extends Resource
                             ->label('Tipe Transaksi')
                             ->content(fn ($get) => 
                                 $get('tipe_transaksi') === 'KAS_MASUK'
-                                    ? 'ðŸŸ¢ Kas Masuk (Penerimaan Tunai)'
-                                    : ($get('tipe_transaksi') === 'KAS_KELUAR' ? 'ðŸ”´ Kas Keluar (Pengeluaran Tunai)' : 'â€”')
+                                    ? '🟢 Kas Masuk (Penerimaan Tunai)'
+                                    : ($get('tipe_transaksi') === 'KAS_KELUAR' ? '🔴 Kas Keluar (Pengeluaran Tunai)' : '—')
                             ),
 
                         Grid::make(2)

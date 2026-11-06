@@ -13,6 +13,7 @@ use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
 
 class ApprovalFormResource extends Resource
 {
@@ -110,11 +111,14 @@ class ApprovalFormResource extends Resource
                                             ->searchable()
                                             ->preload()
                                             ->live()
-                                            ->afterStateUpdated(function ($state, callable $set) {
+                                            ->afterStateUpdated(function ($state, callable $set, callable $get) {
                                                 if (!$state) return;
                                                 $fg = FinishGoodItem::find($state);
                                                 if ($fg) {
-                                                    $set('item_name', $fg->nama_barang);
+                                                    $currentItemName = trim((string) ($get('item_name') ?? ''));
+                                                    if ($currentItemName === '' && strtoupper(trim((string) $fg->nama_barang)) !== 'KERTAS IVORY') {
+                                                        $set('item_name', $fg->nama_barang);
+                                                    }
                                                     $set('jenis', $fg->jenis);
                                                     $set('komponen', $fg->komponen);
                                                     $set('isi', $fg->isi);
@@ -325,24 +329,68 @@ class ApprovalFormResource extends Resource
                         ->icon('heroicon-o-queue-list')
                         ->color('primary')
                         ->tooltip('Rancang atau buka Bill of Materials di Finish Good berdasarkan Approval Form ini')
-                        ->action(function (ApprovalForm $record) {
-                            $service = app(MarketingWorkflowService::class);
-                            $firstItem = $record->items->first();
+                        ->modalHeading(fn (ApprovalForm $record) => "Pilih Item untuk Mengatur BOM ({$record->form_no})")
+                        ->modalDescription('Pilih item spesifikasi yang ingin disiapkan atau diatur resep bahan baku (BOM)-nya.')
+                        ->modalSubmitActionLabel('Buka Form BOM Finish Good')
+                        ->form(function (ApprovalForm $record) {
+                            $items = $record->items;
+                            if ($items->isEmpty()) {
+                                return [
+                                    Forms\Components\Placeholder::make('no_items')
+                                        ->content('Belum ada item spesifikasi pada Approval Form ini.'),
+                                ];
+                            }
 
-                            if (!$firstItem) {
+                            return [
+                                Forms\Components\Select::make('approval_form_item_id')
+                                    ->label('Pilih Item Spesifikasi')
+                                    ->options(function () use ($items) {
+                                        return $items->mapWithKeys(function ($item) {
+                                            $hasFg = $item->finish_good_item_id && $item->finishGoodItem;
+                                            $hasBom = $hasFg && $item->finishGoodItem->materials()->exists();
+                                            $status = $hasBom ? '✅ [BOM Lengkap]' : ($hasFg ? '⚠️ [Belum ada BOM]' : '🆕 [Master FG Belum Dibuat]');
+                                            return [$item->id => "{$item->item_name} - {$status}"];
+                                        });
+                                    })
+                                    ->default($items->whereNull('finish_good_item_id')->first()?->id ?? $items->first()?->id)
+                                    ->required(),
+
+                                Forms\Components\Toggle::make('create_all_fg')
+                                    ->label('Siapkan Master Finish Good untuk seluruh item sekaligus')
+                                    ->default(true)
+                                    ->helperText('Otomatis mendaftarkan master Finish Good untuk item lain yang belum dibuat.'),
+                            ];
+                        })
+                        ->action(function (ApprovalForm $record, array $data) {
+                            $service = app(MarketingWorkflowService::class);
+                            $selectedItemId = $data['approval_form_item_id'] ?? null;
+                            $createAll = $data['create_all_fg'] ?? false;
+
+                            if (! $selectedItemId) {
                                 Notification::make()
-                                    ->title('Tidak Ada Item')
-                                    ->body('Silakan tambahkan minimal 1 item spesifikasi terlebih dahulu pada Approval Form ini.')
+                                    ->title('Tidak Ada Item Dipilih')
+                                    ->body('Silakan pilih salah satu item spesifikasi terlebih dahulu.')
                                     ->warning()
                                     ->send();
                                 return;
                             }
 
-                            $fg = $service->createOrLinkFinishGoodFromApprovalFormItem($firstItem);
+                            if ($createAll) {
+                                foreach ($record->items as $item) {
+                                    $service->createOrLinkFinishGoodFromApprovalFormItem($item);
+                                }
+                            }
+
+                            $selectedItem = $record->items()->find($selectedItemId);
+                            if (! $selectedItem) {
+                                return;
+                            }
+
+                            $fg = $service->createOrLinkFinishGoodFromApprovalFormItem($selectedItem);
 
                             Notification::make()
                                 ->title('Master Finish Good Siap!')
-                                ->body("Produk '{$fg->nama_barang}' berhasil disiapkan. Silakan atur kebutuhan bahan baku (BOM) pada Tahap 4.")
+                                ->body("Produk '{$fg->nama_barang}' siap diatur. Silakan lengkapi resep BOM pada Tahap 4.")
                                 ->success()
                                 ->send();
 
@@ -381,6 +429,15 @@ class ApprovalFormResource extends Resource
                 Tables\Actions\BulkActionGroup::make([
                     Tables\Actions\DeleteBulkAction::make(),
                 ]),
+            ]);
+    }
+
+    public static function getEloquentQuery(): Builder
+    {
+        return parent::getEloquentQuery()
+            ->with([
+                'customer',
+                'items.finishGoodItem.materials',
             ]);
     }
 

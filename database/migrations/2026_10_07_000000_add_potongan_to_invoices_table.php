@@ -9,13 +9,15 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::table('invoices', function (Blueprint $table) {
-            $table->double('potongan')->default(0)->after('diskon');
-        });
+        if (! Schema::hasColumn('invoices', 'potongan')) {
+            Schema::table('invoices', function (Blueprint $table) {
+                $table->double('potongan')->default(0)->after('diskon');
+            });
 
-        DB::table('invoices')->update([
-            'potongan' => DB::raw('(subtotal * diskon) / 100'),
-        ]);
+            DB::table('invoices')->update([
+                'potongan' => DB::raw('(subtotal * diskon) / 100'),
+            ]);
+        }
     }
 
     public function down(): void

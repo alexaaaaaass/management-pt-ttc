@@ -27,6 +27,13 @@ class Invoice extends Model
         'status',
         'is_printed',
         'catatan',
+        'order_id',
+        'dibuat_oleh',
+        'kepada',
+        'terms_conditions',
+        'bank_accounts',
+        'terbilang_override',
+        'potongan',
     ];
 
     protected $casts = [
@@ -70,7 +77,7 @@ class Invoice extends Model
     {
         return $this->belongsTo(
             \App\Models\SalesOrder::class
-        );
+        )->withTrashed();
     }
 
     public function items()

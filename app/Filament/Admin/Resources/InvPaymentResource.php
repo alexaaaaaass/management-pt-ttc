@@ -60,7 +60,7 @@ class InvPaymentResource extends Resource
                                         ->getOptionLabelFromRecordUsing(
                                             fn ($record) =>
                                                 $record->kode_invoice .
-                                                ' â€¢ ' .
+                                                ' • ' .
                                                 ($record->suratJalan?->salesOrder?->customer?->nama_customer ?? '-')
                                         )
                                         ->searchable()

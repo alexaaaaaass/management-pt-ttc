@@ -619,9 +619,9 @@ class TreasuryService
     public function postInvPayment(InvPayment $payment): void
     {
         // Hanya pembayaran berhasil yang boleh menambah mutasi kas/bank.
-if (strtoupper((string) $payment->status) !== 'SUCCESS') {
-    return;
-}    
+        if (strtoupper((string) $payment->status) !== 'SUCCESS') {
+            return;
+        }    
         if (empty($payment->coa_id)) {
             return; 
         }
@@ -636,6 +636,7 @@ if (strtoupper((string) $payment->status) !== 'SUCCESS') {
         $tanggal = $payment->tanggal_bayar ? Carbon::parse($payment->tanggal_bayar)->toDateString() : now()->toDateString();
         $desc = "Penerimaan Pembayaran Customer Invoice {$refNo}";
 
+        // 1. DEBIT: Kas/Bank bertambah
         $this->postMovement([
             'coa_id'         => $payment->coa_id,
             'tanggal'        => $tanggal,
@@ -646,6 +647,25 @@ if (strtoupper((string) $payment->status) !== 'SUCCESS') {
             'nominal'        => $nominal,
             'remarks'        => $desc,
         ]);
+
+        // 2. KREDIT: Piutang Usaha berkurang (Prinsip Double-Entry Indigama)
+        $piutangCoa = MasterCOA::where('kode_akun', '1121')->first()
+            ?? MasterCOA::where('kode_akun', '1120')->first()
+            ?? MasterCOA::where('nama_akun', 'like', '%Piutang - Barang Jadi IDR%')->first()
+            ?? MasterCOA::where('nama_akun', 'like', '%Piutang Usaha%')->first();
+
+        if ($piutangCoa && (int) $piutangCoa->id !== (int) $payment->coa_id) {
+            $this->postMovement([
+                'coa_id'         => $piutangCoa->id,
+                'tanggal'        => $tanggal,
+                'reference_type' => 'INV_PAYMENT',
+                'reference_id'   => $payment->id,
+                'reference_no'   => $refNo,
+                'movement_type'  => 'KREDIT', // Piutang berkurang
+                'nominal'        => $nominal,
+                'remarks'        => "Pelunasan Piutang Invoice {$refNo}",
+            ]);
+        }
     }
 
     public function syncInvPayment(InvPayment $payment): void

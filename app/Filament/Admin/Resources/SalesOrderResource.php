@@ -16,8 +16,10 @@ use Filament\Forms\Form;
 use Filament\Forms\Get;
 use Filament\Forms\Set;
 use Filament\Resources\Resource;
+use Filament\Support\RawJs;
 use Filament\Tables;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
 
 
 class SalesOrderResource extends Resource
@@ -26,6 +28,33 @@ class SalesOrderResource extends Resource
     protected static ?string $navigationGroup = 'Marketing';
     protected static ?int $navigationSort = 5;
     protected static ?string $navigationIcon = 'heroicon-o-shopping-cart';
+
+    public static function formatMoney(mixed $value): ?string
+    {
+        if ($value === null || $value === '') {
+            return null;
+        }
+        if (is_numeric($value)) {
+            return number_format((float) $value, 0, '.', ',');
+        }
+        $cleaned = preg_replace('/[^0-9]/', '', (string) $value);
+        return $cleaned !== '' ? number_format((float) $cleaned, 0, '.', ',') : null;
+    }
+
+    public static function cleanMoney(mixed $value): ?int
+    {
+        if ($value === null || $value === '') {
+            return null;
+        }
+        if (is_int($value)) {
+            return $value;
+        }
+        if (is_float($value)) {
+            return (int) round($value);
+        }
+        $cleaned = preg_replace('/[^0-9]/', '', (string) $value);
+        return $cleaned !== '' ? (int) $cleaned : null;
+    }
 
     public static function form(Form $form): Form
     {
@@ -41,7 +70,6 @@ class SalesOrderResource extends Resource
                     ->schema([
                         Forms\Components\Grid::make(3)->schema([
                             Forms\Components\Hidden::make('material_item_id'),
-                            Forms\Components\Hidden::make('order_confirmation_id'),
                             
                             Forms\Components\Select::make('order_type')
                                 ->label('Order Type')
@@ -60,6 +88,101 @@ class SalesOrderResource extends Resource
                                     $set('itemable_id', null);
                                     $set('kode_material', null);
                                     $set('bom_items', []);
+                                    $set('order_confirmation_id', null);
+                                    $set('order_confirmation_item_id', null);
+                                }),
+
+                            Forms\Components\Select::make('order_confirmation_id')
+                                ->label('No. Order Confirmation (Opsional)')
+                                ->placeholder('-- Pilih Order Confirmation jika ada --')
+                                ->visible(fn(Get $get) => $get('order_type') == 'SPK')
+                                ->options(function () {
+                                    return \App\Models\OrderConfirmation::with(['customer', 'items'])
+                                        ->latest('id')
+                                        ->get()
+                                        ->mapWithKeys(function ($oc) {
+                                            $itemNames = $oc->items->pluck('item_name')->filter()->implode(', ');
+                                            $cust = $oc->customer?->nama_customer ?? '-';
+                                            $label = "{$oc->doc_no} - {$cust}" . ($itemNames ? " ({$itemNames})" : "");
+                                            return [$oc->id => $label];
+                                        });
+                                })
+                                ->searchable()
+                                ->preload()
+                                ->live()
+                                ->afterStateUpdated(function ($state, callable $set, callable $get) {
+                                    if (! $state) {
+                                        return;
+                                    }
+
+                                    $oc = \App\Models\OrderConfirmation::with(['customer', 'items.finishGoodItem.typeItem'])->find($state);
+                                    if (! $oc) {
+                                        return;
+                                    }
+
+                                    if ($oc->customer_id) {
+                                        $set('customer_id', $oc->customer_id);
+                                    }
+                                    if ($oc->lead_time) {
+                                        $set('lead_time', $oc->lead_time);
+                                    }
+                                    if ($oc->tanggal) {
+                                        $set('tanggal_po', $oc->tanggal->format('Y-m-d'));
+                                    }
+                                    if ($oc->catatan) {
+                                        $set('catatan', $oc->catatan);
+                                    }
+                                    if ($oc->diskon !== null) {
+                                        $set('diskon', (float) $oc->diskon);
+                                    }
+
+                                    $formData = app(\App\Services\Sales\SalesOrderService::class)->prepareFormDataFromOrderConfirmation($oc);
+                                    foreach ($formData as $field => $val) {
+                                        $set($field, $val);
+                                    }
+                                }),
+
+                            Forms\Components\Select::make('order_confirmation_item_id')
+                                ->label('Pilih Item dari Order Confirmation')
+                                ->placeholder('-- Pilih Item Penawaran --')
+                                ->visible(function (Get $get) {
+                                    $ocId = $get('order_confirmation_id');
+                                    if (! $ocId || $get('order_type') !== 'SPK') return false;
+                                    return \App\Models\OrderConfirmationItem::where('order_confirmation_id', $ocId)->count() > 1;
+                                })
+                                ->options(function (Get $get) {
+                                    $ocId = $get('order_confirmation_id');
+                                    if (! $ocId) return [];
+
+                                    $oc = \App\Models\OrderConfirmation::with('items')->find($ocId);
+                                    if (! $oc) return [];
+
+                                    $progress = app(\App\Services\Marketing\MarketingWorkflowService::class)->getOrderConfirmationProgress($oc);
+                                    $existingSoFgIds = $progress['existing_so_fg_ids'];
+
+                                    return $oc->items
+                                        ->mapWithKeys(function ($item) use ($existingSoFgIds) {
+                                            $name = $item->item_name ?: 'Item';
+                                            $qty = number_format((float) $item->qty, 0, ',', '.');
+                                            $harga = number_format((float) $item->harga, 0, ',', '.');
+                                            $isCreated = $item->finish_good_item_id && in_array($item->finish_good_item_id, $existingSoFgIds);
+                                            $badge = $isCreated ? ' ✅ (Sudah Terbit SO)' : ' ⚠️ (Belum Terbit SO)';
+                                            return [$item->id => "{$name} (Qty: {$qty} pcs @ Rp {$harga}){$badge}"];
+                                        });
+                                })
+                                ->live()
+                                ->afterStateUpdated(function ($state, callable $set, callable $get) {
+                                    if (! $state) return;
+                                    $ocId = $get('order_confirmation_id');
+                                    if (! $ocId) return;
+
+                                    $oc = \App\Models\OrderConfirmation::with(['items.finishGoodItem.typeItem'])->find($ocId);
+                                    if (! $oc) return;
+
+                                    $formData = app(\App\Services\Sales\SalesOrderService::class)->prepareFormDataFromOrderConfirmation($oc, (int) $state);
+                                    foreach ($formData as $field => $val) {
+                                        $set($field, $val);
+                                    }
                                 }),     
 
                             Forms\Components\Select::make('item_source')
@@ -96,6 +219,10 @@ class SalesOrderResource extends Resource
                                         $set('itemable_id', $item?->id);
                                         $set('customer_id', $item?->customer_id);
                                         $set('kode_material', $item?->kode_material_produk);
+                                        $currentProductName = trim((string) ($get('product_name') ?? ''));
+                                        if ($currentProductName === '' && $item && strtoupper(trim((string) $item->nama_barang)) !== 'KERTAS IVORY') {
+                                            $set('product_name', $item->nama_barang);
+                                        }
                                         $set('material_item_id', null);
                                         $set('jenis', $item?->jenis);
                                         $set('komponen', $item?->komponen ?? $item?->typeItem?->nama_type_item);
@@ -118,6 +245,11 @@ class SalesOrderResource extends Resource
                                         $set('bom_items', []);
                                     }
                                 }),
+
+                            Forms\Components\TextInput::make('product_name')
+                                ->label('Nama Item / Produk')
+                                ->placeholder('Contoh: DAFI 16')
+                                ->visible(fn(Get $get) => $get('order_type') == 'SPK'),
 
                             Forms\Components\Hidden::make('itemable_type'),
                             Forms\Components\Hidden::make('itemable_id'),
@@ -206,26 +338,31 @@ class SalesOrderResource extends Resource
                                 }),
 
                             Forms\Components\TextInput::make('harga_pcs')
+                                ->label('Harga pcs')
                                 ->visible(fn(Get $get)=>$get('order_type')=='SPK')
-                                ->numeric()
-                                ->required()
                                 ->prefix('Rp')
-                                ->formatStateUsing(fn ($state) => $state ? number_format($state, 0, ',', '.') : null)
-                                ->dehydrateStateUsing(fn ($state) => $state ? (int) str_replace('.', '', $state) : null),
+                                ->mask(RawJs::make('$money($input, ".", ",", 0)'))
+                                ->stripCharacters(',')
+                                ->formatStateUsing(fn ($state) => static::formatMoney($state))
+                                ->dehydrateStateUsing(fn ($state) => static::cleanMoney($state))
+                                ->required(),
 
                             Forms\Components\TextInput::make('harga_kirim')
-                                ->numeric()
+                                ->label('Harga kirim')
                                 ->prefix('Rp')
-                                ->formatStateUsing(fn ($state) => $state ? number_format($state, 0, ',', '.') : null)
-                                ->dehydrateStateUsing(fn ($state) => $state ? (int) str_replace('.', '', $state) : null),
+                                ->mask(RawJs::make('$money($input, ".", ",", 0)'))
+                                ->stripCharacters(',')
+                                ->formatStateUsing(fn ($state) => static::formatMoney($state))
+                                ->dehydrateStateUsing(fn ($state) => static::cleanMoney($state)),
 
                             Forms\Components\TextInput::make('diskon')
                                 ->label('Diskon')
-                                ->numeric()
                                 ->prefix('Rp')
                                 ->default(0)
-                                ->formatStateUsing(fn ($state) => $state ? number_format($state, 0, ',', '.') : null)
-                                ->dehydrateStateUsing(fn ($state) => $state ? (int) str_replace('.', '', $state) : 0),
+                                ->mask(RawJs::make('$money($input, ".", ",", 0)'))
+                                ->stripCharacters(',')
+                                ->formatStateUsing(fn ($state) => static::formatMoney($state ?? 0) ?? '0')
+                                ->dehydrateStateUsing(fn ($state) => static::cleanMoney($state) ?? 0),
 
                             Forms\Components\Select::make('mata_uang')
                                 ->options([
@@ -347,9 +484,12 @@ class SalesOrderResource extends Resource
                                     })
                                     ->itemLabel(function ($state) {
                                         $nama = $state['nama_material'] ?? 'Material';
-                                        $qtyMaster = $state['qty_master'] ?? 0;
+                                        $qtyMaster = (float) ($state['qty_master'] ?? 0);
                                         $satuan = $state['satuan'] ?? '';
-                                        return "{$nama} ({$qtyMaster} {$satuan})";
+                                        if ($qtyMaster > 0) {
+                                            return "{$nama} ({$qtyMaster} {$satuan})";
+                                        }
+                                        return "{$nama} [Bahan Penolong / Request di IMR]";
                                     })
                                     ->schema([
                                         Forms\Components\TextInput::make('nama_material')
@@ -363,10 +503,18 @@ class SalesOrderResource extends Resource
 
                                         Forms\Components\TextInput::make('qty_master')
                                             ->label('Qty BOM (Per Pcs)')
+                                            ->formatStateUsing(function ($state) {
+                                                $val = (float) ($state ?? 0);
+                                                return $val > 0 ? (string) $val : 'Bahan Penolong (0)';
+                                            })
                                             ->disabled(),
 
                                         Forms\Components\TextInput::make('qty_produksi')
                                             ->label('Total Qty Produksi')
+                                            ->formatStateUsing(function ($state) {
+                                                $val = (float) ($state ?? 0);
+                                                return $val > 0 ? (string) $val : 'Request saat IMR';
+                                            })
                                             ->disabled(),
 
                                         Forms\Components\TextInput::make('satuan')
@@ -459,6 +607,13 @@ class SalesOrderResource extends Resource
                     ->color('primary')
                     ->searchable(),
 
+                Tables\Columns\TextColumn::make('orderConfirmation.doc_no')
+                    ->label('No OC')
+                    ->badge()
+                    ->color('gray')
+                    ->placeholder('-')
+                    ->searchable(),
+
                 Tables\Columns\TextColumn::make('order_type')
                     ->label('Tipe')
                     ->badge()
@@ -480,7 +635,7 @@ class SalesOrderResource extends Resource
                                 ->implode(', ');
                         }
 
-                        return $record->itemable?->nama_barang ?? '-';
+                        return $record->product_name ?: ($record->itemable?->nama_barang ?? '-');
                     }),
 
                 Tables\Columns\TextColumn::make('qty')
@@ -544,6 +699,19 @@ class SalesOrderResource extends Resource
             ])
             ->bulkActions([
                 Tables\Actions\DeleteBulkAction::make(),
+            ]);
+    }
+
+    public static function getEloquentQuery(): Builder
+    {
+        return parent::getEloquentQuery()
+            ->with([
+                'orderConfirmation',
+                'customer',
+                'itemable',
+                'items.material',
+                'suratJalans.items',
+                'spk',
             ]);
     }
 

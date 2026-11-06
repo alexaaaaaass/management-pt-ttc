@@ -11,7 +11,6 @@ use Filament\Forms\Components\Grid;
 use Filament\Forms\Components\Section;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
-use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Components\Repeater;
@@ -22,6 +21,7 @@ use Filament\Resources\Resource;
 use Filament\Support\RawJs;
 use Filament\Tables;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
 
 class InvoiceResource extends Resource
 {
@@ -37,28 +37,69 @@ class InvoiceResource extends Resource
                 Wizard::make([
 
                     // ==========================================
-                    // ðŸ”¥ TAHAP 1: SURAT JALAN & DETAIL ORDER
+                    // 🔥 TAHAP 1: SURAT JALAN & DETAIL ORDER
                     // ==========================================
                     Wizard\Step::make('Surat Jalan & Detail Order')
                         ->icon('heroicon-o-document-text')
-                        ->description('Pilih Surat Jalan terkirim dan tinjau item pengiriman')
+                        ->description('Pilih Surat Jalan yang sudah siap kirim / sudah terbit Surat Jalan dan belum ditagihkan')
                         ->schema([
                             Grid::make(2)
                                 ->schema([
                                     Select::make('surat_jalan_id')
-                                        ->label('Surat Jalan')
+                                        ->label('Pilih Surat Jalan')
+                                        ->placeholder('Pilih Surat Jalan yang siap kirim / belum ditagihkan...')
                                         ->relationship(
-                                            'suratJalan',
-                                            'kode_surat_jalan',
-                                            fn ($query, ?Invoice $record) => $query->where(function ($q) use ($record) {
-                                                $q->whereDoesntHave('invoice');
-                                                if ($record && $record->surat_jalan_id) {
-                                                    $q->orWhere('id', $record->surat_jalan_id);
-                                                }
-                                            })
+                                            name: 'suratJalan',
+                                            titleAttribute: 'kode_surat_jalan',
+                                            modifyQueryUsing: function (Builder $query, ?Invoice $record) {
+                                                return $query
+                                                    ->with([
+                                                        'salesOrder.customer',
+                                                        'salesOrder.itemable',
+                                                        'salesOrder.items.material',
+                                                        'spk',
+                                                    ])
+                                                    ->where(function (Builder $q) use ($record) {
+                                                        // Hanya tampilkan Surat Jalan yang sudah terbit & siap kirim (qty > 0)
+                                                        // dan BELUM selesai dibuatkan Invoice
+                                                        $q->where(function (Builder $activeQuery) {
+                                                            $activeQuery
+                                                                ->whereDoesntHave('invoice')
+                                                                ->whereHas('salesOrder')
+                                                                ->where(function (Builder $qtyQuery) {
+                                                                    $qtyQuery->where('qty_pengiriman', '>', 0)
+                                                                        ->orWhereHas('items', fn (Builder $iq) => $iq->where('qty_kirim', '>', 0));
+                                                                });
+                                                        });
+
+                                                        // Saat Edit Invoice, tetap tampilkan Surat Jalan milik Invoice ini
+                                                        if ($record && $record->surat_jalan_id) {
+                                                            $q->orWhere('surat_jalans.id', $record->surat_jalan_id);
+                                                        }
+                                                    });
+                                            }
                                         )
+                                        ->getOptionLabelFromRecordUsing(function (SuratJalan $record): string {
+                                            $so = $record->salesOrder;
+                                            $noSo = $so?->no_sales_order ?? '-';
+                                            $customer = $so?->customer?->nama_customer ?? '-';
+                                            $produk = $so?->product_name
+                                                ?: ($so?->itemable?->nama_barang ?? '-');
+                                            $qty = $record->qty_pengiriman > 0
+                                                ? $record->qty_pengiriman
+                                                : $record->items()->sum('qty_kirim');
+
+                                            return sprintf(
+                                                '%s — %s | %s (%s - %s pcs)',
+                                                $record->kode_surat_jalan,
+                                                $noSo,
+                                                $customer,
+                                                $produk,
+                                                number_format((float) $qty, 0, ',', '.')
+                                            );
+                                        })
                                         ->disabled(fn (string $operation) => $operation === 'edit')
-                                        ->searchable()
+                                        ->searchable(['kode_surat_jalan'])
                                         ->preload()
                                         ->required()
                                         ->live()
@@ -67,17 +108,18 @@ class InvoiceResource extends Resource
                                                 'salesOrder.customer',
                                                 'salesOrder.itemable',
                                                 'salesOrder.items.material',
+                                                'salesOrder.orderConfirmation',
                                                 'items.salesOrderItem',
                                             ])->find($state);
 
-                                            if (!$sj) {
+                                            if (! $sj) {
                                                 $set('preview_items', []);
                                                 return;
                                             }
 
                                             $so = $sj->salesOrder;
 
-                                            // Set Preview Items
+                                            // Set Preview Items untuk MULTI_MATERIAL
                                             if ($so && $so->mode === 'MULTI_MATERIAL') {
                                                 $rows = [];
                                                 foreach ($so->items as $item) {
@@ -94,112 +136,123 @@ class InvoiceResource extends Resource
 
                                             // Perhitungan Subtotal via InvoiceService
                                             $subtotal = app(\App\Services\Finance\InvoiceService::class)->calculateSubtotal($sj);
-
                                             $set('subtotal', $subtotal);
 
                                             $set('ongkir', $so?->harga_kirim ?? 0);
 
-                                            /*
-                                            |--------------------------------------------------------------------------
-                                            | Hidden data
-                                            |--------------------------------------------------------------------------
-                                            */
+                                            $uangMuka = $so?->orderConfirmation?->dp_nominal ?? ($so?->uang_muka ?? 0);
+                                            $set('uang_muka', $uangMuka);
+
+                                            // Autofill hidden fields
                                             $set('customer_id', $so?->customer_id);
                                             $set('sales_order_id', $so?->id);
-                                            $set('no_po_customer', $so?->no_po_customer);
+                                            $set('no_po_customer', $so?->no_po_customer ?? '-');
                                         }),
 
                                     TextInput::make('kode_invoice')
                                         ->label('Kode Invoice')
+                                        ->default(fn () => app(\App\Services\Finance\InvoiceService::class)->generateKodeInvoice())
                                         ->disabled()
-                                        ->dehydrated(false)
-                                        ->default('AUTO'),
+                                        ->dehydrated()
+                                        ->required(),
                                 ]),
 
-                            Section::make('Informasi Order Terkait')
+                            Section::make('Informasi Order & Pengiriman Terkait')
                                 ->schema([
-                                    Placeholder::make('customer_info')
-                                        ->label('Customer')
-                                        ->content(function (Get $get) {
-                                            $sj = SuratJalan::with('salesOrder.customer')
-                                                ->find($get('surat_jalan_id'));
-                                            return $sj?->salesOrder?->customer?->nama_customer ?? '-';
-                                        }),
+                                    Grid::make(3)
+                                        ->schema([
+                                            Placeholder::make('customer_info')
+                                                ->label('Customer')
+                                                ->content(function (Get $get) {
+                                                    $sj = SuratJalan::with('salesOrder.customer')->find($get('surat_jalan_id'));
+                                                    return $sj?->salesOrder?->customer?->nama_customer ?? '-';
+                                                }),
 
-                                    Placeholder::make('sales_order_info')
-                                        ->label('Sales Order')
-                                        ->content(function (Get $get) {
-                                            $sj = SuratJalan::with('salesOrder')
-                                                ->find($get('surat_jalan_id'));
-                                            return $sj?->salesOrder?->no_sales_order ?? '-';
-                                        }),
+                                            Placeholder::make('so_info')
+                                                ->label('No. Sales Order')
+                                                ->content(function (Get $get) {
+                                                    $sj = SuratJalan::with('salesOrder')->find($get('surat_jalan_id'));
+                                                    return $sj?->salesOrder?->no_sales_order ?? '-';
+                                                }),
 
-                                    Placeholder::make('po_customer_info')
-                                        ->label('PO Customer')
-                                        ->content(function (Get $get) {
-                                            $sj = SuratJalan::with('salesOrder')
-                                                ->find($get('surat_jalan_id'));
-                                            return $sj?->salesOrder?->no_po_customer ?? '-';
-                                        }),
+                                            Placeholder::make('po_info')
+                                                ->label('No. PO Customer')
+                                                ->content(function (Get $get) {
+                                                    $sj = SuratJalan::with('salesOrder')->find($get('surat_jalan_id'));
+                                                    return $sj?->salesOrder?->no_po_customer ?: '-';
+                                                }),
 
-                                    Placeholder::make('produk_info')
-                                        ->label('Produk')
-                                        ->content(function (Get $get) {
-                                            $sj = SuratJalan::with([
-                                                'salesOrder.itemable',
-                                                'salesOrder.items.material',
-                                            ])->find($get('surat_jalan_id'));
+                                            Placeholder::make('produk_info')
+                                                ->label('Produk / Barang')
+                                                ->content(function (Get $get) {
+                                                    $sj = SuratJalan::with(['salesOrder.itemable', 'salesOrder.items.material'])->find($get('surat_jalan_id'));
+                                                    if (! $sj || ! $sj->salesOrder) {
+                                                        return '-';
+                                                    }
+                                                    $so = $sj->salesOrder;
+                                                    return match ($so->mode) {
+                                                        'SPK' => $so->product_name ?: ($so->itemable?->nama_barang ?? '-'),
+                                                        'SINGLE_MATERIAL' => $so->items->first()?->material?->nama_master_item ?? '-',
+                                                        'MULTI_MATERIAL' => $so->items->pluck('material.nama_master_item')->filter()->implode(', '),
+                                                        default => '-',
+                                                    };
+                                                }),
 
-                                            if (! $sj) {
-                                                return '-';
-                                            }
+                                            Placeholder::make('qty_kirim_info')
+                                                ->label('Qty Kirim (Siap Tagih)')
+                                                ->content(function (Get $get) {
+                                                    $sj = SuratJalan::find($get('surat_jalan_id'));
+                                                    if (! $sj) {
+                                                        return '-';
+                                                    }
+                                                    $qty = $sj->qty_pengiriman > 0 ? $sj->qty_pengiriman : $sj->items()->sum('qty_kirim');
+                                                    return number_format((float) $qty, 0, ',', '.') . ' pcs';
+                                                }),
 
-                                            $so = $sj->salesOrder;
+                                            Placeholder::make('harga_info')
+                                                ->label('Harga / PCS')
+                                                ->content(function (Get $get) {
+                                                    $sj = SuratJalan::with('salesOrder')->find($get('surat_jalan_id'));
+                                                    return 'Rp ' . number_format((float) ($sj?->salesOrder?->harga_pcs ?? 0), 0, ',', '.');
+                                                }),
 
-                                            if (! $so) {
-                                                return '-';
-                                            }
+                                            Placeholder::make('sj_date')
+                                                ->label('Tgl Kirim Surat Jalan')
+                                                ->content(function (Get $get) {
+                                                    $sj = SuratJalan::find($get('surat_jalan_id'));
+                                                    return $sj && $sj->tanggal_surat_jalan
+                                                        ? \Carbon\Carbon::parse($sj->tanggal_surat_jalan)->format('d F Y')
+                                                        : '-';
+                                                }),
 
-                                            return match ($so->mode) {
-                                                'SPK' =>
-                                                    $so->itemable?->nama_barang ?? '-',
-                                                'SINGLE_MATERIAL' =>
-                                                    $so->items->first()?->material?->nama_master_item ?? '-',
-                                                'MULTI_MATERIAL' =>
-                                                    $so->items->pluck('material.nama_master_item')->filter()->implode(', '),
-                                                default => '-',
-                                            };
-                                        }),
+                                            Placeholder::make('driver_info')
+                                                ->label('Driver / Ekspedisi')
+                                                ->content(function (Get $get) {
+                                                    $sj = SuratJalan::find($get('surat_jalan_id'));
+                                                    if (! $sj) {
+                                                        return '-';
+                                                    }
+                                                    return trim(($sj->driver ?? '') . ($sj->transportasi ? ' (' . $sj->transportasi . ')' : '')) ?: '-';
+                                                }),
 
-                                    Placeholder::make('qty_kirim_info')
-                                        ->label('Qty Kirim')
-                                        ->content(function (Get $get) {
-                                            $sj = SuratJalan::find($get('surat_jalan_id'));
-                                            return number_format($sj?->qty_pengiriman ?? 0);
-                                        }),
-
-                                    Placeholder::make('harga_info')
-                                        ->label('Harga / PCS')
-                                        ->content(function (Get $get) {
-                                            $sj = SuratJalan::with('salesOrder')
-                                                ->find($get('surat_jalan_id'));
-                                            return 'Rp ' . number_format($sj?->salesOrder?->harga_pcs ?? 0, 0, ',', '.');
-                                        }),
+                                            Placeholder::make('kendaraan_info')
+                                                ->label('No. Polisi')
+                                                ->content(function (Get $get) {
+                                                    $sj = SuratJalan::find($get('surat_jalan_id'));
+                                                    return $sj?->no_polisi ?: '-';
+                                                }),
+                                        ]),
                                 ])
-                                ->columns(3)
-                                ->visible(fn(Get $get) => filled($get('surat_jalan_id'))),
+                                ->visible(fn (Get $get) => filled($get('surat_jalan_id'))),
 
-                            // Section Detail Material untuk Mode MULTI_MATERIAL
                             Section::make('Detail Material')
                                 ->visible(function (Get $get) {
                                     $sj = SuratJalan::with('salesOrder.items')->find($get('surat_jalan_id'));
-                                    if (!$sj || !$sj->salesOrder) {
-                                        return false;
-                                    }
-                                    return $sj->salesOrder->mode === 'MULTI_MATERIAL';
+                                    return $sj && $sj->salesOrder && $sj->salesOrder->mode === 'MULTI_MATERIAL';
                                 })
                                 ->schema([
                                     Repeater::make('preview_items')
+                                        ->label('Rincian Item (Multi Material)')
                                         ->dehydrated(false)
                                         ->addable(false)
                                         ->deletable(false)
@@ -207,19 +260,23 @@ class InvoiceResource extends Resource
                                         ->columns(4)
                                         ->schema([
                                             TextInput::make('material')
+                                                ->label('Nama Material')
                                                 ->disabled(),
 
                                             TextInput::make('qty')
+                                                ->label('Qty Dikirim')
                                                 ->disabled(),
 
                                             TextInput::make('harga')
+                                                ->label('Harga Satuan')
                                                 ->prefix('Rp')
                                                 ->disabled(),
 
                                             Placeholder::make('subtotal')
-                                                ->content(fn(Get $get) =>
+                                                ->label('Subtotal')
+                                                ->content(fn (Get $get) =>
                                                     'Rp ' . number_format(
-                                                        ((float)($get('qty') ?? 0)) * ((float)($get('harga') ?? 0)),
+                                                        ((float) ($get('qty') ?? 0)) * ((float) ($get('harga') ?? 0)),
                                                         0,
                                                         ',',
                                                         '.'
@@ -234,7 +291,7 @@ class InvoiceResource extends Resource
                         ]),
 
                     // ==========================================
-                    // ðŸ”¥ TAHAP 2: BIAYA, DISKON & TOTAL TAGIHAN
+                    // 🔥 TAHAP 2: BIAYA, DISKON & TOTAL TAGIHAN
                     // ==========================================
                     Wizard\Step::make('Biaya & Tagihan')
                         ->icon('heroicon-o-banknotes')
@@ -258,7 +315,7 @@ class InvoiceResource extends Resource
                                     TextInput::make('subtotal')
                                         ->label('Subtotal (DPP)')
                                         ->prefix('Rp')
-                                        ->mask(\Filament\Support\RawJs::make('$money($input, ",", ".", 0)'))
+                                        ->mask(RawJs::make('$money($input, ",", ".", 0)'))
                                         ->stripCharacters('.')
                                         ->readOnly()
                                         ->default(0)
@@ -286,7 +343,7 @@ class InvoiceResource extends Resource
                                     TextInput::make('ongkir')
                                         ->label('Ongkos Kirim')
                                         ->prefix('Rp')
-                                        ->mask(\Filament\Support\RawJs::make('$money($input, ",", ".", 0)'))
+                                        ->mask(RawJs::make('$money($input, ",", ".", 0)'))
                                         ->stripCharacters('.')
                                         ->default(0)
                                         ->live(),
@@ -294,7 +351,7 @@ class InvoiceResource extends Resource
                                     TextInput::make('uang_muka')
                                         ->label('Uang Muka (DP)')
                                         ->prefix('Rp')
-                                        ->mask(\Filament\Support\RawJs::make('$money($input, ",", ".", 0)'))
+                                        ->mask(RawJs::make('$money($input, ",", ".", 0)'))
                                         ->stripCharacters('.')
                                         ->default(0)
                                         ->live(),
@@ -328,7 +385,7 @@ class InvoiceResource extends Resource
 
                                     Placeholder::make('grand_total_view')
                                         ->label('Grand Total Tagihan')
-                                        ->extraAttributes(['class' => 'text-lg font-bold', 'style' => 'color: #007bff; font-size: 2.25rem;'])
+                                        ->extraAttributes(['class' => 'text-lg font-bold', 'style' => 'color: #007bff; font-size: 1.5rem;'])
                                         ->content(function (Get $get) {
                                             $subtotal = (float) ($get('subtotal') ?? 0);
                                             $diskon = (float) ($get('diskon') ?? 0);
@@ -340,6 +397,32 @@ class InvoiceResource extends Resource
                                             $grandTotal = $subtotal - $diskonNominal + $ppnNominal + $ongkir;
 
                                             return 'Rp ' . number_format($grandTotal, 0, ',', '.');
+                                        }),
+
+                                    Placeholder::make('uang_muka_view')
+                                        ->label('Uang Muka (DP)')
+                                        ->extraAttributes(['class' => 'text-lg font-bold', 'style' => 'color: #16a34a; font-size: 1.5rem;'])
+                                        ->content(function (Get $get) {
+                                            $uangMuka = (float) str_replace(['.', ','], '', (string) ($get('uang_muka') ?? 0));
+                                            return 'Rp ' . number_format($uangMuka, 0, ',', '.');
+                                        }),
+
+                                    Placeholder::make('sisa_tagihan_view')
+                                        ->label('Sisa Tagihan (Setelah DP)')
+                                        ->extraAttributes(['class' => 'text-lg font-bold', 'style' => 'color: #dc2626; font-size: 1.5rem;'])
+                                        ->content(function (Get $get) {
+                                            $subtotal = (float) ($get('subtotal') ?? 0);
+                                            $diskon = (float) ($get('diskon') ?? 0);
+                                            $ppn = (float) ($get('ppn') ?? 0);
+                                            $ongkir = (float) ($get('ongkir') ?? 0);
+                                            $uangMuka = (float) str_replace(['.', ','], '', (string) ($get('uang_muka') ?? 0));
+
+                                            $diskonNominal = ($subtotal * $diskon) / 100;
+                                            $ppnNominal = ($subtotal * $ppn) / 100;
+                                            $grandTotal = $subtotal - $diskonNominal + $ppnNominal + $ongkir;
+                                            $sisa = max(0, $grandTotal - $uangMuka);
+
+                                            return 'Rp ' . number_format($sisa, 0, ',', '.');
                                         }),
                                 ])
                                 ->columns(2),
@@ -355,107 +438,129 @@ class InvoiceResource extends Resource
         return 'Invoice';
     }
 
+    public static function table(Table $table): Table
+    {
+        return $table
+            ->columns([
+                Tables\Columns\TextColumn::make('kode_invoice')
+                    ->searchable(),
 
+                Tables\Columns\TextColumn::make('suratJalan.kode_surat_jalan'),
 
-public static function table(Table $table): Table
-{
-    return $table
-        ->columns([
-            Tables\Columns\TextColumn::make('kode_invoice')
-                ->searchable(),
+                Tables\Columns\TextColumn::make('suratJalan.salesOrder.customer.nama_customer')
+                    ->label('Customer'),
 
-            Tables\Columns\TextColumn::make('suratJalan.kode_surat_jalan'),
+                Tables\Columns\TextColumn::make('grand_total')
+                    ->money('IDR'),
 
-            Tables\Columns\TextColumn::make('suratJalan.salesOrder.customer.nama_customer')
-                ->label('Customer'),
+                Tables\Columns\TextColumn::make('total_payment')
+                    ->label('Terbayar / DP')
+                    ->money('IDR')
+                    ->getStateUsing(fn ($record) => (float) ($record->total_payment > 0 ? $record->total_payment : (($record->uang_muka ?? 0) + $record->payments()->where('status', 'SUCCESS')->sum('nominal_bayar')))),
 
-            Tables\Columns\TextColumn::make('grand_total')
-                ->money('IDR'),
+                Tables\Columns\TextColumn::make('sisa_tagihan')
+                    ->label('Sisa Tagihan')
+                    ->money('IDR')
+                    ->color(fn ($record) => $record->sisa_tagihan <= 0 ? 'success' : 'danger'),
 
-            Tables\Columns\TextColumn::make('status')
-                ->badge()
-                ->color(fn (string $state): string => match ($state) {
-                    'Paid' => 'success',
-                    'Partial' => 'warning',
-                    'Unpaid' => 'danger',
-                    default => 'gray',
-                }),
+                Tables\Columns\TextColumn::make('status')
+                    ->badge()
+                    ->color(fn (string $state): string => match ($state) {
+                        'Paid' => 'success',
+                        'Partial' => 'warning',
+                        'Unpaid' => 'danger',
+                        default => 'gray',
+                    }),
 
-            Tables\Columns\TextColumn::make('status_pembayaran')
-                ->label('Status Pembayaran')
-                ->badge()
-                ->getStateUsing(fn ($record) =>
-                    $record->sisa_tagihan <= 0 ? 'Lunas' : 'Belum Lunas'
-                )
-                ->color(fn ($record) =>
-                    $record->sisa_tagihan <= 0 ? 'success' : 'danger'
-                ),
-
-            Tables\Columns\TextColumn::make('tanggal_invoice')
-                ->date('d/m/Y'),
-        ])
-        ->bulkActions([
-            Tables\Actions\BulkAction::make('infoDataTerpilih')
-                ->label('Info Data Terpilih')
-                ->icon('heroicon-o-check-circle')
-                ->action(function (\Illuminate\Database\Eloquent\Collection $records): void {
-                    \Filament\Notifications\Notification::make()
-                        ->title($records->count() . ' data dipilih')
-                        ->success()
-                        ->send();
-                })
-                ->deselectRecordsAfterCompletion(),
-        ])
-        ->actions([
-            Tables\Actions\ActionGroup::make([
-                Tables\Actions\Action::make('detail')
-                    ->label('Detail')
-                    ->icon('heroicon-o-eye')
-                    ->url(fn ($record) => static::getUrl('view', [
-                        'record' => $record,
-                    ])),
-
-                Tables\Actions\Action::make('preview_pdf')
-                    ->label('Preview PDF')
-                    ->icon('heroicon-o-document')
-                    ->url(fn ($record) => route('invoice.preview', $record))
-                    ->openUrlInNewTab(),
-
-                Tables\Actions\Action::make('download_pdf')
-                    ->label('Download PDF')
-                    ->icon('heroicon-o-arrow-down-tray')
-                    ->url(fn ($record) => route('invoice.download', $record)),
-
-                Tables\Actions\EditAction::make()
-                    ->label('Edit'),
-
-                Tables\Actions\DeleteAction::make()
-                    ->label('Hapus')
-                    ->hidden(fn ($record) =>
-                        ! app(\App\Services\Finance\InvoiceService::class)
-                            ->canDelete($record)
+                Tables\Columns\TextColumn::make('status_pembayaran')
+                    ->label('Status Pembayaran')
+                    ->badge()
+                    ->getStateUsing(fn ($record) =>
+                        $record->sisa_tagihan <= 0 ? 'Lunas' : 'Belum Lunas'
+                    )
+                    ->color(fn ($record) =>
+                        $record->sisa_tagihan <= 0 ? 'success' : 'danger'
                     ),
+
+                Tables\Columns\TextColumn::make('tanggal_invoice')
+                    ->date('d/m/Y'),
             ])
-                ->label('Aksi')
-                ->icon('heroicon-m-ellipsis-vertical')
-                ->size('md')
-                ->color('gray')
-                ->button()
-                ->dropdownPlacement('bottom-end'),
-        ]);
-}
+            ->bulkActions([
+                Tables\Actions\BulkAction::make('infoDataTerpilih')
+                    ->label('Info Data Terpilih')
+                    ->icon('heroicon-o-check-circle')
+                    ->action(function (\Illuminate\Database\Eloquent\Collection $records): void {
+                        \Filament\Notifications\Notification::make()
+                            ->title($records->count() . ' data dipilih')
+                            ->success()
+                            ->send();
+                    })
+                    ->deselectRecordsAfterCompletion(),
+            ])
+            ->actions([
+                Tables\Actions\ActionGroup::make([
+                    Tables\Actions\Action::make('detail')
+                        ->label('Detail')
+                        ->icon('heroicon-o-eye')
+                        ->url(fn ($record) => static::getUrl('view', [
+                            'record' => $record,
+                        ])),
 
-public static function getRelations(): array
-{
-    return [];
-}
+                    Tables\Actions\Action::make('preview_pdf')
+                        ->label('Preview PDF')
+                        ->icon('heroicon-o-document')
+                        ->color('warning')
+                        ->url(fn ($record) => route('invoice.preview', $record))
+                        ->openUrlInNewTab(),
 
-public static function getPages(): array
-{
-    return [
-        'index' => Pages\ListInvoices::route('/'),
-        'create' => Pages\CreateInvoice::route('/create'),
-        'view' => Pages\ViewInvoice::route('/{record}'),
-        'edit' => Pages\EditInvoice::route('/{record}/edit'),
-    ];
-}}
+                    Tables\Actions\Action::make('download_pdf')
+                        ->label('Download PDF')
+                        ->icon('heroicon-o-arrow-down-tray')
+                        ->color('success')
+                        ->url(fn ($record) => route('invoice.download', $record)),
+
+                    Tables\Actions\EditAction::make()
+                        ->label('Edit'),
+
+                    Tables\Actions\DeleteAction::make()
+                        ->label('Hapus')
+                        ->hidden(fn ($record) =>
+                            ! app(\App\Services\Finance\InvoiceService::class)
+                                ->canDelete($record)
+                        ),
+                ])
+                    ->label('Aksi')
+                    ->icon('heroicon-m-ellipsis-vertical')
+                    ->size('md')
+                    ->color('gray')
+                    ->button()
+                    ->dropdownPlacement('bottom-end'),
+            ]);
+    }
+
+    public static function getRelations(): array
+    {
+        return [];
+    }
+
+    public static function getEloquentQuery(): Builder
+    {
+        return parent::getEloquentQuery()
+            ->with([
+                'suratJalan.salesOrder.customer',
+                'payments.metodeBayar',
+                'payments.coa',
+                'payments.karyawan',
+            ]);
+    }
+
+    public static function getPages(): array
+    {
+        return [
+            'index' => Pages\ListInvoices::route('/'),
+            'create' => Pages\CreateInvoice::route('/create'),
+            'view' => Pages\ViewInvoice::route('/{record}'),
+            'edit' => Pages\EditInvoice::route('/{record}/edit'),
+        ];
+    }
+}

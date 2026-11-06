@@ -12,9 +12,11 @@ class SalesOrder extends Model
 
  use SoftDeletes;
     protected $fillable = [
+    'order_confirmation_id',
     'itemable_type',
     'itemable_id',
     'kode_material',
+    'product_name',
     'customer_id',
     'no_sales_order',
     'no_po_customer',
@@ -40,6 +42,11 @@ class SalesOrder extends Model
     'catatan_colour_range',
     'order_type',
 ];
+
+    public function orderConfirmation()
+    {
+        return $this->belongsTo(OrderConfirmation::class);
+    }
 
     public function getEffectiveJenisAttribute(): string
     {
@@ -141,12 +148,54 @@ class SalesOrder extends Model
         return (float) $this->items->sum('qty');
     }
 
-    public function getProductNameAttribute(): string
+    public function getProductNameAttribute(?string $value = null): string
     {
         if ($this->mode === 'SPK') {
+            $customName = trim((string) ($value ?? ($this->attributes['product_name'] ?? '')));
+            if ($customName !== '' && strtoupper($customName) !== 'KERTAS IVORY') {
+                return $customName;
+            }
 
-            return $this->itemable?->nama_barang ?? '-';
+            if ($this->order_confirmation_id && $this->orderConfirmation) {
+                $ocItems = $this->orderConfirmation->items ?? collect();
+                $matched = $ocItems->first(function ($it) {
+                    return ($this->itemable_id && (int) $it->finish_good_item_id === (int) $this->itemable_id)
+                        && !empty($it->item_name)
+                        && strtoupper(trim($it->item_name)) !== 'KERTAS IVORY';
+                }) ?? $ocItems->first(function ($it) {
+                    return !empty($it->item_name) && strtoupper(trim($it->item_name)) !== 'KERTAS IVORY';
+                });
 
+                if ($matched && !empty($matched->item_name)) {
+                    return $matched->item_name;
+                }
+            }
+
+            $fgName = trim((string) ($this->itemable?->nama_barang ?? ''));
+            if ($fgName !== '' && strtoupper($fgName) !== 'KERTAS IVORY') {
+                return $fgName;
+            }
+
+            if ($this->customer_id) {
+                $afItem = \App\Models\ApprovalFormItem::whereHas('approvalForm', function ($q) {
+                    $q->where('customer_id', $this->customer_id);
+                })
+                ->whereNotNull('item_name')
+                ->where('item_name', '!=', '')
+                ->whereRaw("UPPER(TRIM(item_name)) != 'KERTAS IVORY'")
+                ->latest('id')
+                ->first();
+
+                if ($afItem && !empty($afItem->item_name)) {
+                    return $afItem->item_name;
+                }
+            }
+
+            if ($customName !== '') {
+                return $customName;
+            }
+
+            return $fgName !== '' ? $fgName : '-';
         }
 
         if ($this->items->count() == 1) {

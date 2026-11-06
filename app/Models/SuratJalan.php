@@ -41,7 +41,7 @@ class SuratJalan extends Model
     {
         return $this->belongsTo(
             SalesOrder::class
-        );
+        )->withTrashed();
     }
 
     public function spk()

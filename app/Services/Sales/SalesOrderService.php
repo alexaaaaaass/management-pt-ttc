@@ -4,9 +4,12 @@ namespace App\Services\Sales;
 
 use App\Models\FinishGoodItem;
 use App\Models\MasterItem;
+use App\Models\OrderConfirmation;
+use App\Models\OrderConfirmationItem;
 use App\Models\SalesOrder;
 use App\Models\SalesOrderItem;
 use App\Services\Inventory\StockService;
+use App\Services\Marketing\MarketingWorkflowService;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -14,8 +17,63 @@ use Illuminate\Validation\ValidationException;
 class SalesOrderService
 {
     public function __construct(
-        protected StockService $stockService
+        protected StockService $stockService,
+        protected MarketingWorkflowService $marketingWorkflowService,
     ) {}
+
+    /**
+     * Siapkan data pre-fill formulir Sales Order dari Order Confirmation (Kasus Multi-Item Juan: 1 SO = 1 SPK)
+     */
+    public function prepareFormDataFromOrderConfirmation(OrderConfirmation $oc, ?int $orderConfirmationItemId = null): array
+    {
+        $targetItem = $this->marketingWorkflowService->resolveTargetItemForSalesOrder($oc, $orderConfirmationItemId);
+
+        $fgId = $targetItem?->finish_good_item_id;
+        if (! $fgId && $targetItem?->item_name) {
+            $fg = FinishGoodItem::where('nama_barang', $targetItem->item_name)->first();
+            $fgId = $fg?->id;
+        }
+        $fg = $fgId ? FinishGoodItem::with('typeItem')->find($fgId) : null;
+
+        $qty = (float) ($targetItem?->qty ?? 0);
+        $hargaPcs = (float) ($targetItem?->harga ?? 0);
+
+        $bom = ($fg && $qty > 0)
+            ? $this->getBomPreview((int) $fg->id, $qty)
+            : [];
+
+        return [
+            'order_confirmation_id'      => $oc->id,
+            'order_confirmation_item_id' => $targetItem?->id,
+            'order_type'                 => 'SPK',
+            'customer_id'                => $oc->customer_id,
+            'item_source'                => $fg?->id,
+            'itemable_id'                => $fg?->id,
+            'itemable_type'              => $fg ? FinishGoodItem::class : null,
+            'finish_good_item_id'        => $fg?->id,
+            'kode_material'              => $fg?->kode_material_produk,
+            'product_name'               => $targetItem?->item_name ?: $fg?->nama_barang,
+            'no_sales_order'             => $oc->order_id ?: $this->generateNoSalesOrder(),
+            'tanggal_po'                 => $oc->tanggal ? $oc->tanggal->format('Y-m-d') : now()->format('Y-m-d'),
+            'lead_time'                  => $oc->lead_time ?: '21 Hari Kerja',
+            'qty'                        => $qty,
+            'harga_pcs'                  => $hargaPcs,
+            'harga_kirim'                => 0,
+            'diskon'                     => (float) ($oc->diskon ?? 0),
+            'mata_uang'                  => 'rupiah',
+            'syarat_pembayaran'          => '30 Hari setelah invoice',
+            'toleransi_pengiriman'       => 0,
+            'klaim_kertas'               => 'not_claim',
+            'catatan'                    => $oc->catatan,
+            'jenis'                      => $targetItem?->jenis ?: $fg?->jenis,
+            'komponen'                   => $targetItem?->komponen ?: ($fg?->komponen ?? $fg?->typeItem?->nama_type_item),
+            'isi'                        => $targetItem?->isi ?: $fg?->isi,
+            'kertas'                     => $targetItem?->kertas ?: $fg?->spesifikasi_kertas,
+            'warna'                      => $targetItem?->warna ?: $fg?->warna,
+            'finishing'                  => $targetItem?->finishing ?: $fg?->finishing,
+            'bom_items'                  => $bom,
+        ];
+    }
 
     /**
      * Generate format nomor Sales Order otomatis: 0001/IK-10/mY

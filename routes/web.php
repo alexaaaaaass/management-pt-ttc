@@ -88,6 +88,16 @@ Route::middleware('auth')->group(function () {
     Route::get(
         '/surat-jalan/{suratJalan}/download',
         [SuratJalanPdfController::class, 'download']
+    )->name('suratjalan.download');
+
+    Route::get(
+        '/surat-jalan-pdf/{suratJalan}/preview',
+        [SuratJalanPdfController::class, 'preview']
+    )->name('surat-jalan.preview');
+
+    Route::get(
+        '/surat-jalan-pdf/{suratJalan}/download',
+        [SuratJalanPdfController::class, 'download']
     )->name('surat-jalan.download');
 
     /*

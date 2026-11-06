@@ -51,8 +51,8 @@ class TransKasBankResource extends Resource
                     Placeholder::make('info_tipe')
                         ->label('Tipe Transaksi')
                         ->content(fn ($get) => $get('tipe_transaksi') === 'BANK_KELUAR'
-                            ? 'ðŸ”´ Bank Keluar (Pengeluaran via Rekening Bank)'
-                            : 'ðŸŸ¢ Bank Masuk (Penerimaan via Rekening Bank)'
+                            ? '🔴 Bank Keluar (Pengeluaran via Rekening Bank)'
+                            : '🟢 Bank Masuk (Penerimaan via Rekening Bank)'
                         ),
 
                     Grid::make(2)

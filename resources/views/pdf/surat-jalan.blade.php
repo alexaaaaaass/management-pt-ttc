@@ -6,20 +6,26 @@
 
 <style>
 @page {
-    margin: 25px 30px 25px 30px;
+    size: A4 landscape;
+    margin: 22px 28px 22px 28px;
+}
+
+* {
+    box-sizing: border-box;
 }
 
 body {
     font-family: Arial, Helvetica, sans-serif;
     font-size: 11px;
     color: #000;
-    line-height: 1.3;
+    line-height: 1.35;
+    margin: 0;
 }
 
 .top-table {
     width: 100%;
     border-collapse: collapse;
-    margin-bottom: 12px;
+    margin-bottom: 10px;
 }
 
 .top-table td {
@@ -29,7 +35,7 @@ body {
 }
 
 .company-title {
-    font-size: 12.5px;
+    font-size: 13px;
     font-weight: bold;
     color: #000;
     margin-bottom: 2px;
@@ -38,96 +44,122 @@ body {
 .company-desc {
     font-size: 10px;
     font-style: italic;
-    color: #222;
-    line-height: 1.35;
+    color: #111;
+    line-height: 1.45;
 }
 
-/* OUTLINE BOX FOR SURAT JALAN & RECIPIENT INFO */
+/* TITLE BAR & META LAYOUT MATCHING TTC REFERENCE IMAGE 100% */
 .header-box {
     width: 100%;
-    border: 2px solid #000;
     border-collapse: collapse;
     margin-bottom: 8px;
 }
 
 .title-bar {
     text-align: center;
-    font-size: 14px;
+    font-size: 15px;
     font-weight: bold;
     letter-spacing: 0.5px;
-    padding: 6px;
-    border-bottom: 2px solid #000;
+    padding: 7px 6px;
+    border: 2px solid #000;
 }
 
-.info-table {
-    width: 100%;
-    border-collapse: collapse;
-}
-
-.info-table td {
-    padding: 4px 6px;
+.recipient-cell {
+    width: 63%;
+    padding: 6px 4px 6px 4px;
+    border: none;
     vertical-align: top;
-    font-size: 11px;
 }
 
-.right-meta-table {
+.meta-cell {
+    width: 37%;
+    padding: 0;
+    border-left: 2px solid #000;
+    border-right: 2px solid #000;
+    border-bottom: 2px solid #000;
+    vertical-align: top;
+}
+
+.meta-grid {
     width: 100%;
     border-collapse: collapse;
 }
 
-.right-meta-table td {
-    padding: 2px 4px;
+.meta-grid td {
+    padding: 3px 8px;
     font-size: 11px;
+    vertical-align: middle;
     border: none;
 }
 
-.right-meta-table tr td:first-child {
+.meta-grid td.meta-label {
+    width: 34%;
     font-weight: bold;
-    width: 80px;
+    border-right: 1.5px solid #000;
 }
 
-/* TABLE OF ITEMS */
+/* TABLE OF ITEMS MATCHING TTC REFERENCE IMAGE 100% */
 .items-table {
     width: 100%;
     border-collapse: collapse;
-    font-size: 10px;
-    margin-bottom: 10px;
+    border: 2px solid #000;
+    font-size: 10.5px;
+    margin-bottom: 4px;
 }
 
 .items-table th {
-    background-color: #2b5fa8;
-    color: #ffffff;
+    background-color: #ffffff;
+    color: #1f4e78;
     font-weight: bold;
     text-align: center;
-    padding: 6px 4px;
+    padding: 5px 4px;
+    border-left: 1px solid #000;
+    border-right: 1px solid #000;
+    border-top: 2px solid #000;
+    border-bottom: 2px solid #000;
+    font-size: 10.5px;
+}
+
+.items-table tbody td {
     border: 1px solid #000;
-    font-size: 10px;
-}
-
-.items-table td {
-    border: 1px solid #333;
-    padding: 4px 5px;
-    height: 15px;
+    padding: 3.5px 6px;
+    height: 18px;
     vertical-align: middle;
+    color: #2f5597;
 }
 
-.items-table tr.striped {
-    background-color: #e9f1fb;
+.items-table tbody tr.striped td {
+    background-color: #d9e1f2;
 }
 
 .items-table tfoot td {
     font-weight: bold;
-    border: 1px solid #000;
-    padding: 5px;
-    font-size: 10.5px;
-    background-color: #ffffff;
+    border-top: 2px solid #000;
+    border-bottom: 2px solid #000;
+    border-left: 1px solid #000;
+    border-right: 1px solid #000;
+    padding: 4px 6px;
+    font-size: 11px;
 }
 
-/* SIGNATURES SECTION */
+.items-table tfoot td.total-label-cell {
+    background-color: #d9e1f2;
+    color: #1f4e78;
+    text-align: right;
+    padding-right: 18px;
+}
+
+.items-table tfoot td.total-value-cell {
+    background-color: #ffffff;
+    color: #000000;
+    text-align: center;
+}
+
+/* SIGNATURES SECTION MATCHING TTC REFERENCE IMAGE 100% */
 .footer-table {
     width: 100%;
     border-collapse: collapse;
-    margin-top: 15px;
+    margin-top: 2px;
 }
 
 .footer-table td {
@@ -138,24 +170,16 @@ body {
 .notice-bold {
     font-weight: bold;
     font-style: italic;
-    font-size: 10px;
+    font-size: 10.5px;
+    color: #000;
 }
 
 .notice-sub {
     font-style: italic;
-    font-size: 9.5px;
-    margin-bottom: 15px;
-}
-
-.sig-name {
-    font-weight: normal;
-    font-size: 11px;
-    margin-bottom: 50px;
-}
-
-.sig-line {
-    font-size: 11px;
-    letter-spacing: -1px;
+    font-size: 10px;
+    margin-top: 2px;
+    margin-bottom: 2px;
+    color: #000;
 }
 </style>
 </head>
@@ -174,14 +198,33 @@ body {
         </div>
     </td>
     <td width="30%" align="right">
-        @if(file_exists(public_path('images/logo.png')))
-            <img src="{{ public_path('images/logo.png') }}" style="max-height: 60px; width: auto;">
+        @if(!empty($logoBase64))
+            <img src="{{ $logoBase64 }}" style="max-height: 65px; width: auto;" alt="Logo TTC">
+        @elseif(file_exists(public_path('images/Logo PT Teknografi.png')))
+            <img src="{{ public_path('images/Logo PT Teknografi.png') }}" style="max-height: 65px; width: auto;" alt="Logo TTC">
+        @elseif(file_exists(public_path('images/logo.png')))
+            <img src="{{ public_path('images/logo.png') }}" style="max-height: 65px; width: auto;" alt="Logo TTC">
         @endif
     </td>
 </tr>
 </table>
 
 <!-- SURAT JALAN & RECIPIENT BOX -->
+@php
+    $so = $suratJalan->salesOrder ?? $suratJalan->spk?->salesOrder;
+    $customerName = $so?->customer?->nama_customer
+                    ?? ($suratJalan->invoice?->customer?->nama_customer ?? 'Customer');
+
+    $noInvoice = $so?->no_sales_order
+                 ?: ($suratJalan->invoice?->kode_invoice ?: ($suratJalan->kode_surat_jalan ?: '-'));
+
+    $tanggal = $suratJalan->tanggal_surat_jalan 
+               ? date('d M Y', strtotime($suratJalan->tanggal_surat_jalan)) 
+               : date('d M Y');
+
+    $ekspedisi = $suratJalan->transportasi ?: ($suratJalan->driver ?: '');
+@endphp
+
 <table class="header-box">
 <tr>
     <td colspan="2" class="title-bar">
@@ -189,38 +232,28 @@ body {
     </td>
 </tr>
 <tr>
-    <td width="60%" style="padding: 6px 10px; border-right: 1.5px solid #000; vertical-align: top;">
+    <td class="recipient-cell">
         <div style="font-size: 11px;">Yth</div>
-        <div style="font-size: 11.5px; font-weight: bold; margin: 3px 0;">
-            {{ $suratJalan->salesOrder?->customer?->nama_customer ?? 'Customer' }}
+        <div style="font-size: 11px; margin: 2px 0;">
+            {{ $customerName }}
         </div>
-        <div style="font-size: 10.5px; color: #222;">
-            di tempat
+        <div style="font-size: 11px;">
+            {{ $suratJalan->alamat_tujuan ?: 'di tempat' }}
         </div>
     </td>
-    <td width="40%" style="padding: 4px 6px; vertical-align: middle;">
-        @php
-            $noInvoice = $suratJalan->invoice?->no_invoice 
-                         ?: ($suratJalan->salesOrder?->no_sales_order ?? '-');
-            $tanggal = $suratJalan->tanggal_surat_jalan 
-                       ? date('d M Y', strtotime($suratJalan->tanggal_surat_jalan)) 
-                       : date('d M Y');
-            $ekspedisi = $suratJalan->transportasi 
-                         ? ($suratJalan->transportasi . ($suratJalan->no_polisi ? ' - ' . $suratJalan->no_polisi : '')) 
-                         : ($suratJalan->driver ?: '-');
-        @endphp
-        <table class="right-meta-table">
+    <td class="meta-cell">
+        <table class="meta-grid">
             <tr>
-                <td>No Invoice</td>
-                <td>: {{ $noInvoice }}</td>
+                <td class="meta-label">No Invoice</td>
+                <td>{{ $noInvoice }}</td>
             </tr>
             <tr>
-                <td>Tanggal</td>
-                <td>: {{ $tanggal }}</td>
+                <td class="meta-label">Tanggal</td>
+                <td>{{ $tanggal }}</td>
             </tr>
             <tr>
-                <td>Ekspedisi</td>
-                <td>: {{ $ekspedisi }}</td>
+                <td class="meta-label">Ekspedisi</td>
+                <td>{{ $ekspedisi }}</td>
             </tr>
         </table>
     </td>
@@ -231,38 +264,114 @@ body {
 @php
     $rows = [];
     $totalQty = 0;
+    $targetQty = (float) ($suratJalan->qty_pengiriman ?? 0);
+
+    $baseItemName = ($so && !empty($so->product_name) && $so->product_name !== '-')
+        ? $so->product_name
+        : ($so?->itemable?->nama_barang ?? 'Barang Cetakan');
+
+    $komp = $so && !empty($so->effective_komponen) && $so->effective_komponen !== '-'
+            ? ucwords(strtolower(trim($so->effective_komponen)))
+            : '';
+    $jenis = $so && !empty($so->effective_jenis) && $so->effective_jenis !== '-'
+            ? strtoupper(trim($so->effective_jenis))
+            : '';
+    $isi = $so && !empty($so->effective_isi) && $so->effective_isi !== '-'
+            ? trim((string) $so->effective_isi)
+            : '';
+
+    // Clean brand name to avoid duplicating komponen/jenis/isi (e.g., "DAFI 16" -> "Etiket Dafi SKT 16")
+    $cleanBrand = trim((string) $baseItemName);
+    if ($komp !== '' && stripos($cleanBrand, $komp) === 0) {
+        $cleanBrand = trim(substr($cleanBrand, strlen($komp)));
+    }
+    if ($isi !== '' && preg_match('/\s+' . preg_quote($isi, '/') . '$/i', $cleanBrand)) {
+        $cleanBrand = trim(preg_replace('/\s+' . preg_quote($isi, '/') . '$/i', '', $cleanBrand));
+    }
+    if ($jenis !== '' && preg_match('/\b' . preg_quote($jenis, '/') . '\b/i', $cleanBrand)) {
+        $cleanBrand = trim(preg_replace('/\b' . preg_quote($jenis, '/') . '\b/i', '', $cleanBrand));
+    }
+    if ($cleanBrand !== '' && strtoupper($cleanBrand) === $cleanBrand && strlen($cleanBrand) > 2) {
+        $cleanBrand = ucwords(strtolower($cleanBrand));
+    }
+
+    $parts = array_filter([$komp, $cleanBrand !== '' ? $cleanBrand : $baseItemName, $jenis, $isi], fn($v) => $v !== null && trim((string) $v) !== '');
+    $formattedItemName = preg_replace('/\s+/', ' ', implode(' ', $parts));
 
     // 1. Cek apakah SPK memiliki detail Packaging
-    if ($suratJalan->spk && $suratJalan->spk->packagings()->count() > 0) {
-        $itemName = $suratJalan->salesOrder?->itemable?->nama_barang 
-                    ?? $suratJalan->salesOrder?->product_name 
-                    ?? '-';
+    if ($suratJalan->spk && $suratJalan->spk->packagings && $suratJalan->spk->packagings->count() > 0) {
+        $remainingToShip = $targetQty > 0 ? $targetQty : null;
 
         foreach ($suratJalan->spk->packagings as $pkg) {
-            if ($pkg->jumlah_satuan_penuh > 0 && $pkg->qty_per_satuan_penuh > 0) {
-                $sub = (float) ($pkg->total_satuan_penuh ?: ($pkg->jumlah_satuan_penuh * $pkg->qty_per_satuan_penuh));
-                $rows[] = [
-                    'nama_item' => $itemName,
-                    'qty_pcs'   => (float) $pkg->qty_per_satuan_penuh,
-                    'kemasan'   => $pkg->satuan_transfer ?? 'Box',
-                    'jumlah'    => (int) $pkg->jumlah_satuan_penuh,
-                    'total'     => $sub,
-                    'keterangan'=> '',
-                ];
-                $totalQty += $sub;
+            if ($pkg->jenis_transfer === 'blokir') {
+                continue;
             }
 
-            if ($pkg->jumlah_satuan_sisa > 0 && $pkg->qty_per_satuan_sisa > 0) {
-                $sub = (float) ($pkg->total_satuan_sisa ?: ($pkg->jumlah_satuan_sisa * $pkg->qty_per_satuan_sisa));
-                $rows[] = [
-                    'nama_item' => $itemName,
-                    'qty_pcs'   => (float) $pkg->qty_per_satuan_sisa,
-                    'kemasan'   => $pkg->satuan_transfer ?? 'Box',
-                    'jumlah'    => (int) $pkg->jumlah_satuan_sisa,
-                    'total'     => $sub,
-                    'keterangan'=> '',
-                ];
-                $totalQty += $sub;
+            $qtyPcs = (float) ($pkg->qty_per_satuan_penuh ?: 1);
+            $jmlPenuh = (int) $pkg->jumlah_satuan_penuh;
+
+            if ($jmlPenuh > 0 && $qtyPcs > 0) {
+                $sub = (float) ($pkg->total_satuan_penuh ?: ($jmlPenuh * $qtyPcs));
+                if ($remainingToShip !== null) {
+                    if ($remainingToShip <= 0) break;
+                    $subShip = min($sub, $remainingToShip);
+                    $jmlShip = $qtyPcs > 0 ? (int) ceil($subShip / $qtyPcs) : 1;
+                    $rows[] = [
+                        'nama_item' => $formattedItemName,
+                        'qty_pcs'   => $qtyPcs,
+                        'kemasan'   => $pkg->satuan_transfer ?? 'Box',
+                        'jumlah'    => $jmlShip,
+                        'total'     => $subShip,
+                        'keterangan'=> ($suratJalan->keterangan && $suratJalan->keterangan !== '-') ? $suratJalan->keterangan : '',
+                    ];
+                    $totalQty += $subShip;
+                    $remainingToShip -= $subShip;
+                } else {
+                    $rows[] = [
+                        'nama_item' => $formattedItemName,
+                        'qty_pcs'   => $qtyPcs,
+                        'kemasan'   => $pkg->satuan_transfer ?? 'Box',
+                        'jumlah'    => $jmlPenuh,
+                        'total'     => $sub,
+                        'keterangan'=> ($suratJalan->keterangan && $suratJalan->keterangan !== '-') ? $suratJalan->keterangan : '',
+                    ];
+                    $totalQty += $sub;
+                }
+            }
+
+            if ($remainingToShip !== null && $remainingToShip <= 0) {
+                break;
+            }
+
+            $qtySisa = (float) ($pkg->qty_per_satuan_sisa ?: 1);
+            $jmlSisa = (int) $pkg->jumlah_satuan_sisa;
+            if ($jmlSisa > 0 && $qtySisa > 0) {
+                $sub = (float) ($pkg->total_satuan_sisa ?: ($jmlSisa * $qtySisa));
+                if ($remainingToShip !== null) {
+                    if ($remainingToShip <= 0) break;
+                    $subShip = min($sub, $remainingToShip);
+                    $jmlShip = $qtySisa > 0 ? (int) ceil($subShip / $qtySisa) : 1;
+                    $rows[] = [
+                        'nama_item' => $formattedItemName,
+                        'qty_pcs'   => $qtySisa,
+                        'kemasan'   => $pkg->satuan_transfer ?? 'Box',
+                        'jumlah'    => $jmlShip,
+                        'total'     => $subShip,
+                        'keterangan'=> '',
+                    ];
+                    $totalQty += $subShip;
+                    $remainingToShip -= $subShip;
+                } else {
+                    $rows[] = [
+                        'nama_item' => $formattedItemName,
+                        'qty_pcs'   => $qtySisa,
+                        'kemasan'   => $pkg->satuan_transfer ?? 'Box',
+                        'jumlah'    => $jmlSisa,
+                        'total'     => $sub,
+                        'keterangan'=> '',
+                    ];
+                    $totalQty += $sub;
+                }
             }
         }
     }
@@ -284,14 +393,11 @@ body {
         }
     }
 
-    // 3. Fallback jika SPK tunggal atau material tunggal tanpa repeater
+    // 3. Fallback jika SPK tunggal atau material tunggal tanpa packaging
     if (empty($rows)) {
         $sub = (float) ($suratJalan->qty_pengiriman ?: 0);
-        $itemName = $suratJalan->salesOrder?->itemable?->nama_barang 
-                    ?? $suratJalan->salesOrder?->product_name 
-                    ?? '-';
         $rows[] = [
-            'nama_item' => $itemName,
+            'nama_item' => $formattedItemName,
             'qty_pcs'   => $sub,
             'kemasan'   => 'Box',
             'jumlah'    => 1,
@@ -307,12 +413,12 @@ body {
 <table class="items-table">
     <thead>
         <tr>
-            <th width="4%">No</th>
-            <th width="30%">Nama Item</th>
-            <th width="12%">Q'ty (pcs)</th>
-            <th width="11%">Kemasan</th>
+            <th width="5%">No</th>
+            <th width="29%">Nama Item</th>
+            <th width="13%">Q'ty (pcs)</th>
+            <th width="13%">Kemasan</th>
             <th width="9%">Jumlah</th>
-            <th width="14%">Total</th>
+            <th width="11%">Total</th>
             <th width="20%">Keterangan</th>
         </tr>
     </thead>
@@ -320,29 +426,29 @@ body {
     @foreach($rows as $row)
         @php
             $rowCount++;
-            $isStriped = ($rowCount % 2 == 0);
+            // Baris ganjil (1, 3, 5, 7, 9) berwarna biru muda persis sesuai referensi TTC
+            $isStriped = ($rowCount % 2 == 1);
         @endphp
         <tr class="{{ $isStriped ? 'striped' : '' }}">
             <td align="center">{{ $rowCount }}</td>
-            <td>{{ $row['nama_item'] }}</td>
-            <td align="center">{{ number_format($row['qty_pcs'], 0, ',', '.') }}</td>
+            <td align="center">{{ $row['nama_item'] }}</td>
+            <td align="center">{{ number_format($row['qty_pcs'], 0, '.', ',') }}</td>
             <td align="center">{{ $row['kemasan'] }}</td>
-            <td align="center">{{ number_format($row['jumlah'], 0, ',', '.') }}</td>
-            <td align="right">{{ number_format($row['total'], 0, ',', '.') }}</td>
+            <td align="center">{{ number_format($row['jumlah'], 0, '.', ',') }}</td>
+            <td align="center">{{ number_format($row['total'], 0, '.', ',') }}</td>
             <td>{{ $row['keterangan'] }}</td>
         </tr>
     @endforeach
 
-    {{-- Baris kosong bergaris (zebra stripes) seperti dokumen asli TTC --}}
     @php
-        $minRows = 8;
-        $emptyRows = max(1, $minRows - $rowCount);
+        $minRows = 10;
+        $emptyRows = max(0, $minRows - $rowCount);
     @endphp
 
     @for($i = 0; $i < $emptyRows; $i++)
         @php
             $rowCount++;
-            $isStriped = ($rowCount % 2 == 0);
+            $isStriped = ($rowCount % 2 == 1);
         @endphp
         <tr class="{{ $isStriped ? 'striped' : '' }}">
             <td align="center">&nbsp;</td>
@@ -358,27 +464,37 @@ body {
 
     <tfoot>
         <tr>
-            <td colspan="5" align="right" style="padding-right: 15px;">Total</td>
-            <td align="right">{{ number_format($totalQty, 0, ',', '.') }}</td>
-            <td>&nbsp;</td>
+            <td colspan="5" class="total-label-cell">Total</td>
+            <td class="total-value-cell">{{ number_format($totalQty, 0, '.', ',') }}</td>
+            <td style="background-color: #ffffff;">&nbsp;</td>
         </tr>
     </tfoot>
 </table>
 
-<!-- BOTTOM NOTICE & SIGNATURE -->
+<!-- BOTTOM NOTICE & SIGNATURE: 5-COLUMN GRID SO PENERIMA & PENGIRIM ALIGN 100% WITH THEIR LINES -->
 <table class="footer-table">
 <tr>
-    <td width="60%">
+    <td colspan="5" style="padding-bottom: 2px;">
         <div class="notice-bold">BARANG SUDAH DITERIMA DALAM KEADAAN BAIK DAN SESUAI</div>
         <div class="notice-sub">(tanda tangan dan cap perusahaan)</div>
-        <div class="sig-name">Penerima</div>
-        <div class="sig-line">_________________________________</div>
     </td>
-    <td width="40%" align="center">
-        <div style="height: 28px;">&nbsp;</div>
-        <div class="sig-name" style="text-align: center;">Pengirim</div>
-        <div class="sig-line" style="text-align: center;">_________________________________</div>
-    </td>
+</tr>
+<tr>
+    <td style="width: 13%;"></td>
+    <td style="width: 17%; text-align: center; font-size: 11px; color: #000;">Penerima</td>
+    <td style="width: 40%;"></td>
+    <td style="width: 17%; text-align: center; font-size: 11px; color: #000;">Pengirim</td>
+    <td style="width: 13%;"></td>
+</tr>
+<tr>
+    <td colspan="5" style="height: 46px;">&nbsp;</td>
+</tr>
+<tr>
+    <td style="width: 13%;"></td>
+    <td style="width: 17%; border-bottom: 1px solid #000;">&nbsp;</td>
+    <td style="width: 40%;"></td>
+    <td style="width: 17%; border-bottom: 1px solid #000;">&nbsp;</td>
+    <td style="width: 13%;"></td>
 </tr>
 </table>
 
