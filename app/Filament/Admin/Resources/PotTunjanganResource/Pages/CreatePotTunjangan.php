@@ -9,4 +9,9 @@ use Filament\Resources\Pages\CreateRecord;
 class CreatePotTunjangan extends CreateRecord
 {
     protected static string $resource = PotTunjanganResource::class;
+
+    protected function getRedirectUrl(): string
+    {
+        return $this->getResource()::getUrl('index');
+    }
 }

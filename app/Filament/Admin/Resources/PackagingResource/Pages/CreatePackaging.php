@@ -16,4 +16,9 @@ class CreatePackaging extends CreateRecord
     {
         return app(ProductionService::class)->recordPackaging($data);
     }
+
+    protected function getRedirectUrl(): string
+    {
+        return $this->getResource()::getUrl('index');
+    }
 }

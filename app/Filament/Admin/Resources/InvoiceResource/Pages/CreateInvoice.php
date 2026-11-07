@@ -15,4 +15,9 @@ class CreateInvoice extends CreateRecord
     {
         return app(InvoiceService::class)->createInvoice($data);
     }
+
+    protected function getRedirectUrl(): string
+    {
+        return $this->getResource()::getUrl('index');
+    }
 }

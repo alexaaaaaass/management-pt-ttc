@@ -1,0 +1,747 @@
+/*
+ * To change this license header, choose License Headers in Project Properties.
+ * To change this template file, choose Tools | Templates
+ * and open the template in the editor.
+ */
+
+package Absensi;
+
+import Accounting.*;
+import DialogPublicTP.DialogAccount;
+import DialogPublicTP.DialogGudang;
+import DialogPublicTP.DialogKaryawan;
+import Main.DefaultProgram;
+import static Main.DefaultProgram.deffProgram;
+import Main.Login;
+import Main.MenuAdmin;
+import static Main.MenuAdmin.keyssDef;
+import Master.MGudang;
+import Tools.ConnectDB;
+import java.awt.Color;
+import java.awt.Cursor;
+import java.awt.Rectangle;
+import java.awt.event.ActionEvent;
+import java.awt.event.KeyEvent;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.Scanner;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+import javax.swing.AbstractAction;
+import javax.swing.ActionMap;
+import javax.swing.InputMap;
+import javax.swing.JComponent;
+import javax.swing.JFileChooser;
+import javax.swing.JOptionPane;
+import javax.swing.KeyStroke;
+import javax.swing.table.DefaultTableModel;
+import net.sf.jasperreports.engine.JRDataSource;
+import net.sf.jasperreports.engine.JasperCompileManager;
+import net.sf.jasperreports.engine.JasperFillManager;
+import net.sf.jasperreports.engine.JasperPrint;
+import net.sf.jasperreports.engine.JasperReport;
+import net.sf.jasperreports.engine.data.JRTableModelDataSource;
+import net.sf.jasperreports.view.JasperViewer;
+import org.apache.poi.hssf.usermodel.HSSFCell;
+import org.apache.poi.hssf.usermodel.HSSFRow;
+import org.apache.poi.hssf.usermodel.HSSFSheet;
+import org.apache.poi.hssf.usermodel.HSSFWorkbook;
+import org.apache.poi.ss.usermodel.DataFormatter;
+import org.jdesktop.swingx.autocomplete.AutoCompleteDecorator;
+import rf4declare.Rf4declare;
+
+/**
+ *
+ * @author HP
+ */
+public class Ijin extends javax.swing.JPanel {
+
+    ConnectDB con = new ConnectDB();
+    rf4declare.Rf4declare rfa = new Rf4declare();
+    ResultSet rs;
+    String sql;
+    String id="",cnbkt="",cnbkt_print="";
+    int barisEdit=-1;
+    String akses="TRANSAKSI PAYROLL KARYAWAN";
+    String idKas="21";
+    ArrayList<String> deleteRow;
+    final JFileChooser chooser2 = new JFileChooser();
+    ArrayList<String> idCTK;
+    public Ijin(String mode) {
+        initComponents();
+        push_button();
+        deleteRow = new ArrayList<>();
+        idCTK = new ArrayList<>();
+        push_button();
+        loadctk(); 
+        clear();
+        AutoCompleteDecorator.decorate(this.time1);
+        AutoCompleteDecorator.decorate(this.time2);
+        
+        jDate1.setDate(new Date());
+        jDate2.setDate(new Date());
+        
+        loadData();
+    }
+    
+    private void push_button(){
+        InputMap im = this.getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW);
+        ActionMap am = this.getActionMap();
+
+            
+        im.put(KeyStroke.getKeyStroke(KeyEvent.VK_F9, 0), "payment");
+        am.put("payment", new AbstractAction() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+//                 System.out.println("Print "+jLabel2.getText());
+            }
+        });
+    }
+    
+    private void clear(){
+        rfa.empty(keyssDef, tket,tkaryawankode,tkaryawannama,tjam,tmenit);
+        btDelete.setVisible(false);
+        btSave.setText("Save");
+        id="";
+        time1.setSelectedIndex(0);
+        time2.setSelectedIndex(0);
+    }
+    private void loadctk(){
+        sql="select * from MCuti where cidc in ('CK019','CK020','CK021','CK022')";
+        rs = con.queryResult(sql);
+        try {
+            while(rs.next()){
+                listCuti.addItem(rs.getString("cdesc"));
+                idCTK.add(rs.getString("cidc"));
+            }
+        } catch (SQLException ex) {
+            Logger.getLogger(Ijin.class.getName()).log(Level.SEVERE, null, ex);
+        }
+    }
+    private void loadData(){
+        String dtran1=rfa.DateString(keyssDef, jDate1.getDate(),"yyyy-MM-dd");
+        String dtran2=rfa.DateString(keyssDef, jDate2.getDate(),"yyyy-MM-dd");
+        
+        rfa.clear_table(MenuAdmin.keyssDef, jTable2);
+        DefaultTableModel model = (DefaultTableModel) jTable2.getModel();
+        sql="select a.*,b.cname as karyawan,c.ctglcuti,d.cdesc from cuti_ambil a join MKaryawan b on a.cidk=b.nik\n" +
+            "join cuti_ambil_dt c on a.nidca=c.nidca\n" +
+            "join MCuti d on a.cidc=d.cidc where a.cjenis = 'IJIN'  \n ";
+        if(!tkaryawan2.getText().isEmpty()) sql+=" and b.cname like '%"+tkaryawan2.getText()+"%' ";
+        sql+=" order by a.nidca desc";
+        rs = con.queryResult(sql);
+        try {
+            while(rs.next()){
+                model.addRow(new Object[]{
+                    rs.getString("nidca"),
+                    rs.getString("cidk"),
+                    rs.getString("karyawan"),
+                    rfa.DateString(keyssDef,rs.getDate("ctglcuti"),"dd/MM/yyyy"),
+                    rs.getString("cdesc") ,
+                    rs.getString("cjamawal") ,
+                    rs.getString("cjamakhir") ,
+                    rs.getString("cket"),
+                    
+                });
+            }
+        } catch (SQLException ex) {
+            Logger.getLogger(Ijin.class.getName()).log(Level.SEVERE, null, ex);
+        }
+    }
+    private void loadEdit(){
+        sql="select a.*,b.cname as karyawan,c.ctglcuti,d.cdesc from cuti_ambil a join MKaryawan b on a.cidk=b.nik\n" +
+            "join cuti_ambil_dt c on a.nidca=c.nidca\n" +
+            "join MCuti d on a.cidc=d.cidc where a.nidca='"+id+"' \n ";
+        rs = con.queryResult(sql);
+        try {
+            while(rs.next()){
+                
+                jDateLembur.setDate(rs.getDate("ctglcuti"));
+                tkaryawankode.setText(rs.getString("cidk"));
+                tkaryawannama.setText(rs.getString("karyawan"));
+                tket.setText(rs.getString("cket"));
+                time1.setSelectedItem(rs.getString("cjamawal"));
+                time2.setSelectedItem(rs.getString("cjamakhir"));
+                listCuti.setSelectedItem(rs.getString("cdesc"));
+                
+                
+            }
+        } catch (SQLException ex) {
+            Logger.getLogger(Ijin.class.getName()).log(Level.SEVERE, null, ex);
+        }
+        btSave.setText("Update");
+        btDelete.setVisible(true);
+    }
+    
+    private void save(int statuss){
+        HashMap<String,String> listObj = new HashMap<String,String>();    
+        listObj.put("cidk",tkaryawankode.getText());
+        listObj.put("cjenis","IJIN");
+        listObj.put("cidc",idCTK.get(listCuti.getSelectedIndex()));
+        listObj.put("cket",tket.getText());
+        listObj.put("nstatus","1");
+        listObj.put("ctglterima",rfa.DateString(keyssDef,new Date(),"yyyy-MM-dd"));
+        listObj.put("cjamawal",time1.getSelectedItem().toString());
+        listObj.put("cjamakhir",time2.getSelectedItem().toString());
+        
+        if(statuss == 1) {
+            sql=con.insertValue("Cuti_Ambil", listObj);
+        } else {
+            sql=con.updateValue("Cuti_Ambil", listObj);
+            sql+=" where nidca='"+id+"' ";
+        }
+        
+        if(con.queryUpdate(sql)>0) { 
+            if(statuss == 2) {
+                con.queryUpdate("delete from Cuti_Ambil_dt where nidca='"+id+"' "); 
+            }
+            int nidca = 0;
+            sql="select max(nidca) as nidca from cuti_ambil where cidk = '"+tkaryawankode.getText()+"' and cjenis = 'IJIN' and cidc = '"+idCTK.get(listCuti.getSelectedIndex())+"' and cket='"+tket.getText()+"'";
+            rs = con.queryResult(sql);
+            try {
+                while(rs.next()) {
+                    nidca = rs.getInt("nidca");
+                }
+            } catch (SQLException ex) {
+                Logger.getLogger(Ijin.class.getName()).log(Level.SEVERE, null, ex);
+            }
+
+            HashMap<String,String> listObjd= new HashMap<String,String>();    
+            listObjd.put("nidca",rfa.formatDecimal3.format(nidca));
+            listObjd.put("ctglcuti",rfa.DateString(keyssDef,jDateLembur.getDate(),"yyyy-MM-dd"));
+            listObjd.put("cthn",rfa.DateString(keyssDef,jDateLembur.getDate(),"yyyy"));
+            listObjd.put("nharidt","1");
+            sql=con.insertValue("Cuti_Ambil_dt", listObjd);
+            con.queryUpdate(sql); 
+
+            clear();
+            loadData();
+            JOptionPane.showMessageDialog(this,"Data Berhasil Di Simpan.", "Info", JOptionPane.INFORMATION_MESSAGE);
+        }
+    }
+    
+    @SuppressWarnings("unchecked")
+    // <editor-fold defaultstate="collapsed" desc="Generated Code">//GEN-BEGIN:initComponents
+    private void initComponents() {
+
+        jScrollPane3 = new javax.swing.JScrollPane();
+        jtable_print = new javax.swing.JTable();
+        jLabel21 = new javax.swing.JLabel();
+        jLabel23 = new javax.swing.JLabel();
+        tmenit = new javax.swing.JTextField();
+        tjam = new javax.swing.JTextField();
+        jLabel15 = new javax.swing.JLabel();
+        jLabel22 = new javax.swing.JLabel();
+        jTabbedPane1 = new javax.swing.JTabbedPane();
+        jPanel4 = new javax.swing.JPanel();
+        jPanel6 = new javax.swing.JPanel();
+        jLabel9 = new javax.swing.JLabel();
+        jDate2 = new com.toedter.calendar.JDateChooser();
+        jDate1 = new com.toedter.calendar.JDateChooser();
+        jButton7 = new javax.swing.JButton();
+        jLabel14 = new javax.swing.JLabel();
+        jLabel24 = new javax.swing.JLabel();
+        tkaryawan2 = new javax.swing.JTextField();
+        jScrollPane2 = new javax.swing.JScrollPane();
+        jTable2 = new javax.swing.JTable();
+        jPanel1 = new javax.swing.JPanel();
+        jLayeredPane1 = new javax.swing.JLayeredPane();
+        jLabel13 = new javax.swing.JLabel();
+        tkaryawankode = new javax.swing.JTextField();
+        jButton8 = new javax.swing.JButton();
+        tkaryawannama = new javax.swing.JTextField();
+        jDateLembur = new com.toedter.calendar.JDateChooser();
+        jLabel16 = new javax.swing.JLabel();
+        tket = new javax.swing.JTextField();
+        jLabel19 = new javax.swing.JLabel();
+        btDelete = new javax.swing.JButton();
+        btSave = new javax.swing.JButton();
+        btCancel = new javax.swing.JButton();
+        jLabel27 = new javax.swing.JLabel();
+        listCuti = new javax.swing.JComboBox();
+        jLabel28 = new javax.swing.JLabel();
+        jLabel30 = new javax.swing.JLabel();
+        time1 = new javax.swing.JComboBox();
+        time2 = new javax.swing.JComboBox();
+
+        jtable_print.setModel(new javax.swing.table.DefaultTableModel(
+            new Object [][] {
+                {null, null, null, null, null, null, null, null, null, null, null, null},
+                {null, null, null, null, null, null, null, null, null, null, null, null},
+                {null, null, null, null, null, null, null, null, null, null, null, null},
+                {null, null, null, null, null, null, null, null, null, null, null, null}
+            },
+            new String [] {
+                "ctran", "cnbkt", "ccode", "gudang", "cyear", "dtran", "cacc", "cacc_desc", "caccll", "caccll_desc", "cnote", "namnt"
+            }
+        ) {
+            Class[] types = new Class [] {
+                java.lang.String.class, java.lang.String.class, java.lang.String.class, java.lang.String.class, java.lang.String.class, java.lang.String.class, java.lang.String.class, java.lang.String.class, java.lang.String.class, java.lang.String.class, java.lang.String.class, java.lang.String.class
+            };
+
+            public Class getColumnClass(int columnIndex) {
+                return types [columnIndex];
+            }
+        });
+        jScrollPane3.setViewportView(jtable_print);
+
+        jLabel21.setText("Dalam Jam");
+
+        jLabel23.setText("Dalam Menit");
+
+        tmenit.setEditable(false);
+        tmenit.setBackground(new java.awt.Color(153, 153, 255));
+        tmenit.setFont(new java.awt.Font("Tahoma", 1, 11)); // NOI18N
+        tmenit.setForeground(new java.awt.Color(255, 255, 255));
+        tmenit.setHorizontalAlignment(javax.swing.JTextField.CENTER);
+
+        tjam.setEditable(false);
+        tjam.setBackground(new java.awt.Color(153, 153, 255));
+        tjam.setFont(new java.awt.Font("Tahoma", 1, 11)); // NOI18N
+        tjam.setForeground(new java.awt.Color(255, 255, 255));
+        tjam.setHorizontalAlignment(javax.swing.JTextField.CENTER);
+
+        jLabel15.setText("Jam");
+
+        jLabel22.setText(" Menit");
+
+        jPanel6.setBorder(javax.swing.BorderFactory.createTitledBorder("Filter"));
+        jPanel6.setLayout(new org.netbeans.lib.awtextra.AbsoluteLayout());
+
+        jLabel9.setText("s/d");
+        jPanel6.add(jLabel9, new org.netbeans.lib.awtextra.AbsoluteConstraints(280, 30, -1, 20));
+
+        jDate2.setDateFormatString("dd/MM/yyyy");
+        jDate2.addPropertyChangeListener(new java.beans.PropertyChangeListener() {
+            public void propertyChange(java.beans.PropertyChangeEvent evt) {
+                jDate2PropertyChange(evt);
+            }
+        });
+        jDate2.addKeyListener(new java.awt.event.KeyAdapter() {
+            public void keyPressed(java.awt.event.KeyEvent evt) {
+                jDate2KeyPressed(evt);
+            }
+        });
+        jPanel6.add(jDate2, new org.netbeans.lib.awtextra.AbsoluteConstraints(310, 30, 150, -1));
+
+        jDate1.setDateFormatString("dd/MM/yyyy");
+        jDate1.addPropertyChangeListener(new java.beans.PropertyChangeListener() {
+            public void propertyChange(java.beans.PropertyChangeEvent evt) {
+                jDate1PropertyChange(evt);
+            }
+        });
+        jDate1.addKeyListener(new java.awt.event.KeyAdapter() {
+            public void keyPressed(java.awt.event.KeyEvent evt) {
+                jDate1KeyPressed(evt);
+            }
+        });
+        jPanel6.add(jDate1, new org.netbeans.lib.awtextra.AbsoluteConstraints(120, 30, 150, -1));
+
+        jButton7.setIcon(new javax.swing.ImageIcon(getClass().getResource("/icon/Search_More_15px.png"))); // NOI18N
+        jButton7.setText("Cari");
+        jButton7.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                jButton7ActionPerformed(evt);
+            }
+        });
+        jPanel6.add(jButton7, new org.netbeans.lib.awtextra.AbsoluteConstraints(310, 60, 90, -1));
+
+        jLabel14.setText("Periode ");
+        jPanel6.add(jLabel14, new org.netbeans.lib.awtextra.AbsoluteConstraints(20, 30, -1, 20));
+
+        jLabel24.setText("Karyawan");
+        jPanel6.add(jLabel24, new org.netbeans.lib.awtextra.AbsoluteConstraints(20, 60, -1, 20));
+
+        tkaryawan2.addCaretListener(new javax.swing.event.CaretListener() {
+            public void caretUpdate(javax.swing.event.CaretEvent evt) {
+                tkaryawan2CaretUpdate(evt);
+            }
+        });
+        tkaryawan2.addFocusListener(new java.awt.event.FocusAdapter() {
+            public void focusLost(java.awt.event.FocusEvent evt) {
+                tkaryawan2FocusLost(evt);
+            }
+        });
+        tkaryawan2.addKeyListener(new java.awt.event.KeyAdapter() {
+            public void keyPressed(java.awt.event.KeyEvent evt) {
+                tkaryawan2KeyPressed(evt);
+            }
+        });
+        jPanel6.add(tkaryawan2, new org.netbeans.lib.awtextra.AbsoluteConstraints(120, 60, 150, -1));
+
+        jTable2.setModel(new javax.swing.table.DefaultTableModel(
+            new Object [][] {
+                {null, null, null, null, null, null, null, null},
+                {null, null, null, null, null, null, null, null},
+                {null, null, null, null, null, null, null, null},
+                {null, null, null, null, null, null, null, null}
+            },
+            new String [] {
+                "id", "NIK", "Nama Karyawan", "Tanggal", "Ijin", "Jam Mulai", "Jam Selesai", "Keterangan Lembur"
+            }
+        ) {
+            boolean[] canEdit = new boolean [] {
+                false, false, false, false, false, false, false, false
+            };
+
+            public boolean isCellEditable(int rowIndex, int columnIndex) {
+                return canEdit [columnIndex];
+            }
+        });
+        jTable2.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                jTable2MouseClicked(evt);
+            }
+        });
+        jScrollPane2.setViewportView(jTable2);
+        if (jTable2.getColumnModel().getColumnCount() > 0) {
+            jTable2.getColumnModel().getColumn(0).setMinWidth(0);
+            jTable2.getColumnModel().getColumn(0).setMaxWidth(0);
+            jTable2.getColumnModel().getColumn(1).setMinWidth(80);
+            jTable2.getColumnModel().getColumn(1).setMaxWidth(80);
+            jTable2.getColumnModel().getColumn(3).setMinWidth(90);
+            jTable2.getColumnModel().getColumn(3).setMaxWidth(90);
+            jTable2.getColumnModel().getColumn(5).setMinWidth(90);
+            jTable2.getColumnModel().getColumn(5).setMaxWidth(90);
+            jTable2.getColumnModel().getColumn(6).setMinWidth(90);
+            jTable2.getColumnModel().getColumn(6).setMaxWidth(90);
+        }
+
+        jPanel1.setLayout(new org.netbeans.lib.awtextra.AbsoluteLayout());
+
+        jLayeredPane1.setBackground(new java.awt.Color(204, 204, 204));
+        jLayeredPane1.setAutoscrolls(true);
+        jLayeredPane1.setOpaque(true);
+        jLayeredPane1.setLayout(new org.netbeans.lib.awtextra.AbsoluteLayout());
+
+        jLabel13.setText("Karyawan");
+        jLayeredPane1.add(jLabel13, new org.netbeans.lib.awtextra.AbsoluteConstraints(20, 20, -1, 20));
+
+        tkaryawankode.addFocusListener(new java.awt.event.FocusAdapter() {
+            public void focusLost(java.awt.event.FocusEvent evt) {
+                tkaryawankodeFocusLost(evt);
+            }
+        });
+        tkaryawankode.addKeyListener(new java.awt.event.KeyAdapter() {
+            public void keyPressed(java.awt.event.KeyEvent evt) {
+                tkaryawankodeKeyPressed(evt);
+            }
+        });
+        jLayeredPane1.add(tkaryawankode, new org.netbeans.lib.awtextra.AbsoluteConstraints(110, 20, 90, -1));
+
+        jButton8.setIcon(new javax.swing.ImageIcon(getClass().getResource("/icon/Search_More_15px.png"))); // NOI18N
+        jButton8.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                jButton8ActionPerformed(evt);
+            }
+        });
+        jLayeredPane1.add(jButton8, new org.netbeans.lib.awtextra.AbsoluteConstraints(200, 20, 30, 20));
+
+        tkaryawannama.setEditable(false);
+        tkaryawannama.setBackground(new java.awt.Color(153, 153, 255));
+        tkaryawannama.setForeground(new java.awt.Color(255, 255, 255));
+        jLayeredPane1.add(tkaryawannama, new org.netbeans.lib.awtextra.AbsoluteConstraints(230, 20, 210, 20));
+
+        jDateLembur.setDateFormatString("dd/MM/yyyy");
+        jDateLembur.addPropertyChangeListener(new java.beans.PropertyChangeListener() {
+            public void propertyChange(java.beans.PropertyChangeEvent evt) {
+                jDateLemburPropertyChange(evt);
+            }
+        });
+        jDateLembur.addKeyListener(new java.awt.event.KeyAdapter() {
+            public void keyPressed(java.awt.event.KeyEvent evt) {
+                jDateLemburKeyPressed(evt);
+            }
+        });
+        jLayeredPane1.add(jDateLembur, new org.netbeans.lib.awtextra.AbsoluteConstraints(110, 50, 120, -1));
+
+        jLabel16.setText("Tanggal");
+        jLayeredPane1.add(jLabel16, new org.netbeans.lib.awtextra.AbsoluteConstraints(20, 50, -1, 20));
+
+        tket.addFocusListener(new java.awt.event.FocusAdapter() {
+            public void focusLost(java.awt.event.FocusEvent evt) {
+                tketFocusLost(evt);
+            }
+        });
+        jLayeredPane1.add(tket, new org.netbeans.lib.awtextra.AbsoluteConstraints(110, 170, 260, -1));
+
+        jLabel19.setText("Jenis Izin");
+        jLayeredPane1.add(jLabel19, new org.netbeans.lib.awtextra.AbsoluteConstraints(20, 80, -1, 20));
+
+        btDelete.setIcon(new javax.swing.ImageIcon(getClass().getResource("/icon/Delete_Bin_16px.png"))); // NOI18N
+        btDelete.setText("Delete");
+        btDelete.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                btDeleteActionPerformed(evt);
+            }
+        });
+        jLayeredPane1.add(btDelete, new org.netbeans.lib.awtextra.AbsoluteConstraints(80, 230, 90, -1));
+
+        btSave.setIcon(new javax.swing.ImageIcon(getClass().getResource("/icon/save.png"))); // NOI18N
+        btSave.setText("Save");
+        btSave.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                btSaveActionPerformed(evt);
+            }
+        });
+        jLayeredPane1.add(btSave, new org.netbeans.lib.awtextra.AbsoluteConstraints(180, 230, 100, -1));
+
+        btCancel.setIcon(new javax.swing.ImageIcon(getClass().getResource("/icon/cancel.png"))); // NOI18N
+        btCancel.setText("Cancel");
+        btCancel.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                btCancelActionPerformed(evt);
+            }
+        });
+        jLayeredPane1.add(btCancel, new org.netbeans.lib.awtextra.AbsoluteConstraints(290, 230, -1, -1));
+
+        jLabel27.setText("Keterangan");
+        jLayeredPane1.add(jLabel27, new org.netbeans.lib.awtextra.AbsoluteConstraints(20, 170, -1, 20));
+
+        jLayeredPane1.add(listCuti, new org.netbeans.lib.awtextra.AbsoluteConstraints(110, 80, 260, -1));
+
+        jLabel28.setText("Jam Akhir");
+        jLayeredPane1.add(jLabel28, new org.netbeans.lib.awtextra.AbsoluteConstraints(20, 140, 80, 20));
+
+        jLabel30.setText("Jam Awal");
+        jLayeredPane1.add(jLabel30, new org.netbeans.lib.awtextra.AbsoluteConstraints(20, 110, 80, 20));
+
+        time1.setEditable(true);
+        time1.setModel(new javax.swing.DefaultComboBoxModel(new String[] { "01:00", "01:01", "01:02", "01:03", "01:04", "01:05", "01:06", "01:07", "01:08", "01:09", "01:10", "01:11", "01:12", "01:13", "01:14", "01:15", "01:16", "01:17", "01:18", "01:19", "01:20", "01:21", "01:22", "01:23", "01:24", "01:25", "01:26", "01:27", "01:28", "01:29", "01:30", "01:31", "01:32", "01:33", "01:34", "01:35", "01:36", "01:37", "01:38", "01:39", "01:40", "01:41", "01:42", "01:43", "01:44", "01:45", "01:46", "01:47", "01:48", "01:49", "01:50", "01:51", "01:52", "01:53", "01:54", "01:55", "01:56", "01:57", "01:58", "01:59", "02:00", "02:01", "02:02", "02:03", "02:04", "02:05", "02:06", "02:07", "02:08", "02:09", "02:10", "02:11", "02:12", "02:13", "02:14", "02:15", "02:16", "02:17", "02:18", "02:19", "02:20", "02:21", "02:22", "02:23", "02:24", "02:25", "02:26", "02:27", "02:28", "02:29", "02:30", "02:31", "02:32", "02:33", "02:34", "02:35", "02:36", "02:37", "02:38", "02:39", "02:40", "02:41", "02:42", "02:43", "02:44", "02:45", "02:46", "02:47", "02:48", "02:49", "02:50", "02:51", "02:52", "02:53", "02:54", "02:55", "02:56", "02:57", "02:58", "02:59", "03:00", "03:01", "03:02", "03:03", "03:04", "03:05", "03:06", "03:07", "03:08", "03:09", "03:10", "03:11", "03:12", "03:13", "03:14", "03:15", "03:16", "03:17", "03:18", "03:19", "03:20", "03:21", "03:22", "03:23", "03:24", "03:25", "03:26", "03:27", "03:28", "03:29", "03:30", "03:31", "03:32", "03:33", "03:34", "03:35", "03:36", "03:37", "03:38", "03:39", "03:40", "03:41", "03:42", "03:43", "03:44", "03:45", "03:46", "03:47", "03:48", "03:49", "03:50", "03:51", "03:52", "03:53", "03:54", "03:55", "03:56", "03:57", "03:58", "03:59", "04:00", "04:01", "04:02", "04:03", "04:04", "04:05", "04:06", "04:07", "04:08", "04:09", "04:10", "04:11", "04:12", "04:13", "04:14", "04:15", "04:16", "04:17", "04:18", "04:19", "04:20", "04:21", "04:22", "04:23", "04:24", "04:25", "04:26", "04:27", "04:28", "04:29", "04:30", "04:31", "04:32", "04:33", "04:34", "04:35", "04:36", "04:37", "04:38", "04:39", "04:40", "04:41", "04:42", "04:43", "04:44", "04:45", "04:46", "04:47", "04:48", "04:49", "04:50", "04:51", "04:52", "04:53", "04:54", "04:55", "04:56", "04:57", "04:58", "04:59", "05:00", "05:01", "05:02", "05:03", "05:04", "05:05", "05:06", "05:07", "05:08", "05:09", "05:10", "05:11", "05:12", "05:13", "05:14", "05:15", "05:16", "05:17", "05:18", "05:19", "05:20", "05:21", "05:22", "05:23", "05:24", "05:25", "05:26", "05:27", "05:28", "05:29", "05:30", "05:31", "05:32", "05:33", "05:34", "05:35", "05:36", "05:37", "05:38", "05:39", "05:40", "05:41", "05:42", "05:43", "05:44", "05:45", "05:46", "05:47", "05:48", "05:49", "05:50", "05:51", "05:52", "05:53", "05:54", "05:55", "05:56", "05:57", "05:58", "05:59", "06:00", "06:01", "06:02", "06:03", "06:04", "06:05", "06:06", "06:07", "06:08", "06:09", "06:10", "06:11", "06:12", "06:13", "06:14", "06:15", "06:16", "06:17", "06:18", "06:19", "06:20", "06:21", "06:22", "06:23", "06:24", "06:25", "06:26", "06:27", "06:28", "06:29", "06:30", "06:31", "06:32", "06:33", "06:34", "06:35", "06:36", "06:37", "06:38", "06:39", "06:40", "06:41", "06:42", "06:43", "06:44", "06:45", "06:46", "06:47", "06:48", "06:49", "06:50", "06:51", "06:52", "06:53", "06:54", "06:55", "06:56", "06:57", "06:58", "06:59", "07:00", "07:01", "07:02", "07:03", "07:04", "07:05", "07:06", "07:07", "07:08", "07:09", "07:10", "07:11", "07:12", "07:13", "07:14", "07:15", "07:16", "07:17", "07:18", "07:19", "07:20", "07:21", "07:22", "07:23", "07:24", "07:25", "07:26", "07:27", "07:28", "07:29", "07:30", "07:31", "07:32", "07:33", "07:34", "07:35", "07:36", "07:37", "07:38", "07:39", "07:40", "07:41", "07:42", "07:43", "07:44", "07:45", "07:46", "07:47", "07:48", "07:49", "07:50", "07:51", "07:52", "07:53", "07:54", "07:55", "07:56", "07:57", "07:58", "07:59", "08:00", "08:01", "08:02", "08:03", "08:04", "08:05", "08:06", "08:07", "08:08", "08:09", "08:10", "08:11", "08:12", "08:13", "08:14", "08:15", "08:16", "08:17", "08:18", "08:19", "08:20", "08:21", "08:22", "08:23", "08:24", "08:25", "08:26", "08:27", "08:28", "08:29", "08:30", "08:31", "08:32", "08:33", "08:34", "08:35", "08:36", "08:37", "08:38", "08:39", "08:40", "08:41", "08:42", "08:43", "08:44", "08:45", "08:46", "08:47", "08:48", "08:49", "08:50", "08:51", "08:52", "08:53", "08:54", "08:55", "08:56", "08:57", "08:58", "08:59", "09:00", "09:01", "09:02", "09:03", "09:04", "09:05", "09:06", "09:07", "09:08", "09:09", "09:10", "09:11", "09:12", "09:13", "09:14", "09:15", "09:16", "09:17", "09:18", "09:19", "09:20", "09:21", "09:22", "09:23", "09:24", "09:25", "09:26", "09:27", "09:28", "09:29", "09:30", "09:31", "09:32", "09:33", "09:34", "09:35", "09:36", "09:37", "09:38", "09:39", "09:40", "09:41", "09:42", "09:43", "09:44", "09:45", "09:46", "09:47", "09:48", "09:49", "09:50", "09:51", "09:52", "09:53", "09:54", "09:55", "09:56", "09:57", "09:58", "09:59", "10:00", "10:01", "10:02", "10:03", "10:04", "10:05", "10:06", "10:07", "10:08", "10:09", "10:10", "10:11", "10:12", "10:13", "10:14", "10:15", "10:16", "10:17", "10:18", "10:19", "10:20", "10:21", "10:22", "10:23", "10:24", "10:25", "10:26", "10:27", "10:28", "10:29", "10:30", "10:31", "10:32", "10:33", "10:34", "10:35", "10:36", "10:37", "10:38", "10:39", "10:40", "10:41", "10:42", "10:43", "10:44", "10:45", "10:46", "10:47", "10:48", "10:49", "10:50", "10:51", "10:52", "10:53", "10:54", "10:55", "10:56", "10:57", "10:58", "10:59", "11:00", "11:01", "11:02", "11:03", "11:04", "11:05", "11:06", "11:07", "11:08", "11:09", "11:10", "11:11", "11:12", "11:13", "11:14", "11:15", "11:16", "11:17", "11:18", "11:19", "11:20", "11:21", "11:22", "11:23", "11:24", "11:25", "11:26", "11:27", "11:28", "11:29", "11:30", "11:31", "11:32", "11:33", "11:34", "11:35", "11:36", "11:37", "11:38", "11:39", "11:40", "11:41", "11:42", "11:43", "11:44", "11:45", "11:46", "11:47", "11:48", "11:49", "11:50", "11:51", "11:52", "11:53", "11:54", "11:55", "11:56", "11:57", "11:58", "11:59", "12:00", "12:01", "12:02", "12:03", "12:04", "12:05", "12:06", "12:07", "12:08", "12:09", "12:10", "12:11", "12:12", "12:13", "12:14", "12:15", "12:16", "12:17", "12:18", "12:19", "12:20", "12:21", "12:22", "12:23", "12:24", "12:25", "12:26", "12:27", "12:28", "12:29", "12:30", "12:31", "12:32", "12:33", "12:34", "12:35", "12:36", "12:37", "12:38", "12:39", "12:40", "12:41", "12:42", "12:43", "12:44", "12:45", "12:46", "12:47", "12:48", "12:49", "12:50", "12:51", "12:52", "12:53", "12:54", "12:55", "12:56", "12:57", "12:58", "12:59", "13:00", "13:01", "13:02", "13:03", "13:04", "13:05", "13:06", "13:07", "13:08", "13:09", "13:10", "13:11", "13:12", "13:13", "13:14", "13:15", "13:16", "13:17", "13:18", "13:19", "13:20", "13:21", "13:22", "13:23", "13:24", "13:25", "13:26", "13:27", "13:28", "13:29", "13:30", "13:31", "13:32", "13:33", "13:34", "13:35", "13:36", "13:37", "13:38", "13:39", "13:40", "13:41", "13:42", "13:43", "13:44", "13:45", "13:46", "13:47", "13:48", "13:49", "13:50", "13:51", "13:52", "13:53", "13:54", "13:55", "13:56", "13:57", "13:58", "13:59", "14:00", "14:01", "14:02", "14:03", "14:04", "14:05", "14:06", "14:07", "14:08", "14:09", "14:10", "14:11", "14:12", "14:13", "14:14", "14:15", "14:16", "14:17", "14:18", "14:19", "14:20", "14:21", "14:22", "14:23", "14:24", "14:25", "14:26", "14:27", "14:28", "14:29", "14:30", "14:31", "14:32", "14:33", "14:34", "14:35", "14:36", "14:37", "14:38", "14:39", "14:40", "14:41", "14:42", "14:43", "14:44", "14:45", "14:46", "14:47", "14:48", "14:49", "14:50", "14:51", "14:52", "14:53", "14:54", "14:55", "14:56", "14:57", "14:58", "14:59", "15:00", "15:01", "15:02", "15:03", "15:04", "15:05", "15:06", "15:07", "15:08", "15:09", "15:10", "15:11", "15:12", "15:13", "15:14", "15:15", "15:16", "15:17", "15:18", "15:19", "15:20", "15:21", "15:22", "15:23", "15:24", "15:25", "15:26", "15:27", "15:28", "15:29", "15:30", "15:31", "15:32", "15:33", "15:34", "15:35", "15:36", "15:37", "15:38", "15:39", "15:40", "15:41", "15:42", "15:43", "15:44", "15:45", "15:46", "15:47", "15:48", "15:49", "15:50", "15:51", "15:52", "15:53", "15:54", "15:55", "15:56", "15:57", "15:58", "15:59", "16:00", "16:01", "16:02", "16:03", "16:04", "16:05", "16:06", "16:07", "16:08", "16:09", "16:10", "16:11", "16:12", "16:13", "16:14", "16:15", "16:16", "16:17", "16:18", "16:19", "16:20", "16:21", "16:22", "16:23", "16:24", "16:25", "16:26", "16:27", "16:28", "16:29", "16:30", "16:31", "16:32", "16:33", "16:34", "16:35", "16:36", "16:37", "16:38", "16:39", "16:40", "16:41", "16:42", "16:43", "16:44", "16:45", "16:46", "16:47", "16:48", "16:49", "16:50", "16:51", "16:52", "16:53", "16:54", "16:55", "16:56", "16:57", "16:58", "16:59", "17:00", "17:01", "17:02", "17:03", "17:04", "17:05", "17:06", "17:07", "17:08", "17:09", "17:10", "17:11", "17:12", "17:13", "17:14", "17:15", "17:16", "17:17", "17:18", "17:19", "17:20", "17:21", "17:22", "17:23", "17:24", "17:25", "17:26", "17:27", "17:28", "17:29", "17:30", "17:31", "17:32", "17:33", "17:34", "17:35", "17:36", "17:37", "17:38", "17:39", "17:40", "17:41", "17:42", "17:43", "17:44", "17:45", "17:46", "17:47", "17:48", "17:49", "17:50", "17:51", "17:52", "17:53", "17:54", "17:55", "17:56", "17:57", "17:58", "17:59", "18:00", "18:01", "18:02", "18:03", "18:04", "18:05", "18:06", "18:07", "18:08", "18:09", "18:10", "18:11", "18:12", "18:13", "18:14", "18:15", "18:16", "18:17", "18:18", "18:19", "18:20", "18:21", "18:22", "18:23", "18:24", "18:25", "18:26", "18:27", "18:28", "18:29", "18:30", "18:31", "18:32", "18:33", "18:34", "18:35", "18:36", "18:37", "18:38", "18:39", "18:40", "18:41", "18:42", "18:43", "18:44", "18:45", "18:46", "18:47", "18:48", "18:49", "18:50", "18:51", "18:52", "18:53", "18:54", "18:55", "18:56", "18:57", "18:58", "18:59", "19:00", "19:01", "19:02", "19:03", "19:04", "19:05", "19:06", "19:07", "19:08", "19:09", "19:10", "19:11", "19:12", "19:13", "19:14", "19:15", "19:16", "19:17", "19:18", "19:19", "19:20", "19:21", "19:22", "19:23", "19:24", "19:25", "19:26", "19:27", "19:28", "19:29", "19:30", "19:31", "19:32", "19:33", "19:34", "19:35", "19:36", "19:37", "19:38", "19:39", "19:40", "19:41", "19:42", "19:43", "19:44", "19:45", "19:46", "19:47", "19:48", "19:49", "19:50", "19:51", "19:52", "19:53", "19:54", "19:55", "19:56", "19:57", "19:58", "19:59", "20:00", "20:01", "20:02", "20:03", "20:04", "20:05", "20:06", "20:07", "20:08", "20:09", "20:10", "20:11", "20:12", "20:13", "20:14", "20:15", "20:16", "20:17", "20:18", "20:19", "20:20", "20:21", "20:22", "20:23", "20:24", "20:25", "20:26", "20:27", "20:28", "20:29", "20:30", "20:31", "20:32", "20:33", "20:34", "20:35", "20:36", "20:37", "20:38", "20:39", "20:40", "20:41", "20:42", "20:43", "20:44", "20:45", "20:46", "20:47", "20:48", "20:49", "20:50", "20:51", "20:52", "20:53", "20:54", "20:55", "20:56", "20:57", "20:58", "20:59", "21:00", "21:01", "21:02", "21:03", "21:04", "21:05", "21:06", "21:07", "21:08", "21:09", "21:10", "21:11", "21:12", "21:13", "21:14", "21:15", "21:16", "21:17", "21:18", "21:19", "21:20", "21:21", "21:22", "21:23", "21:24", "21:25", "21:26", "21:27", "21:28", "21:29", "21:30", "21:31", "21:32", "21:33", "21:34", "21:35", "21:36", "21:37", "21:38", "21:39", "21:40", "21:41", "21:42", "21:43", "21:44", "21:45", "21:46", "21:47", "21:48", "21:49", "21:50", "21:51", "21:52", "21:53", "21:54", "21:55", "21:56", "21:57", "21:58", "21:59", "22:00", "22:01", "22:02", "22:03", "22:04", "22:05", "22:06", "22:07", "22:08", "22:09", "22:10", "22:11", "22:12", "22:13", "22:14", "22:15", "22:16", "22:17", "22:18", "22:19", "22:20", "22:21", "22:22", "22:23", "22:24", "22:25", "22:26", "22:27", "22:28", "22:29", "22:30", "22:31", "22:32", "22:33", "22:34", "22:35", "22:36", "22:37", "22:38", "22:39", "22:40", "22:41", "22:42", "22:43", "22:44", "22:45", "22:46", "22:47", "22:48", "22:49", "22:50", "22:51", "22:52", "22:53", "22:54", "22:55", "22:56", "22:57", "22:58", "22:59", "23:00", "23:01", "23:02", "23:03", "23:04", "23:05", "23:06", "23:07", "23:08", "23:09", "23:10", "23:11", "23:12", "23:13", "23:14", "23:15", "23:16", "23:17", "23:18", "23:19", "23:20", "23:21", "23:22", "23:23", "23:24", "23:25", "23:26", "23:27", "23:28", "23:29", "23:30", "23:31", "23:32", "23:33", "23:34", "23:35", "23:36", "23:37", "23:38", "23:39", "23:40", "23:41", "23:42", "23:43", "23:44", "23:45", "23:46", "23:47", "23:48", "23:49", "23:50", "23:51", "23:52", "23:53", "23:54", "23:55", "23:56", "23:57", "23:58", "23:59", " " }));
+        time1.addPropertyChangeListener(new java.beans.PropertyChangeListener() {
+            public void propertyChange(java.beans.PropertyChangeEvent evt) {
+                time1PropertyChange(evt);
+            }
+        });
+        jLayeredPane1.add(time1, new org.netbeans.lib.awtextra.AbsoluteConstraints(110, 110, 80, -1));
+
+        time2.setEditable(true);
+        time2.setModel(new javax.swing.DefaultComboBoxModel(new String[] { "01:00", "01:01", "01:02", "01:03", "01:04", "01:05", "01:06", "01:07", "01:08", "01:09", "01:10", "01:11", "01:12", "01:13", "01:14", "01:15", "01:16", "01:17", "01:18", "01:19", "01:20", "01:21", "01:22", "01:23", "01:24", "01:25", "01:26", "01:27", "01:28", "01:29", "01:30", "01:31", "01:32", "01:33", "01:34", "01:35", "01:36", "01:37", "01:38", "01:39", "01:40", "01:41", "01:42", "01:43", "01:44", "01:45", "01:46", "01:47", "01:48", "01:49", "01:50", "01:51", "01:52", "01:53", "01:54", "01:55", "01:56", "01:57", "01:58", "01:59", "02:00", "02:01", "02:02", "02:03", "02:04", "02:05", "02:06", "02:07", "02:08", "02:09", "02:10", "02:11", "02:12", "02:13", "02:14", "02:15", "02:16", "02:17", "02:18", "02:19", "02:20", "02:21", "02:22", "02:23", "02:24", "02:25", "02:26", "02:27", "02:28", "02:29", "02:30", "02:31", "02:32", "02:33", "02:34", "02:35", "02:36", "02:37", "02:38", "02:39", "02:40", "02:41", "02:42", "02:43", "02:44", "02:45", "02:46", "02:47", "02:48", "02:49", "02:50", "02:51", "02:52", "02:53", "02:54", "02:55", "02:56", "02:57", "02:58", "02:59", "03:00", "03:01", "03:02", "03:03", "03:04", "03:05", "03:06", "03:07", "03:08", "03:09", "03:10", "03:11", "03:12", "03:13", "03:14", "03:15", "03:16", "03:17", "03:18", "03:19", "03:20", "03:21", "03:22", "03:23", "03:24", "03:25", "03:26", "03:27", "03:28", "03:29", "03:30", "03:31", "03:32", "03:33", "03:34", "03:35", "03:36", "03:37", "03:38", "03:39", "03:40", "03:41", "03:42", "03:43", "03:44", "03:45", "03:46", "03:47", "03:48", "03:49", "03:50", "03:51", "03:52", "03:53", "03:54", "03:55", "03:56", "03:57", "03:58", "03:59", "04:00", "04:01", "04:02", "04:03", "04:04", "04:05", "04:06", "04:07", "04:08", "04:09", "04:10", "04:11", "04:12", "04:13", "04:14", "04:15", "04:16", "04:17", "04:18", "04:19", "04:20", "04:21", "04:22", "04:23", "04:24", "04:25", "04:26", "04:27", "04:28", "04:29", "04:30", "04:31", "04:32", "04:33", "04:34", "04:35", "04:36", "04:37", "04:38", "04:39", "04:40", "04:41", "04:42", "04:43", "04:44", "04:45", "04:46", "04:47", "04:48", "04:49", "04:50", "04:51", "04:52", "04:53", "04:54", "04:55", "04:56", "04:57", "04:58", "04:59", "05:00", "05:01", "05:02", "05:03", "05:04", "05:05", "05:06", "05:07", "05:08", "05:09", "05:10", "05:11", "05:12", "05:13", "05:14", "05:15", "05:16", "05:17", "05:18", "05:19", "05:20", "05:21", "05:22", "05:23", "05:24", "05:25", "05:26", "05:27", "05:28", "05:29", "05:30", "05:31", "05:32", "05:33", "05:34", "05:35", "05:36", "05:37", "05:38", "05:39", "05:40", "05:41", "05:42", "05:43", "05:44", "05:45", "05:46", "05:47", "05:48", "05:49", "05:50", "05:51", "05:52", "05:53", "05:54", "05:55", "05:56", "05:57", "05:58", "05:59", "06:00", "06:01", "06:02", "06:03", "06:04", "06:05", "06:06", "06:07", "06:08", "06:09", "06:10", "06:11", "06:12", "06:13", "06:14", "06:15", "06:16", "06:17", "06:18", "06:19", "06:20", "06:21", "06:22", "06:23", "06:24", "06:25", "06:26", "06:27", "06:28", "06:29", "06:30", "06:31", "06:32", "06:33", "06:34", "06:35", "06:36", "06:37", "06:38", "06:39", "06:40", "06:41", "06:42", "06:43", "06:44", "06:45", "06:46", "06:47", "06:48", "06:49", "06:50", "06:51", "06:52", "06:53", "06:54", "06:55", "06:56", "06:57", "06:58", "06:59", "07:00", "07:01", "07:02", "07:03", "07:04", "07:05", "07:06", "07:07", "07:08", "07:09", "07:10", "07:11", "07:12", "07:13", "07:14", "07:15", "07:16", "07:17", "07:18", "07:19", "07:20", "07:21", "07:22", "07:23", "07:24", "07:25", "07:26", "07:27", "07:28", "07:29", "07:30", "07:31", "07:32", "07:33", "07:34", "07:35", "07:36", "07:37", "07:38", "07:39", "07:40", "07:41", "07:42", "07:43", "07:44", "07:45", "07:46", "07:47", "07:48", "07:49", "07:50", "07:51", "07:52", "07:53", "07:54", "07:55", "07:56", "07:57", "07:58", "07:59", "08:00", "08:01", "08:02", "08:03", "08:04", "08:05", "08:06", "08:07", "08:08", "08:09", "08:10", "08:11", "08:12", "08:13", "08:14", "08:15", "08:16", "08:17", "08:18", "08:19", "08:20", "08:21", "08:22", "08:23", "08:24", "08:25", "08:26", "08:27", "08:28", "08:29", "08:30", "08:31", "08:32", "08:33", "08:34", "08:35", "08:36", "08:37", "08:38", "08:39", "08:40", "08:41", "08:42", "08:43", "08:44", "08:45", "08:46", "08:47", "08:48", "08:49", "08:50", "08:51", "08:52", "08:53", "08:54", "08:55", "08:56", "08:57", "08:58", "08:59", "09:00", "09:01", "09:02", "09:03", "09:04", "09:05", "09:06", "09:07", "09:08", "09:09", "09:10", "09:11", "09:12", "09:13", "09:14", "09:15", "09:16", "09:17", "09:18", "09:19", "09:20", "09:21", "09:22", "09:23", "09:24", "09:25", "09:26", "09:27", "09:28", "09:29", "09:30", "09:31", "09:32", "09:33", "09:34", "09:35", "09:36", "09:37", "09:38", "09:39", "09:40", "09:41", "09:42", "09:43", "09:44", "09:45", "09:46", "09:47", "09:48", "09:49", "09:50", "09:51", "09:52", "09:53", "09:54", "09:55", "09:56", "09:57", "09:58", "09:59", "10:00", "10:01", "10:02", "10:03", "10:04", "10:05", "10:06", "10:07", "10:08", "10:09", "10:10", "10:11", "10:12", "10:13", "10:14", "10:15", "10:16", "10:17", "10:18", "10:19", "10:20", "10:21", "10:22", "10:23", "10:24", "10:25", "10:26", "10:27", "10:28", "10:29", "10:30", "10:31", "10:32", "10:33", "10:34", "10:35", "10:36", "10:37", "10:38", "10:39", "10:40", "10:41", "10:42", "10:43", "10:44", "10:45", "10:46", "10:47", "10:48", "10:49", "10:50", "10:51", "10:52", "10:53", "10:54", "10:55", "10:56", "10:57", "10:58", "10:59", "11:00", "11:01", "11:02", "11:03", "11:04", "11:05", "11:06", "11:07", "11:08", "11:09", "11:10", "11:11", "11:12", "11:13", "11:14", "11:15", "11:16", "11:17", "11:18", "11:19", "11:20", "11:21", "11:22", "11:23", "11:24", "11:25", "11:26", "11:27", "11:28", "11:29", "11:30", "11:31", "11:32", "11:33", "11:34", "11:35", "11:36", "11:37", "11:38", "11:39", "11:40", "11:41", "11:42", "11:43", "11:44", "11:45", "11:46", "11:47", "11:48", "11:49", "11:50", "11:51", "11:52", "11:53", "11:54", "11:55", "11:56", "11:57", "11:58", "11:59", "12:00", "12:01", "12:02", "12:03", "12:04", "12:05", "12:06", "12:07", "12:08", "12:09", "12:10", "12:11", "12:12", "12:13", "12:14", "12:15", "12:16", "12:17", "12:18", "12:19", "12:20", "12:21", "12:22", "12:23", "12:24", "12:25", "12:26", "12:27", "12:28", "12:29", "12:30", "12:31", "12:32", "12:33", "12:34", "12:35", "12:36", "12:37", "12:38", "12:39", "12:40", "12:41", "12:42", "12:43", "12:44", "12:45", "12:46", "12:47", "12:48", "12:49", "12:50", "12:51", "12:52", "12:53", "12:54", "12:55", "12:56", "12:57", "12:58", "12:59", "13:00", "13:01", "13:02", "13:03", "13:04", "13:05", "13:06", "13:07", "13:08", "13:09", "13:10", "13:11", "13:12", "13:13", "13:14", "13:15", "13:16", "13:17", "13:18", "13:19", "13:20", "13:21", "13:22", "13:23", "13:24", "13:25", "13:26", "13:27", "13:28", "13:29", "13:30", "13:31", "13:32", "13:33", "13:34", "13:35", "13:36", "13:37", "13:38", "13:39", "13:40", "13:41", "13:42", "13:43", "13:44", "13:45", "13:46", "13:47", "13:48", "13:49", "13:50", "13:51", "13:52", "13:53", "13:54", "13:55", "13:56", "13:57", "13:58", "13:59", "14:00", "14:01", "14:02", "14:03", "14:04", "14:05", "14:06", "14:07", "14:08", "14:09", "14:10", "14:11", "14:12", "14:13", "14:14", "14:15", "14:16", "14:17", "14:18", "14:19", "14:20", "14:21", "14:22", "14:23", "14:24", "14:25", "14:26", "14:27", "14:28", "14:29", "14:30", "14:31", "14:32", "14:33", "14:34", "14:35", "14:36", "14:37", "14:38", "14:39", "14:40", "14:41", "14:42", "14:43", "14:44", "14:45", "14:46", "14:47", "14:48", "14:49", "14:50", "14:51", "14:52", "14:53", "14:54", "14:55", "14:56", "14:57", "14:58", "14:59", "15:00", "15:01", "15:02", "15:03", "15:04", "15:05", "15:06", "15:07", "15:08", "15:09", "15:10", "15:11", "15:12", "15:13", "15:14", "15:15", "15:16", "15:17", "15:18", "15:19", "15:20", "15:21", "15:22", "15:23", "15:24", "15:25", "15:26", "15:27", "15:28", "15:29", "15:30", "15:31", "15:32", "15:33", "15:34", "15:35", "15:36", "15:37", "15:38", "15:39", "15:40", "15:41", "15:42", "15:43", "15:44", "15:45", "15:46", "15:47", "15:48", "15:49", "15:50", "15:51", "15:52", "15:53", "15:54", "15:55", "15:56", "15:57", "15:58", "15:59", "16:00", "16:01", "16:02", "16:03", "16:04", "16:05", "16:06", "16:07", "16:08", "16:09", "16:10", "16:11", "16:12", "16:13", "16:14", "16:15", "16:16", "16:17", "16:18", "16:19", "16:20", "16:21", "16:22", "16:23", "16:24", "16:25", "16:26", "16:27", "16:28", "16:29", "16:30", "16:31", "16:32", "16:33", "16:34", "16:35", "16:36", "16:37", "16:38", "16:39", "16:40", "16:41", "16:42", "16:43", "16:44", "16:45", "16:46", "16:47", "16:48", "16:49", "16:50", "16:51", "16:52", "16:53", "16:54", "16:55", "16:56", "16:57", "16:58", "16:59", "17:00", "17:01", "17:02", "17:03", "17:04", "17:05", "17:06", "17:07", "17:08", "17:09", "17:10", "17:11", "17:12", "17:13", "17:14", "17:15", "17:16", "17:17", "17:18", "17:19", "17:20", "17:21", "17:22", "17:23", "17:24", "17:25", "17:26", "17:27", "17:28", "17:29", "17:30", "17:31", "17:32", "17:33", "17:34", "17:35", "17:36", "17:37", "17:38", "17:39", "17:40", "17:41", "17:42", "17:43", "17:44", "17:45", "17:46", "17:47", "17:48", "17:49", "17:50", "17:51", "17:52", "17:53", "17:54", "17:55", "17:56", "17:57", "17:58", "17:59", "18:00", "18:01", "18:02", "18:03", "18:04", "18:05", "18:06", "18:07", "18:08", "18:09", "18:10", "18:11", "18:12", "18:13", "18:14", "18:15", "18:16", "18:17", "18:18", "18:19", "18:20", "18:21", "18:22", "18:23", "18:24", "18:25", "18:26", "18:27", "18:28", "18:29", "18:30", "18:31", "18:32", "18:33", "18:34", "18:35", "18:36", "18:37", "18:38", "18:39", "18:40", "18:41", "18:42", "18:43", "18:44", "18:45", "18:46", "18:47", "18:48", "18:49", "18:50", "18:51", "18:52", "18:53", "18:54", "18:55", "18:56", "18:57", "18:58", "18:59", "19:00", "19:01", "19:02", "19:03", "19:04", "19:05", "19:06", "19:07", "19:08", "19:09", "19:10", "19:11", "19:12", "19:13", "19:14", "19:15", "19:16", "19:17", "19:18", "19:19", "19:20", "19:21", "19:22", "19:23", "19:24", "19:25", "19:26", "19:27", "19:28", "19:29", "19:30", "19:31", "19:32", "19:33", "19:34", "19:35", "19:36", "19:37", "19:38", "19:39", "19:40", "19:41", "19:42", "19:43", "19:44", "19:45", "19:46", "19:47", "19:48", "19:49", "19:50", "19:51", "19:52", "19:53", "19:54", "19:55", "19:56", "19:57", "19:58", "19:59", "20:00", "20:01", "20:02", "20:03", "20:04", "20:05", "20:06", "20:07", "20:08", "20:09", "20:10", "20:11", "20:12", "20:13", "20:14", "20:15", "20:16", "20:17", "20:18", "20:19", "20:20", "20:21", "20:22", "20:23", "20:24", "20:25", "20:26", "20:27", "20:28", "20:29", "20:30", "20:31", "20:32", "20:33", "20:34", "20:35", "20:36", "20:37", "20:38", "20:39", "20:40", "20:41", "20:42", "20:43", "20:44", "20:45", "20:46", "20:47", "20:48", "20:49", "20:50", "20:51", "20:52", "20:53", "20:54", "20:55", "20:56", "20:57", "20:58", "20:59", "21:00", "21:01", "21:02", "21:03", "21:04", "21:05", "21:06", "21:07", "21:08", "21:09", "21:10", "21:11", "21:12", "21:13", "21:14", "21:15", "21:16", "21:17", "21:18", "21:19", "21:20", "21:21", "21:22", "21:23", "21:24", "21:25", "21:26", "21:27", "21:28", "21:29", "21:30", "21:31", "21:32", "21:33", "21:34", "21:35", "21:36", "21:37", "21:38", "21:39", "21:40", "21:41", "21:42", "21:43", "21:44", "21:45", "21:46", "21:47", "21:48", "21:49", "21:50", "21:51", "21:52", "21:53", "21:54", "21:55", "21:56", "21:57", "21:58", "21:59", "22:00", "22:01", "22:02", "22:03", "22:04", "22:05", "22:06", "22:07", "22:08", "22:09", "22:10", "22:11", "22:12", "22:13", "22:14", "22:15", "22:16", "22:17", "22:18", "22:19", "22:20", "22:21", "22:22", "22:23", "22:24", "22:25", "22:26", "22:27", "22:28", "22:29", "22:30", "22:31", "22:32", "22:33", "22:34", "22:35", "22:36", "22:37", "22:38", "22:39", "22:40", "22:41", "22:42", "22:43", "22:44", "22:45", "22:46", "22:47", "22:48", "22:49", "22:50", "22:51", "22:52", "22:53", "22:54", "22:55", "22:56", "22:57", "22:58", "22:59", "23:00", "23:01", "23:02", "23:03", "23:04", "23:05", "23:06", "23:07", "23:08", "23:09", "23:10", "23:11", "23:12", "23:13", "23:14", "23:15", "23:16", "23:17", "23:18", "23:19", "23:20", "23:21", "23:22", "23:23", "23:24", "23:25", "23:26", "23:27", "23:28", "23:29", "23:30", "23:31", "23:32", "23:33", "23:34", "23:35", "23:36", "23:37", "23:38", "23:39", "23:40", "23:41", "23:42", "23:43", "23:44", "23:45", "23:46", "23:47", "23:48", "23:49", "23:50", "23:51", "23:52", "23:53", "23:54", "23:55", "23:56", "23:57", "23:58", "23:59", " " }));
+        time2.addPropertyChangeListener(new java.beans.PropertyChangeListener() {
+            public void propertyChange(java.beans.PropertyChangeEvent evt) {
+                time2PropertyChange(evt);
+            }
+        });
+        jLayeredPane1.add(time2, new org.netbeans.lib.awtextra.AbsoluteConstraints(110, 140, 80, -1));
+
+        javax.swing.GroupLayout jPanel4Layout = new javax.swing.GroupLayout(jPanel4);
+        jPanel4.setLayout(jPanel4Layout);
+        jPanel4Layout.setHorizontalGroup(
+            jPanel4Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(jPanel4Layout.createSequentialGroup()
+                .addContainerGap()
+                .addComponent(jLayeredPane1, javax.swing.GroupLayout.PREFERRED_SIZE, 447, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addGroup(jPanel4Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addGroup(jPanel4Layout.createSequentialGroup()
+                        .addGap(12, 12, 12)
+                        .addComponent(jPanel1, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                        .addContainerGap(689, Short.MAX_VALUE))
+                    .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, jPanel4Layout.createSequentialGroup()
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                        .addGroup(jPanel4Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                            .addComponent(jScrollPane2, javax.swing.GroupLayout.Alignment.TRAILING)
+                            .addComponent(jPanel6, javax.swing.GroupLayout.Alignment.TRAILING, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+                        .addContainerGap())))
+        );
+        jPanel4Layout.setVerticalGroup(
+            jPanel4Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(jPanel4Layout.createSequentialGroup()
+                .addContainerGap()
+                .addGroup(jPanel4Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addGroup(jPanel4Layout.createSequentialGroup()
+                        .addComponent(jPanel6, javax.swing.GroupLayout.PREFERRED_SIZE, 101, javax.swing.GroupLayout.PREFERRED_SIZE)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                        .addComponent(jScrollPane2, javax.swing.GroupLayout.PREFERRED_SIZE, 0, Short.MAX_VALUE))
+                    .addComponent(jLayeredPane1, javax.swing.GroupLayout.DEFAULT_SIZE, 574, Short.MAX_VALUE))
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addComponent(jPanel1, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addGap(11, 11, 11))
+        );
+
+        jTabbedPane1.addTab("Izin", jPanel4);
+
+        javax.swing.GroupLayout layout = new javax.swing.GroupLayout(this);
+        this.setLayout(layout);
+        layout.setHorizontalGroup(
+            layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(layout.createSequentialGroup()
+                .addContainerGap()
+                .addComponent(jTabbedPane1)
+                .addContainerGap())
+        );
+        layout.setVerticalGroup(
+            layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(layout.createSequentialGroup()
+                .addContainerGap()
+                .addComponent(jTabbedPane1)
+                .addContainerGap())
+        );
+    }// </editor-fold>//GEN-END:initComponents
+
+    private void jTable2MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_jTable2MouseClicked
+        if(evt.getClickCount() == 2) {
+            int baris = jTable2.getSelectedRow();
+            id = jTable2.getValueAt(baris, 0).toString();
+            cnbkt = jTable2.getValueAt(baris, 4).toString();
+            cnbkt_print = cnbkt;
+            loadEdit();
+        }
+    }//GEN-LAST:event_jTable2MouseClicked
+
+    private void jButton7ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton7ActionPerformed
+        loadData();
+    }//GEN-LAST:event_jButton7ActionPerformed
+
+    private void jDate1KeyPressed(java.awt.event.KeyEvent evt) {//GEN-FIRST:event_jDate1KeyPressed
+        // TODO add your handling code here:
+    }//GEN-LAST:event_jDate1KeyPressed
+
+    private void jDate1PropertyChange(java.beans.PropertyChangeEvent evt) {//GEN-FIRST:event_jDate1PropertyChange
+        // TODO add your handling code here:
+    }//GEN-LAST:event_jDate1PropertyChange
+
+    private void jDate2KeyPressed(java.awt.event.KeyEvent evt) {//GEN-FIRST:event_jDate2KeyPressed
+        // TODO add your handling code here:
+    }//GEN-LAST:event_jDate2KeyPressed
+
+    private void jDate2PropertyChange(java.beans.PropertyChangeEvent evt) {//GEN-FIRST:event_jDate2PropertyChange
+        // TODO add your handling code here:
+    }//GEN-LAST:event_jDate2PropertyChange
+
+    private void tkaryawankodeFocusLost(java.awt.event.FocusEvent evt) {//GEN-FIRST:event_tkaryawankodeFocusLost
+        sql = "select * from mkaryawan where nik = '"+tkaryawankode.getText()+"'  ";
+        rs = con.queryResult(sql);
+        try {
+            while(rs.next()){
+                tkaryawannama.setText(rs.getString("cname"));
+
+            }
+        } catch (SQLException ex) { ex.printStackTrace();   }
+    }//GEN-LAST:event_tkaryawankodeFocusLost
+
+    private void tkaryawankodeKeyPressed(java.awt.event.KeyEvent evt) {//GEN-FIRST:event_tkaryawankodeKeyPressed
+        rfa.EnterNextFocus(evt, tket);
+    }//GEN-LAST:event_tkaryawankodeKeyPressed
+
+    private void jButton8ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton8ActionPerformed
+        DialogKaryawan a = new DialogKaryawan();
+        a.setVisible(true);
+        if(a.status){
+            tkaryawankode.setText(a.Kode);
+            tkaryawannama.setText(a.Nama);
+        }
+    }//GEN-LAST:event_jButton8ActionPerformed
+
+    private void jDateLemburPropertyChange(java.beans.PropertyChangeEvent evt) {//GEN-FIRST:event_jDateLemburPropertyChange
+        // TODO add your handling code here:
+    }//GEN-LAST:event_jDateLemburPropertyChange
+
+    private void jDateLemburKeyPressed(java.awt.event.KeyEvent evt) {//GEN-FIRST:event_jDateLemburKeyPressed
+        // TODO add your handling code here:
+    }//GEN-LAST:event_jDateLemburKeyPressed
+
+    private void btDeleteActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btDeleteActionPerformed
+        int pil=JOptionPane.showConfirmDialog(this, "Apakah anda yakin akan menghapus data ini? ", "Hapus Data", JOptionPane.YES_NO_OPTION);
+        if(pil == 0) {
+            if(con.akses(akses, rfa.DELETE)) {
+                sql="delete from cuti_ambil where nidca='"+id+"' ";
+                con.queryUpdate(sql);
+            clear();
+            loadData();
+            }
+        }
+    }//GEN-LAST:event_btDeleteActionPerformed
+
+    private void btSaveActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btSaveActionPerformed
+        int pil=JOptionPane.showConfirmDialog(this, "Apakah anda yakin akan menyimpan data ini? ", "Save Data", JOptionPane.YES_NO_OPTION);
+        if(pil == 0) {
+            if(btSave.getText().equals("Save")) {
+                if(con.akses(akses, rfa.INSERT)) {
+                    save(1);
+                }
+            } else {
+                if(con.akses(akses, rfa.UPDATE)) {
+                    save(2);
+                }
+            }
+        }
+    }//GEN-LAST:event_btSaveActionPerformed
+
+    private void tkaryawan2FocusLost(java.awt.event.FocusEvent evt) {//GEN-FIRST:event_tkaryawan2FocusLost
+        // TODO add your handling code here:
+    }//GEN-LAST:event_tkaryawan2FocusLost
+
+    private void tkaryawan2KeyPressed(java.awt.event.KeyEvent evt) {//GEN-FIRST:event_tkaryawan2KeyPressed
+        // TODO add your handling code here:
+    }//GEN-LAST:event_tkaryawan2KeyPressed
+
+    private void tkaryawan2CaretUpdate(javax.swing.event.CaretEvent evt) {//GEN-FIRST:event_tkaryawan2CaretUpdate
+        loadData();
+    }//GEN-LAST:event_tkaryawan2CaretUpdate
+
+    private void btCancelActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btCancelActionPerformed
+       clear();
+    }//GEN-LAST:event_btCancelActionPerformed
+
+    private void tketFocusLost(java.awt.event.FocusEvent evt) {//GEN-FIRST:event_tketFocusLost
+        tket.setText(tket.getText().toUpperCase());
+    }//GEN-LAST:event_tketFocusLost
+
+    private void time1PropertyChange(java.beans.PropertyChangeEvent evt) {//GEN-FIRST:event_time1PropertyChange
+       
+    }//GEN-LAST:event_time1PropertyChange
+
+    private void time2PropertyChange(java.beans.PropertyChangeEvent evt) {//GEN-FIRST:event_time2PropertyChange
+      
+    }//GEN-LAST:event_time2PropertyChange
+
+
+    // Variables declaration - do not modify//GEN-BEGIN:variables
+    private javax.swing.JButton btCancel;
+    private javax.swing.JButton btDelete;
+    private javax.swing.JButton btSave;
+    private javax.swing.JButton jButton7;
+    private javax.swing.JButton jButton8;
+    private com.toedter.calendar.JDateChooser jDate1;
+    private com.toedter.calendar.JDateChooser jDate2;
+    private com.toedter.calendar.JDateChooser jDateLembur;
+    private javax.swing.JLabel jLabel13;
+    private javax.swing.JLabel jLabel14;
+    private javax.swing.JLabel jLabel15;
+    private javax.swing.JLabel jLabel16;
+    private javax.swing.JLabel jLabel19;
+    private javax.swing.JLabel jLabel21;
+    private javax.swing.JLabel jLabel22;
+    private javax.swing.JLabel jLabel23;
+    private javax.swing.JLabel jLabel24;
+    private javax.swing.JLabel jLabel27;
+    private javax.swing.JLabel jLabel28;
+    private javax.swing.JLabel jLabel30;
+    private javax.swing.JLabel jLabel9;
+    private javax.swing.JLayeredPane jLayeredPane1;
+    private javax.swing.JPanel jPanel1;
+    private javax.swing.JPanel jPanel4;
+    private javax.swing.JPanel jPanel6;
+    private javax.swing.JScrollPane jScrollPane2;
+    private javax.swing.JScrollPane jScrollPane3;
+    private javax.swing.JTabbedPane jTabbedPane1;
+    private javax.swing.JTable jTable2;
+    private javax.swing.JTable jtable_print;
+    private javax.swing.JComboBox listCuti;
+    private javax.swing.JComboBox time1;
+    private javax.swing.JComboBox time2;
+    private javax.swing.JTextField tjam;
+    private javax.swing.JTextField tkaryawan2;
+    private javax.swing.JTextField tkaryawankode;
+    private javax.swing.JTextField tkaryawannama;
+    private javax.swing.JTextField tket;
+    private javax.swing.JTextField tmenit;
+    // End of variables declaration//GEN-END:variables
+}

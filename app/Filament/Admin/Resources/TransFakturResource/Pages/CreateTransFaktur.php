@@ -9,4 +9,9 @@ use Filament\Resources\Pages\CreateRecord;
 class CreateTransFaktur extends CreateRecord
 {
     protected static string $resource = TransFakturResource::class;
+
+    protected function getRedirectUrl(): string
+    {
+        return $this->getResource()::getUrl('index');
+    }
 }

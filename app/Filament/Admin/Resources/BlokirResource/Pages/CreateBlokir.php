@@ -9,4 +9,9 @@ use Filament\Resources\Pages\CreateRecord;
 class CreateBlokir extends CreateRecord
 {
     protected static string $resource = BlokirResource::class;
+
+    protected function getRedirectUrl(): string
+    {
+        return $this->getResource()::getUrl('index');
+    }
 }

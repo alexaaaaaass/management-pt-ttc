@@ -129,7 +129,37 @@ class InvPaymentResource extends Resource
                                     TextInput::make('nominal_bayar')
                                         ->numeric()
                                         ->required()
-                                        ->live()
+                                        ->extraInputAttributes(['onwheel' => 'this.blur()'])
+                                        ->helperText('Otomatis dibulatkan ke sisa tagihan jika selisih ≤ Rp 1.000')
+                                        ->live(onBlur: true)
+                                        ->afterStateUpdated(function ($state, Get $get, Set $set, ?InvPayment $record) {
+                                            $invoice = Invoice::find($get('invoice_id'));
+                                            if (!$invoice) {
+                                                return;
+                                            }
+
+                                            $maxAllowed = (float) $invoice->sisa_tagihan;
+                                            if ($record && $record->invoice_id == $invoice->id) {
+                                                $maxAllowed += (float) $record->nominal_bayar;
+                                            }
+
+                                            $val = (float) $state;
+                                            if (
+                                                $maxAllowed > 0 &&
+                                                $val > 0 &&
+                                                abs($maxAllowed - $val) > 0 &&
+                                                abs($maxAllowed - $val) <= \App\Services\Finance\InvoicePaymentService::PAYMENT_TOLERANCE
+                                            ) {
+                                                $diff = abs($maxAllowed - $val);
+                                                $set('nominal_bayar', $maxAllowed);
+
+                                                \Filament\Notifications\Notification::make()
+                                                    ->title('Auto-Snap Nominal Pembayaran')
+                                                    ->body('Selisih Rp ' . number_format($diff, 0, ',', '.') . ' berada dalam batas toleransi (≤ Rp 1.000). Nominal otomatis disesuaikan menjadi Rp ' . number_format($maxAllowed, 0, ',', '.') . '.')
+                                                    ->info()
+                                                    ->send();
+                                            }
+                                        })
                                         ->rule(function (Get $get, ?InvPayment $record) {
                                             return function (
                                                 $attribute,
@@ -146,7 +176,7 @@ class InvPaymentResource extends Resource
                                                     $maxAllowed += (float) $record->nominal_bayar;
                                                 }
 
-                                                if ((float) $value > $maxAllowed) {
+                                                if ((float) $value > ($maxAllowed + \App\Services\Finance\InvoicePaymentService::PAYMENT_TOLERANCE)) {
                                                     $fail('Nominal pembayaran melebihi sisa tagihan (Maks: Rp ' . number_format($maxAllowed, 0, ',', '.') . ').');
                                                 }
                                             };

@@ -9,4 +9,9 @@ use Filament\Resources\Pages\CreateRecord;
 class CreateCoaClass extends CreateRecord
 {
     protected static string $resource = CoaClassResource::class;
+
+    protected function getRedirectUrl(): string
+    {
+        return $this->getResource()::getUrl('index');
+    }
 }

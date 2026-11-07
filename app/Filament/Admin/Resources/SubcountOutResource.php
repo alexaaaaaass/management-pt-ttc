@@ -4,6 +4,9 @@ namespace App\Filament\Admin\Resources;
 
 use App\Filament\Admin\Resources\SubcountOutResource\Pages;
 use App\Models\SubcountOut;
+use App\Models\MasterSpk;
+use App\Models\MasterItem;
+use App\Models\MasterSatuan;
 use Filament\Forms;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
@@ -77,7 +80,7 @@ class SubcountOutResource extends Resource
 
                             Forms\Components\Select::make('spk_id')
                                 ->label('No SPK')
-                                ->relationship('spk', 'no_spk')
+                                ->options(fn () => MasterSpk::pluck('no_spk', 'id'))
                                 ->searchable()
                                 ->preload()
                                 ->visible(fn ($get) => $get('sumber_item') === 'spk')
@@ -106,7 +109,7 @@ class SubcountOutResource extends Resource
 
                             Forms\Components\Select::make('item_id')
                                 ->label('Material')
-                                ->relationship('item', 'nama_master_item')
+                                ->options(fn () => MasterItem::pluck('nama_master_item', 'id'))
                                 ->searchable()
                                 ->preload()
                                 ->visible(fn ($get) => $get('sumber_item') === 'material')
@@ -136,7 +139,7 @@ class SubcountOutResource extends Resource
 
                             Forms\Components\Select::make('satuan_id')
                                 ->label('Satuan')
-                                ->relationship('satuan', 'nama_satuan')
+                                ->options(fn () => MasterSatuan::pluck('nama_satuan', 'id'))
                                 ->searchable()
                                 ->preload()
                                 ->dehydrated(),

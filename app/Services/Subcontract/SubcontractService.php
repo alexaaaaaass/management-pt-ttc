@@ -7,6 +7,7 @@ use App\Models\SubcountIn;
 use App\Models\SubcountInItem;
 use App\Models\SubcountOut;
 use App\Models\SubcountOutItem;
+use App\Services\Inventory\FinishGoodStockService;
 use App\Services\Inventory\StockService;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -15,7 +16,8 @@ use Illuminate\Validation\ValidationException;
 class SubcontractService
 {
     public function __construct(
-        protected StockService $stockService
+        protected StockService $stockService,
+        protected FinishGoodStockService $finishGoodStockService
     ) {}
 
     /**
@@ -71,17 +73,21 @@ class SubcontractService
     /**
      * Hitung sisa quantity yang belum diterima dari Subcount Out tertentu
      */
-    public function calculateOutstandingQty(int $subcountOutId, ?int $itemAsalId = null): float
+    public function calculateOutstandingQty(int $subcountOutId, ?int $itemAsalId = null, ?int $spkId = null): float
     {
         $outQuery = SubcountOutItem::where('subcount_out_id', $subcountOutId);
         if ($itemAsalId) {
             $outQuery->where('item_id', $itemAsalId);
+        } elseif ($spkId) {
+            $outQuery->where('spk_id', $spkId);
         }
         $totalSent = (float) $outQuery->sum('qty');
 
         $inQuery = SubcountInItem::where('subcount_out_id', $subcountOutId);
         if ($itemAsalId) {
             $inQuery->where('item_asal_id', $itemAsalId);
+        } elseif ($spkId) {
+            $inQuery->where('spk_id', $spkId);
         }
         $totalReceived = (float) $inQuery->sum('qty_diterima');
 
@@ -211,15 +217,20 @@ class SubcontractService
                 }
 
                 $subcountOutId = $item['subcount_out_id'] ?? $data['subcount_out_id'] ?? null;
-                $itemAsalId = $item['item_asal_id'] ?? null;
+                $itemAsalId = !empty($item['item_asal_id']) ? (int) $item['item_asal_id'] : null;
+                $spkId = !empty($item['spk_id']) ? (int) $item['spk_id'] : null;
 
-                if ($subcountOutId && $itemAsalId) {
-                    $outstanding = $this->calculateOutstandingQty((int) $subcountOutId, (int) $itemAsalId);
+                if ($subcountOutId && ($itemAsalId || $spkId)) {
+                    $outstanding = $this->calculateOutstandingQty((int) $subcountOutId, $itemAsalId, $spkId);
                     if ($qtyDiterima > $outstanding) {
-                        $materialAsal = MasterItem::find($itemAsalId);
-                        $namaAsal = $materialAsal?->nama_master_item ?? "Item #{$itemAsalId}";
+                        $namaAsal = $item['nama_item_asal'] ?? null;
+                        if (! $namaAsal && $itemAsalId) {
+                            $materialAsal = MasterItem::find($itemAsalId);
+                            $namaAsal = $materialAsal?->nama_master_item ?? "Item #{$itemAsalId}";
+                        }
+                        $namaAsal = $namaAsal ?: 'Item Subcount';
                         throw ValidationException::withMessages([
-                            "items.{$index}.qty_diterima" => "Qty diterima ({$qtyDiterima}) melebihi sisa yang belum diterima ({$outstanding}) untuk material '{$namaAsal}'.",
+                            "items.{$index}.qty_diterima" => "Qty diterima ({$qtyDiterima}) melebihi sisa yang belum diterima ({$outstanding}) untuk '{$namaAsal}'.",
                         ]);
                     }
                 }
@@ -236,13 +247,30 @@ class SubcontractService
             // Simpan items dan mutasi stok
             foreach ($itemsData as $item) {
                 $qtyDiterima = (float) ($item['qty_diterima'] ?? 0);
+                $tipeHasil = $item['tipe_hasil'] ?? 'material';
                 $itemHasilId = !empty($item['item_hasil_id']) ? (int) $item['item_hasil_id'] : null;
+                $finishGoodItemId = !empty($item['finish_good_item_id']) ? (int) $item['finish_good_item_id'] : null;
+                $spkId = !empty($item['spk_id']) ? (int) $item['spk_id'] : null;
                 $itemAsalId = !empty($item['item_asal_id']) ? (int) $item['item_asal_id'] : null;
+
+                $item['tipe_hasil'] = $tipeHasil;
+                $item['item_hasil_id'] = $tipeHasil === 'material' ? $itemHasilId : null;
+                $item['finish_good_item_id'] = $tipeHasil === 'finish_good' ? $finishGoodItemId : null;
 
                 $createdItem = $subcountIn->items()->create($item);
 
-                // Tambah stok item hasil yang telah diproses vendor
-                if ($itemHasilId && $qtyDiterima > 0) {
+                if ($tipeHasil === 'finish_good' && $finishGoodItemId && $qtyDiterima > 0) {
+                    // Tambah stok Barang Jadi (Finish Good Stock)
+                    $this->finishGoodStockService->increaseStock(
+                        finishGoodItemId: $finishGoodItemId,
+                        qty: $qtyDiterima,
+                        reference: $subcountIn,
+                        source: 'SUBCOUNT_IN',
+                        spkId: $spkId,
+                        remarks: 'Penerimaan Subcount In (Barang Jadi) - ' . $subcountIn->no_subcount
+                    );
+                } elseif ($tipeHasil === 'material' && $itemHasilId && $qtyDiterima > 0) {
+                    // Tambah stok Material Produksi (Material Stock)
                     $this->stockService->increaseStock(
                         itemId: $itemHasilId,
                         qty: $qtyDiterima,
@@ -276,9 +304,20 @@ class SubcontractService
 
             foreach ($subcountIn->items as $item) {
                 $qtyDiterima = (float) ($item->qty_diterima ?? 0);
+                $tipeHasil = $item->tipe_hasil ?: 'material';
 
-                // Kurangi stok item hasil yang sebelumnya ditambahkan
-                if ($item->item_hasil_id && $qtyDiterima > 0) {
+                if ($tipeHasil === 'finish_good' && $item->finish_good_item_id && $qtyDiterima > 0) {
+                    $this->finishGoodStockService->decreaseStock(
+                        finishGoodItemId: (int) $item->finish_good_item_id,
+                        qty: $qtyDiterima,
+                        reference: $subcountIn,
+                        source: 'SUBCOUNT_IN',
+                        spkId: $item->spk_id,
+                        remarks: 'Rollback Hapus Subcount In - ' . $subcountIn->no_subcount,
+                        allowNegative: true
+                    );
+                } elseif ($item->item_hasil_id && $qtyDiterima > 0) {
+                    // Kurangi stok item hasil yang sebelumnya ditambahkan
                     $this->stockService->decreaseStock(
                         itemId: (int) $item->item_hasil_id,
                         qty: $qtyDiterima,

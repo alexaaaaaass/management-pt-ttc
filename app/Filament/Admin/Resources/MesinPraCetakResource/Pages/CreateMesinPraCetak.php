@@ -9,4 +9,9 @@ use Filament\Resources\Pages\CreateRecord;
 class CreateMesinPraCetak extends CreateRecord
 {
     protected static string $resource = MesinPraCetakResource::class;
+
+    protected function getRedirectUrl(): string
+    {
+        return $this->getResource()::getUrl('index');
+    }
 }

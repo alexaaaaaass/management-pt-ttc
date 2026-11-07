@@ -9,4 +9,9 @@ use Filament\Resources\Pages\CreateRecord;
 class CreateErrorProduction extends CreateRecord
 {
     protected static string $resource = ErrorProductionResource::class;
+
+    protected function getRedirectUrl(): string
+    {
+        return $this->getResource()::getUrl('index');
+    }
 }

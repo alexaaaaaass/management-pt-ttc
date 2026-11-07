@@ -16,6 +16,7 @@ use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Form;
+use Filament\Forms\Get;
 use Filament\Forms\Set;
 use Filament\Resources\Resource;
 use Filament\Tables;
@@ -60,7 +61,7 @@ protected static ?int $navigationSort = 12;
                             ->preload()
                             ->required()
                             ->live()
-                            ->afterStateUpdated(function ($state, Set $set) {
+                            ->afterStateUpdated(function ($state, Get $get, Set $set) {
                                 $bill = PoBilling::find($state);
                                 if (!$bill) {
                                     return;
@@ -69,6 +70,16 @@ protected static ?int $navigationSort = 12;
                                 $set('gudang', 'UGRMS');
                                 $set('periode', $bill->periode);
                                 $set('total_tagihan', $bill->sisa_tagihan);
+
+                                $items = $get('items') ?? [];
+                                if (count($items) === 1) {
+                                    $firstKey = array_key_first($items);
+                                    if ($firstKey !== null && empty($items[$firstKey]['nominal_pembayaran'])) {
+                                        $items[$firstKey]['nominal_pembayaran'] = $bill->sisa_tagihan;
+                                        $set('items', $items);
+                                        $set('total_pembayaran', $bill->sisa_tagihan);
+                                    }
+                                }
                             }),
 
                         TextInput::make(
@@ -111,7 +122,7 @@ protected static ?int $navigationSort = 12;
 
                 Repeater::make('items')
 
-                    ->relationship()
+                    ->defaultItems(1)
 
                     ->schema([
 
@@ -140,7 +151,35 @@ protected static ?int $navigationSort = 12;
                                 )
                                     ->numeric()
                                     ->prefix('Rp')
-                                    ->live(),
+                                    ->required()
+                                    ->extraInputAttributes(['onwheel' => 'this.blur()'])
+                                    ->helperText('Otomatis dibulatkan ke sisa tagihan jika selisih ≤ Rp 1.000')
+                                    ->live(onBlur: true)
+                                    ->afterStateUpdated(function ($state, Get $get, Set $set) {
+                                        $items = $get('../../items') ?? [];
+                                        $total = collect($items)->sum(fn ($item) => (float) ($item['nominal_pembayaran'] ?? 0));
+                                        $sisaTagihan = (float) ($get('../../total_tagihan') ?? 0);
+
+                                        if (
+                                            $sisaTagihan > 0 &&
+                                            $total > 0 &&
+                                            abs($sisaTagihan - $total) > 0 &&
+                                            abs($sisaTagihan - $total) <= \App\Services\Finance\PoBillPayService::PAYMENT_TOLERANCE
+                                        ) {
+                                            $diff = round($sisaTagihan - $total, 2);
+                                            $adjusted = round((float) $state + $diff, 2);
+                                            $set('nominal_pembayaran', $adjusted);
+                                            $total = $sisaTagihan;
+
+                                            \Filament\Notifications\Notification::make()
+                                                ->title('Auto-Snap Nominal Pembayaran')
+                                                ->body('Selisih Rp ' . number_format(abs($diff), 0, ',', '.') . ' berada dalam batas toleransi (≤ Rp 1.000). Nominal otomatis disesuaikan menjadi Rp ' . number_format($sisaTagihan, 0, ',', '.') . '.')
+                                                ->info()
+                                                ->send();
+                                        }
+
+                                        $set('../../total_pembayaran', $total);
+                                    }),
                             ]),
 
                         Grid::make(2)

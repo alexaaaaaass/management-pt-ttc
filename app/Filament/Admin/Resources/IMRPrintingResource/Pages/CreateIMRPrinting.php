@@ -16,4 +16,9 @@ class CreateIMRPrinting extends CreateRecord
     return app(IMRPrintingService::class)
         ->create($data);
 }
+
+    protected function getRedirectUrl(): string
+    {
+        return $this->getResource()::getUrl('index');
+    }
 }

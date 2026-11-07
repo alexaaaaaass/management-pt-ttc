@@ -9,4 +9,9 @@ use Filament\Resources\Pages\CreateRecord;
 class CreateMasterCOA extends CreateRecord
 {
     protected static string $resource = MasterCOAResource::class;
+
+    protected function getRedirectUrl(): string
+    {
+        return $this->getResource()::getUrl('index');
+    }
 }

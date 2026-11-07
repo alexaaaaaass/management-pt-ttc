@@ -24,9 +24,7 @@ class CreateInvPayment extends CreateRecord
 
     protected function getRedirectUrl(): string
     {
-        return InvoiceResource::getUrl('view', [
-            'record' => $this->record->invoice_id,
-        ]);
+        return $this->getResource()::getUrl('index');
     }
 
     protected function mutateFormDataBeforeFill(array $data): array

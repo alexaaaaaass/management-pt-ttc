@@ -58,4 +58,9 @@ class CreateImrFinish extends CreateRecord
             return $imr;
         });
     }
+
+    protected function getRedirectUrl(): string
+    {
+        return $this->getResource()::getUrl('index');
+    }
 }

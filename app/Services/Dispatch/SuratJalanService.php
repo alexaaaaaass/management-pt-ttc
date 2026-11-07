@@ -6,6 +6,7 @@ use App\Models\MasterSpk;
 use App\Models\SalesOrder;
 use App\Models\SuratJalan;
 use App\Models\SuratJalanItem;
+use App\Services\Inventory\FinishGoodStockService;
 use App\Services\Inventory\StockService;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -14,7 +15,8 @@ use Illuminate\Validation\ValidationException;
 class SuratJalanService
 {
     public function __construct(
-        protected StockService $stockService
+        protected StockService $stockService,
+        protected FinishGoodStockService $finishGoodStockService
     ) {}
 
     /**
@@ -67,22 +69,24 @@ class SuratJalanService
                 $spk = MasterSpk::find($data['spk_id']);
             }
 
-            // Validasi stok barang jadi SPK sebelum simpan
+            // Validasi stok barang jadi sebelum simpan
             if ($salesOrder->mode === 'SPK') {
                 $qtyKirim = (float) ($data['qty_pengiriman'] ?? 0);
                 if ($qtyKirim <= 0) {
                     throw ValidationException::withMessages([
-                        'qty_pengiriman' => 'Qty pengiriman SPK harus lebih besar dari 0.',
+                        'qty_pengiriman' => 'Qty pengiriman harus lebih besar dari 0.',
                     ]);
                 }
 
-                if ($spk) {
-                    $available = $spk->on_hand_stock;
-                    if ($qtyKirim > $available) {
-                        throw ValidationException::withMessages([
-                            'qty_pengiriman' => "Stok barang jadi SPK tidak mencukupi untuk dikirim (Tersedia siap kirim: " . number_format($available, 0, ',', '.') . " pcs, diminta: " . number_format($qtyKirim, 0, ',', '.') . " pcs).",
-                        ]);
-                    }
+                $fgId = $salesOrder->itemable_id;
+                $available = $fgId
+                    ? $this->finishGoodStockService->getAvailableStock((int) $fgId)
+                    : ($spk ? (float) $spk->on_hand_stock : 0.0);
+
+                if ($qtyKirim > $available) {
+                    throw ValidationException::withMessages([
+                        'qty_pengiriman' => "Stok barang jadi tidak mencukupi untuk dikirim (Tersedia siap kirim: " . number_format($available, 0, ',', '.') . " pcs, diminta: " . number_format($qtyKirim, 0, ',', '.') . " pcs).",
+                    ]);
                 }
             }
 
@@ -92,7 +96,18 @@ class SuratJalanService
             // Proses pemotongan stok & detail berdasarkan mode Sales Order
             switch ($salesOrder->mode) {
                 case 'SPK':
-                    // On-hand stock SPK otomatis tersinkron
+                    $fgId = $salesOrder->itemable_id;
+                    $qtyKirim = (float) ($data['qty_pengiriman'] ?? 0);
+                    if ($fgId && $qtyKirim > 0) {
+                        $this->finishGoodStockService->decreaseStock(
+                            finishGoodItemId: (int) $fgId,
+                            qty: $qtyKirim,
+                            reference: $suratJalan,
+                            source: 'SURAT_JALAN',
+                            spkId: $suratJalan->spk_id,
+                            remarks: 'Pengiriman Surat Jalan - ' . $suratJalan->kode_surat_jalan
+                        );
+                    }
                     break;
 
                 case 'SINGLE_MATERIAL':
@@ -171,7 +186,19 @@ class SuratJalanService
 
             $suratJalan->loadMissing(['items', 'salesOrder.items']);
 
-            // 1. Rollback pemotongan stok material lama
+            // 1a. Rollback pemotongan stok barang jadi lama jika mode SPK
+            if ($suratJalan->salesOrder?->mode === 'SPK' && $suratJalan->salesOrder?->itemable_id && (float) $suratJalan->qty_pengiriman > 0) {
+                $this->finishGoodStockService->increaseStock(
+                    finishGoodItemId: (int) $suratJalan->salesOrder->itemable_id,
+                    qty: (float) $suratJalan->qty_pengiriman,
+                    reference: $suratJalan,
+                    source: 'SURAT_JALAN',
+                    spkId: $suratJalan->spk_id,
+                    remarks: 'Rollback Update Surat Jalan - ' . $suratJalan->kode_surat_jalan
+                );
+            }
+
+            // 1b. Rollback pemotongan stok material lama
             foreach ($suratJalan->items as $oldItem) {
                 if ($oldItem->qty_kirim > 0 && $oldItem->master_item_id) {
                     $this->stockService->increaseStock(
@@ -198,23 +225,24 @@ class SuratJalanService
                 $spk = MasterSpk::find($data['spk_id']);
             }
 
-            // Validasi stok barang jadi SPK saat update
+            // Validasi stok barang jadi saat update (stok lama sudah di-rollback di atas)
             if ($salesOrder->mode === 'SPK') {
                 $qtyKirim = (float) ($data['qty_pengiriman'] ?? $suratJalan->qty_pengiriman);
                 if ($qtyKirim <= 0) {
                     throw ValidationException::withMessages([
-                        'qty_pengiriman' => 'Qty pengiriman SPK harus lebih besar dari 0.',
+                        'qty_pengiriman' => 'Qty pengiriman harus lebih besar dari 0.',
                     ]);
                 }
 
-                if ($spk) {
-                    $oldQty = (float) $suratJalan->qty_pengiriman;
-                    $available = $spk->on_hand_stock + $oldQty;
-                    if ($qtyKirim > $available) {
-                        throw ValidationException::withMessages([
-                            'qty_pengiriman' => "Stok barang jadi SPK tidak mencukupi untuk dikirim (Tersedia siap kirim: " . number_format($available, 0, ',', '.') . " pcs, diminta: " . number_format($qtyKirim, 0, ',', '.') . " pcs).",
-                        ]);
-                    }
+                $fgId = $salesOrder->itemable_id;
+                $available = $fgId
+                    ? $this->finishGoodStockService->getAvailableStock((int) $fgId)
+                    : ($spk ? (float) ($spk->on_hand_stock + (float) $suratJalan->qty_pengiriman) : 0.0);
+
+                if ($qtyKirim > $available) {
+                    throw ValidationException::withMessages([
+                        'qty_pengiriman' => "Stok barang jadi tidak mencukupi untuk dikirim (Tersedia siap kirim: " . number_format($available, 0, ',', '.') . " pcs, diminta: " . number_format($qtyKirim, 0, ',', '.') . " pcs).",
+                    ]);
                 }
             }
 
@@ -223,7 +251,18 @@ class SuratJalanService
             // 3. Terapkan pemotongan stok baru sesuai mode
             switch ($salesOrder->mode) {
                 case 'SPK':
-                    // On-hand stock SPK otomatis tersinkron
+                    $fgId = $salesOrder->itemable_id;
+                    $qtyKirim = (float) ($data['qty_pengiriman'] ?? $suratJalan->qty_pengiriman);
+                    if ($fgId && $qtyKirim > 0) {
+                        $this->finishGoodStockService->decreaseStock(
+                            finishGoodItemId: (int) $fgId,
+                            qty: $qtyKirim,
+                            reference: $suratJalan,
+                            source: 'SURAT_JALAN',
+                            spkId: $suratJalan->spk_id,
+                            remarks: 'Pengiriman Surat Jalan (Update) - ' . $suratJalan->kode_surat_jalan
+                        );
+                    }
                     break;
 
                 case 'SINGLE_MATERIAL':
@@ -300,7 +339,19 @@ class SuratJalanService
                 throw new \Exception('Surat Jalan tidak dapat dihapus karena sudah memiliki Invoice terkait.');
             }
 
-            $suratJalan->loadMissing('items');
+            $suratJalan->loadMissing(['items', 'salesOrder']);
+
+            // Kembalikan stok barang jadi jika mode SPK
+            if ($suratJalan->salesOrder?->mode === 'SPK' && $suratJalan->salesOrder?->itemable_id && (float) $suratJalan->qty_pengiriman > 0) {
+                $this->finishGoodStockService->increaseStock(
+                    finishGoodItemId: (int) $suratJalan->salesOrder->itemable_id,
+                    qty: (float) $suratJalan->qty_pengiriman,
+                    reference: $suratJalan,
+                    source: 'SURAT_JALAN',
+                    spkId: $suratJalan->spk_id,
+                    remarks: 'Rollback Hapus Surat Jalan - ' . $suratJalan->kode_surat_jalan
+                );
+            }
 
             // Kembalikan seluruh stok material yang pernah terpotong
             foreach ($suratJalan->items as $item) {

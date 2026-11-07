@@ -24,4 +24,9 @@ class CreateTransKasBank extends CreateRecord
     {
         return app(TreasuryService::class)->recordBank($data);
     }
+
+    protected function getRedirectUrl(): string
+    {
+        return $this->getResource()::getUrl('index');
+    }
 }

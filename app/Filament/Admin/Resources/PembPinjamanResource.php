@@ -68,6 +68,20 @@ class PembPinjamanResource extends Resource
                     ->label('Nominal Pembayaran')
                     ->numeric()
                     ->prefix('Rp')
+                    ->extraInputAttributes(['onwheel' => 'this.blur()'])
+                    ->helperText('Otomatis dibulatkan ke cicilan/sisa pinjaman jika selisih ≤ Rp 1.000')
+                    ->live(onBlur: true)
+                    ->afterStateUpdated(function ($state, Forms\Get $get, Forms\Set $set) {
+                        $pinjaman = PengPinjaman::find($get('peng_pinjaman_id'));
+                        if (!$pinjaman) {
+                            return;
+                        }
+                        $val = (float) $state;
+                        $cicilan = (float) $pinjaman->cicilan_per_bulan;
+                        if ($cicilan > 0 && $val > 0 && abs($cicilan - $val) > 0 && abs($cicilan - $val) <= 1000) {
+                            $set('nominal_pembayaran', $cicilan);
+                        }
+                    })
                     ->required(),
 
                 Forms\Components\Textarea::make('keterangan')

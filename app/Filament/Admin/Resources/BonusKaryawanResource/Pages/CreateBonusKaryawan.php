@@ -9,4 +9,9 @@ use Filament\Resources\Pages\CreateRecord;
 class CreateBonusKaryawan extends CreateRecord
 {
     protected static string $resource = BonusKaryawanResource::class;
+
+    protected function getRedirectUrl(): string
+    {
+        return $this->getResource()::getUrl('index');
+    }
 }

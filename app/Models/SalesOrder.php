@@ -215,6 +215,13 @@ public function getCurrentStockAttribute()
 {
     if ($this->mode == 'SPK') {
 
+        if ($this->itemable_id) {
+            $fgStock = FinishGoodStock::where('finish_good_item_id', $this->itemable_id)->first();
+            if ($fgStock) {
+                return (float) $fgStock->on_hand;
+            }
+        }
+
         return optional(
 
             MasterSpk::where(

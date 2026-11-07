@@ -27,6 +27,26 @@ class PembPinjaman extends Model
 
     protected static function booted(): void
     {
+        static::saving(function ($pembayaran) {
+            if ($pembayaran->peng_pinjaman_id && $pembayaran->nominal_pembayaran > 0) {
+                $pinjaman = PengPinjaman::find($pembayaran->peng_pinjaman_id);
+                if ($pinjaman) {
+                    $val = (float) $pembayaran->nominal_pembayaran;
+                    $cicilan = (float) $pinjaman->cicilan_per_bulan;
+                    $sudahBayar = (float) $pinjaman->pembayaran()
+                        ->when($pembayaran->exists, fn ($q) => $q->where('id', '!=', $pembayaran->id))
+                        ->sum('nominal_pembayaran');
+                    $sisa = max(0.0, (float) $pinjaman->nilai_pinjaman - $sudahBayar);
+
+                    if ($sisa > 0 && abs($sisa - $val) > 0 && abs($sisa - $val) <= 1000) {
+                        $pembayaran->nominal_pembayaran = $sisa;
+                    } elseif ($cicilan > 0 && abs($cicilan - $val) > 0 && abs($cicilan - $val) <= 1000) {
+                        $pembayaran->nominal_pembayaran = $cicilan;
+                    }
+                }
+            }
+        });
+
         static::creating(function ($pembayaran) {
 
             $count = self::whereYear('created_at', now()->year)

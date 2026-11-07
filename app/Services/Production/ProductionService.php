@@ -3,12 +3,14 @@
 namespace App\Services\Production;
 
 use App\Models\Diemaking;
+use App\Models\FinishGoodItem;
 use App\Models\MasterFinishing;
 use App\Models\MasterSpk;
 use App\Models\Packaging;
 use App\Models\PracetakProcess;
 use App\Models\Printing;
 use App\Models\SalesOrder;
+use App\Services\Inventory\FinishGoodStockService;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -269,6 +271,91 @@ class ProductionService
 
             $packaging = Packaging::create($data);
 
+            // Otomatis tambahkan ke FinishGoodStock
+            $fgId = $spk->salesOrder?->itemable_id;
+            if ($fgId && (! $spk->salesOrder?->itemable_type || $spk->salesOrder?->itemable_type === FinishGoodItem::class)) {
+                $fgStockService = app(FinishGoodStockService::class);
+                if ($packaging->jenis_transfer === 'blokir') {
+                    $fgStockService->increaseBlockedStock(
+                        finishGoodItemId: (int) $fgId,
+                        qty: (float) $packaging->grand_total,
+                        reference: $packaging,
+                        spkId: $spk->id,
+                        remarks: 'Hasil Packaging (Blokir) - ' . $packaging->kode_packaging
+                    );
+                } else {
+                    $fgStockService->increaseStock(
+                        finishGoodItemId: (int) $fgId,
+                        qty: (float) $packaging->grand_total,
+                        reference: $packaging,
+                        source: 'PACKAGING',
+                        spkId: $spk->id,
+                        remarks: 'Hasil Packaging Produksi - ' . $packaging->kode_packaging
+                    );
+                }
+            }
+
+            return $packaging;
+        });
+    }
+
+    /**
+     * Update data Packaging dan sinkronkan mutasi FinishGoodStock.
+     */
+    public function updatePackaging(Packaging $packaging, array $data): Packaging
+    {
+        return DB::transaction(function () use ($packaging, $data) {
+            $oldSpk = $packaging->spk()->with('salesOrder')->first();
+            $oldFgId = $oldSpk?->salesOrder?->itemable_id;
+            $oldGrandTotal = (float) $packaging->grand_total;
+            $oldJenis = $packaging->jenis_transfer;
+
+            $fgStockService = app(FinishGoodStockService::class);
+
+            if ($oldFgId && $oldGrandTotal > 0) {
+                if ($oldJenis === 'blokir') {
+                    $fgStockService->decreaseBlockedStock((int) $oldFgId, $oldGrandTotal, $packaging, $packaging->spk_id);
+                } else {
+                    $fgStockService->decreaseStock(
+                        finishGoodItemId: (int) $oldFgId,
+                        qty: $oldGrandTotal,
+                        reference: $packaging,
+                        source: 'PACKAGING',
+                        spkId: $packaging->spk_id,
+                        remarks: 'Rollback Update Packaging - ' . $packaging->kode_packaging,
+                        allowNegative: true
+                    );
+                }
+            }
+
+            $packaging->update($data);
+            $packaging->refresh();
+
+            $newSpk = $packaging->spk()->with('salesOrder')->first();
+            $newFgId = $newSpk?->salesOrder?->itemable_id;
+            $newGrandTotal = (float) $packaging->grand_total;
+
+            if ($newFgId && $newGrandTotal > 0) {
+                if ($packaging->jenis_transfer === 'blokir') {
+                    $fgStockService->increaseBlockedStock(
+                        finishGoodItemId: (int) $newFgId,
+                        qty: $newGrandTotal,
+                        reference: $packaging,
+                        spkId: $packaging->spk_id,
+                        remarks: 'Update Packaging (Blokir) - ' . $packaging->kode_packaging
+                    );
+                } else {
+                    $fgStockService->increaseStock(
+                        finishGoodItemId: (int) $newFgId,
+                        qty: $newGrandTotal,
+                        reference: $packaging,
+                        source: 'PACKAGING',
+                        spkId: $packaging->spk_id,
+                        remarks: 'Update Packaging Produksi - ' . $packaging->kode_packaging
+                    );
+                }
+            }
+
             return $packaging;
         });
     }
@@ -279,7 +366,7 @@ class ProductionService
     public function deletePackaging(Packaging $packaging): void
     {
         DB::transaction(function () use ($packaging) {
-            $spk = $packaging->spk;
+            $spk = $packaging->spk()->with('salesOrder')->first();
             if ($spk && $packaging->jenis_transfer !== 'blokir') {
                 $currentGood = $spk->total_good_packed;
                 $totalShipped = $spk->total_shipped;
@@ -288,6 +375,24 @@ class ProductionService
                     throw ValidationException::withMessages([
                         'packaging' => "Packaging {$packaging->kode_packaging} tidak dapat dihapus karena barang sudah terkirim via Surat Jalan (Total terkirim: {$totalShipped} pcs, sisa stok jika dihapus: " . ($currentGood - $packaging->grand_total) . " pcs).",
                     ]);
+                }
+            }
+
+            $fgId = $spk?->salesOrder?->itemable_id;
+            if ($fgId && (float) $packaging->grand_total > 0) {
+                $fgStockService = app(FinishGoodStockService::class);
+                if ($packaging->jenis_transfer === 'blokir') {
+                    $fgStockService->decreaseBlockedStock((int) $fgId, (float) $packaging->grand_total, $packaging, $packaging->spk_id);
+                } else {
+                    $fgStockService->decreaseStock(
+                        finishGoodItemId: (int) $fgId,
+                        qty: (float) $packaging->grand_total,
+                        reference: $packaging,
+                        source: 'PACKAGING',
+                        spkId: $packaging->spk_id,
+                        remarks: 'Rollback Hapus Packaging - ' . $packaging->kode_packaging,
+                        allowNegative: true
+                    );
                 }
             }
 

@@ -63,6 +63,11 @@ class MasterSpk extends Model
         return $this->hasMany(SuratJalan::class, 'spk_id');
     }
 
+    public function subcountInItems()
+    {
+        return $this->hasMany(SubcountInItem::class, 'spk_id');
+    }
+
     /*
     |--------------------------------------------------------------------------
     | ACCESSORS & HITUNGAN STOK
@@ -76,9 +81,15 @@ class MasterSpk extends Model
 
     public function getTotalGoodPackedAttribute(): int
     {
-        return (int) $this->packagings()
+        $packed = (int) $this->packagings()
             ->where('jenis_transfer', '!=', 'blokir')
             ->sum('grand_total');
+
+        $subcountReceived = (int) $this->subcountInItems()
+            ->where('tipe_hasil', 'finish_good')
+            ->sum('qty_diterima');
+
+        return $packed + $subcountReceived;
     }
 
     public function getTotalBlockedPackedAttribute(): int

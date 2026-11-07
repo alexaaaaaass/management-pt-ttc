@@ -88,16 +88,13 @@ class AdminPanelProvider extends PanelProvider
             ->collapsed(),
 ])
 
-        ->plugins([
-            \BezhanSalleh\FilamentShield\FilamentShieldPlugin::make(),
-        ])
-
-        
-
         ->discoverResources(in: app_path('Filament/Admin/Resources'), for: 'App\\Filament\\Admin\\Resources')
         ->discoverPages(in: app_path('Filament/Admin/Pages'), for: 'App\\Filament\\Admin\\Pages')
         ->pages([
             Pages\Dashboard::class,
+        ])
+        ->plugins([
+            \BezhanSalleh\FilamentShield\FilamentShieldPlugin::make(),
         ])
         ->discoverWidgets(in: app_path('Filament/Admin/Widgets'), for: 'App\\Filament\\Admin\\Widgets')
        ->widgets([

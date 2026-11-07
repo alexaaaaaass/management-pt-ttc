@@ -34,4 +34,9 @@ class CreateTransKas extends CreateRecord
     {
         return app(TreasuryService::class)->recordKas($data);
     }
+
+    protected function getRedirectUrl(): string
+    {
+        return $this->getResource()::getUrl('index');
+    }
 }

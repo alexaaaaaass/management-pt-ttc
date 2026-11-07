@@ -11,6 +11,8 @@ use Illuminate\Validation\ValidationException;
 
 class PoBillPayService
 {
+    public const PAYMENT_TOLERANCE = 1000.0;
+
     public function __construct(
         protected TreasuryService $treasuryService
     ) {}
@@ -72,7 +74,26 @@ class PoBillPayService
                 ]);
             }
 
-            $sisaTagihan = $billing->sisa_tagihan;
+            $sisaTagihan = (float) $billing->sisa_tagihan;
+
+            // Safeguard Auto-Snap: Jika selisih bayar dengan sisa tagihan berada dalam batas toleransi (<= Rp 1.000),
+            // bulatkan otomatis menjadi pas sesuai sisa tagihan.
+            if (
+                $sisaTagihan > 0 &&
+                abs($sisaTagihan - $totalBayar) > 0 &&
+                abs($sisaTagihan - $totalBayar) <= self::PAYMENT_TOLERANCE
+            ) {
+                $diff = round($sisaTagihan - $totalBayar, 2);
+                $lastKey = array_key_last($itemsData);
+                if ($lastKey !== null) {
+                    $itemsData[$lastKey]['nominal_pembayaran'] = round(
+                        (float) ($itemsData[$lastKey]['nominal_pembayaran'] ?? 0) + $diff,
+                        2
+                    );
+                }
+                $totalBayar = $sisaTagihan;
+            }
+
             if ($totalBayar > $sisaTagihan) {
                 throw ValidationException::withMessages([
                     'total_pembayaran' => 'Total pembayaran (Rp ' . number_format($totalBayar, 0, ',', '.') .
@@ -130,6 +151,24 @@ class PoBillPayService
                 }
 
                 $maxAllowed = (float) $billing->sisa_tagihan + (float) $payment->total_pembayaran;
+
+                // Safeguard Auto-Snap pada saat update pembayaran (toleransi <= Rp 1.000)
+                if (
+                    $maxAllowed > 0 &&
+                    abs($maxAllowed - $totalBayar) > 0 &&
+                    abs($maxAllowed - $totalBayar) <= self::PAYMENT_TOLERANCE
+                ) {
+                    $diff = round($maxAllowed - $totalBayar, 2);
+                    $lastKey = array_key_last($itemsData);
+                    if ($lastKey !== null) {
+                        $itemsData[$lastKey]['nominal_pembayaran'] = round(
+                            (float) ($itemsData[$lastKey]['nominal_pembayaran'] ?? 0) + $diff,
+                            2
+                        );
+                    }
+                    $totalBayar = $maxAllowed;
+                }
+
                 if ($totalBayar > $maxAllowed) {
                     throw ValidationException::withMessages([
                         'total_pembayaran' => 'Total pembayaran (Rp ' . number_format($totalBayar, 0, ',', '.') .

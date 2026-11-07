@@ -9,4 +9,9 @@ use Filament\Resources\Pages\CreateRecord;
 class CreateLembur extends CreateRecord
 {
     protected static string $resource = LemburResource::class;
+
+    protected function getRedirectUrl(): string
+    {
+        return $this->getResource()::getUrl('index');
+    }
 }

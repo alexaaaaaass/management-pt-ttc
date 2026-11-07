@@ -9,4 +9,9 @@ use Filament\Resources\Pages\CreateRecord;
 class CreateOperatorPraCetak extends CreateRecord
 {
     protected static string $resource = OperatorPraCetakResource::class;
+
+    protected function getRedirectUrl(): string
+    {
+        return $this->getResource()::getUrl('index');
+    }
 }

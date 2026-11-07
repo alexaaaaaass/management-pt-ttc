@@ -9,8 +9,11 @@ class SubcountInItem extends Model
     protected $fillable = [
         'subcount_in_id',
         'subcount_out_id',
+        'tipe_hasil',
+        'spk_id',
         'item_asal_id',
         'item_hasil_id',
+        'finish_good_item_id',
         'qty_dikirim',
         'qty_diterima',
         'keterangan',
@@ -24,6 +27,16 @@ class SubcountInItem extends Model
     public function subcountOut()
     {
         return $this->belongsTo(SubcountOut::class);
+    }
+
+    public function spk()
+    {
+        return $this->belongsTo(MasterSpk::class, 'spk_id');
+    }
+
+    public function finishGoodItem()
+    {
+        return $this->belongsTo(FinishGoodItem::class, 'finish_good_item_id');
     }
 
     public function itemAsal()

@@ -9,4 +9,9 @@ use Filament\Resources\Pages\CreateRecord;
 class CreateMesinFinis extends CreateRecord
 {
     protected static string $resource = MesinFinisResource::class;
+
+    protected function getRedirectUrl(): string
+    {
+        return $this->getResource()::getUrl('index');
+    }
 }

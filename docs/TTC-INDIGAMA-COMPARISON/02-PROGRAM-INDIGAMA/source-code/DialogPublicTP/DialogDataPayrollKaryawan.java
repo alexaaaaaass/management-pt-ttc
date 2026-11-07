@@ -1,0 +1,310 @@
+/*
+ * To change this license header, choose License Headers in Project Properties.
+ * To change this template file, choose Tools | Templates
+ * and open the template in the editor.
+ */
+package DialogPublicTP;
+
+import Main.MenuAdmin;
+import Tools.ConnectDB;
+import Tools.TableColumnAdjuster;
+import java.awt.Dialog;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.text.DecimalFormat;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+import javax.swing.JOptionPane;
+import javax.swing.JScrollPane;
+import javax.swing.JTextField;
+import javax.swing.RowFilter;
+import javax.swing.event.DocumentEvent;
+import javax.swing.event.DocumentListener;
+import javax.swing.table.DefaultTableModel;
+import javax.swing.table.TableRowSorter;
+import okhttp3.FormBody;
+import okhttp3.RequestBody;
+import org.json.simple.JSONArray;
+import org.json.simple.JSONObject;
+import rf4declare.Rf4declare;
+
+/**
+ *
+ * @author SAN-SBY-ITPRO4
+ */
+public class DialogDataPayrollKaryawan extends javax.swing.JDialog {
+
+    ConnectDB con = new ConnectDB();
+    rf4declare.Rf4declare rfa = new Rf4declare();
+    ResultSet rs;
+    String sql;
+    String cnbkt="",cnbkt_print="";
+    int barisEdit=-1;
+    String akses="TRANSAKSI OPRASIONAL KELUAR";
+    public Boolean status = false;
+    public String id="",kodeBarang,groupBarang, namaBarang,unit,satuanterkecil;
+    public Double big_value,small_value;
+    private TableRowSorter sorter;
+    private DefaultTableModel model;
+    private JScrollPane scrollPane;
+    String tt="",bor="",modee="",ddawal,ddakhir,cidk;
+    public DialogDataPayrollKaryawan(String cidkk,String cnbkt,String ccode,String dawal,String dakhir) {
+        this.setModalityType(Dialog.ModalityType.APPLICATION_MODAL); 
+        initComponents();
+        setLocationRelativeTo(null);
+        jTable1.getTableHeader().setEnabled(false);
+        tt=cnbkt;
+        bor=ccode; 
+        ddawal=dawal;
+        ddakhir=dakhir;
+        cidk=cidkk;
+        listData();
+         
+        
+        iNama.requestFocus();
+    }
+
+    
+    private void listData(){
+        
+        rfa.clear_table(MenuAdmin.keyssDef, jTable1);
+        DefaultTableModel model = (DefaultTableModel) jTable1.getModel();
+        if(tt.equals("")) {
+            sql="select * From PayrollD where  cidk='"+cidk+"' and tanggal>='"+ddawal+"' and tanggal<='"+ddakhir+"' ";
+        } else {
+            sql="select * From TranPayrollDData where cnbkt = '"+tt+"' and ccode='"+bor+"' and cidk='"+cidk+"' order by Tanggal";
+        }
+        
+        //System.out.println(sql);
+        rs = con.queryResult(sql);
+        try {
+            while(rs.next()){
+                model.addRow(new Object[]{
+                    rs.getString("cidk"),
+                    rs.getString("Name"),
+                    rs.getString("Tanggal"),
+                    rs.getString("clockin"),
+                    rs.getString("clockout"),
+                    rs.getString("late"),
+                    rs.getString("early"),
+                    rs.getInt("ok"),
+                    rs.getInt("a"),
+                    rs.getInt("libur"),
+                    rs.getInt("holiday"),
+                    rs.getInt("telat"),
+                    rs.getInt("telat_menit"),
+                    rs.getInt("pcp"),
+                    rs.getInt("pcp_menit"),
+                    rs.getInt("lembur"),
+                    rs.getInt("lembur_menit"),
+                    rs.getInt("ijin"),
+                    rs.getInt("ijin_menit"),
+                    rs.getInt("cuti"),
+                    rs.getInt("sakit"),
+                    rs.getInt("sakit_sdokter"), 
+                });
+                
+            }
+        } catch (SQLException ex) {
+            ex.printStackTrace();
+        }
+       TableColumnAdjuster tca = new TableColumnAdjuster(jTable1);
+        tca.adjustColumns(); 
+    }
+    
+    private TableRowSorter getRowSorter() {
+    if (sorter == null){
+      sorter = new TableRowSorter(model);
+    }
+    return sorter;
+  }
+  /**
+  * Mendeklarasikan aksi txtFilter
+  */
+  private void aksiTxtFilter(final JTextField data) {
+    data.getDocument().addDocumentListener(new DocumentListener() {
+        @Override
+        public void insertUpdate(DocumentEvent e) {
+          changedUpdate(e);
+        }
+        @Override
+        public void removeUpdate(DocumentEvent e) {
+          changedUpdate(e);
+        }
+        @Override
+        public void changedUpdate(DocumentEvent e) {
+          if (data.getText().length() <= 0){
+            getRowSorter().setRowFilter(null);
+          } else{
+            getRowSorter().setRowFilter(RowFilter.regexFilter(data.getText()));
+          }
+        }
+
+
+      });
+  }
+    
+    
+    /**
+     * This method is called from within the constructor to initialize the form.
+     * WARNING: Do NOT modify this code. The content of this method is always
+     * regenerated by the Form Editor.
+     */
+    @SuppressWarnings("unchecked")
+    // <editor-fold defaultstate="collapsed" desc="Generated Code">//GEN-BEGIN:initComponents
+    private void initComponents() {
+
+        jPanel1 = new javax.swing.JPanel();
+        jTextField1 = new javax.swing.JTextField();
+        iNama = new javax.swing.JTextField();
+        jScrollPane1 = new javax.swing.JScrollPane();
+        jTable1 = new javax.swing.JTable();
+
+        setDefaultCloseOperation(javax.swing.WindowConstants.DISPOSE_ON_CLOSE);
+
+        jTextField1.setEditable(false);
+        jTextField1.setBackground(new java.awt.Color(153, 153, 153));
+        jTextField1.setFont(new java.awt.Font("Tahoma", 1, 12)); // NOI18N
+        jTextField1.setForeground(new java.awt.Color(255, 255, 255));
+        jTextField1.setText("  SEARCH");
+
+        iNama.setFont(new java.awt.Font("Tahoma", 1, 12)); // NOI18N
+        iNama.addCaretListener(new javax.swing.event.CaretListener() {
+            public void caretUpdate(javax.swing.event.CaretEvent evt) {
+                iNamaCaretUpdate(evt);
+            }
+        });
+        iNama.addKeyListener(new java.awt.event.KeyAdapter() {
+            public void keyPressed(java.awt.event.KeyEvent evt) {
+                iNamaKeyPressed(evt);
+            }
+            public void keyReleased(java.awt.event.KeyEvent evt) {
+                iNamaKeyReleased(evt);
+            }
+            public void keyTyped(java.awt.event.KeyEvent evt) {
+                iNamaKeyTyped(evt);
+            }
+        });
+
+        jTable1.setModel(new javax.swing.table.DefaultTableModel(
+            new Object [][] {
+                {null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null},
+                {null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null},
+                {null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null},
+                {null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null}
+            },
+            new String [] {
+                "NIK", "Nama", "Tanggal", "ClockIn", "ClockOut", "Late", "Early", "Absensi OK", "Absen/Alpha", "Libur Kerja", "Libur Narional", "Telat", "Telat Menit", "PCP", "PCP MEnit", "Lembur", "Lembur Menit", "Ijin", "Ijin Menit", "Cuti Khusus", "Sakit", "Surat Dokter"
+            }
+        ) {
+            Class[] types = new Class [] {
+                java.lang.Object.class, java.lang.Object.class, java.lang.Object.class, java.lang.Object.class, java.lang.Object.class, java.lang.Object.class, java.lang.Object.class, java.lang.Double.class, java.lang.Double.class, java.lang.Object.class, java.lang.Object.class, java.lang.Double.class, java.lang.Double.class, java.lang.Double.class, java.lang.Double.class, java.lang.Double.class, java.lang.Double.class, java.lang.Object.class, java.lang.Object.class, java.lang.Double.class, java.lang.Double.class, java.lang.Double.class
+            };
+            boolean[] canEdit = new boolean [] {
+                false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false
+            };
+
+            public Class getColumnClass(int columnIndex) {
+                return types [columnIndex];
+            }
+
+            public boolean isCellEditable(int rowIndex, int columnIndex) {
+                return canEdit [columnIndex];
+            }
+        });
+        jTable1.setAutoResizeMode(javax.swing.JTable.AUTO_RESIZE_OFF);
+        jTable1.addPropertyChangeListener(new java.beans.PropertyChangeListener() {
+            public void propertyChange(java.beans.PropertyChangeEvent evt) {
+                jTable1PropertyChange(evt);
+            }
+        });
+        jTable1.addKeyListener(new java.awt.event.KeyAdapter() {
+            public void keyPressed(java.awt.event.KeyEvent evt) {
+                jTable1KeyPressed(evt);
+            }
+        });
+        jScrollPane1.setViewportView(jTable1);
+
+        javax.swing.GroupLayout jPanel1Layout = new javax.swing.GroupLayout(jPanel1);
+        jPanel1.setLayout(jPanel1Layout);
+        jPanel1Layout.setHorizontalGroup(
+            jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(jPanel1Layout.createSequentialGroup()
+                .addContainerGap()
+                .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addGroup(jPanel1Layout.createSequentialGroup()
+                        .addComponent(jScrollPane1)
+                        .addContainerGap())
+                    .addGroup(jPanel1Layout.createSequentialGroup()
+                        .addComponent(jTextField1, javax.swing.GroupLayout.PREFERRED_SIZE, 110, javax.swing.GroupLayout.PREFERRED_SIZE)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                        .addComponent(iNama, javax.swing.GroupLayout.PREFERRED_SIZE, 430, javax.swing.GroupLayout.PREFERRED_SIZE)
+                        .addContainerGap(457, Short.MAX_VALUE))))
+        );
+        jPanel1Layout.setVerticalGroup(
+            jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(jPanel1Layout.createSequentialGroup()
+                .addContainerGap()
+                .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(jTextField1, javax.swing.GroupLayout.PREFERRED_SIZE, 25, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(iNama, javax.swing.GroupLayout.PREFERRED_SIZE, 25, javax.swing.GroupLayout.PREFERRED_SIZE))
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+                .addComponent(jScrollPane1, javax.swing.GroupLayout.DEFAULT_SIZE, 506, Short.MAX_VALUE)
+                .addContainerGap())
+        );
+
+        javax.swing.GroupLayout layout = new javax.swing.GroupLayout(getContentPane());
+        getContentPane().setLayout(layout);
+        layout.setHorizontalGroup(
+            layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addComponent(jPanel1, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+        );
+        layout.setVerticalGroup(
+            layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addComponent(jPanel1, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+        );
+
+        pack();
+    }// </editor-fold>//GEN-END:initComponents
+
+    private void iNamaKeyPressed(java.awt.event.KeyEvent evt) {//GEN-FIRST:event_iNamaKeyPressed
+        if(evt.getKeyCode() == 10 )
+            jTable1.requestFocus();
+    }//GEN-LAST:event_iNamaKeyPressed
+
+    private void iNamaKeyTyped(java.awt.event.KeyEvent evt) {//GEN-FIRST:event_iNamaKeyTyped
+//        listData();           // TODO add your handling code here:
+    }//GEN-LAST:event_iNamaKeyTyped
+
+    private void iNamaCaretUpdate(javax.swing.event.CaretEvent evt) {//GEN-FIRST:event_iNamaCaretUpdate
+//        try {
+//            listData(); 
+//        } catch (Exception re ) {}// TODO add your handling code here:
+    }//GEN-LAST:event_iNamaCaretUpdate
+
+    private void iNamaKeyReleased(java.awt.event.KeyEvent evt) {//GEN-FIRST:event_iNamaKeyReleased
+        DefaultTableModel tablee = (DefaultTableModel)jTable1.getModel();
+        String search = iNama.getText();
+        TableRowSorter<DefaultTableModel> tr = new TableRowSorter<DefaultTableModel>(tablee);
+        jTable1.setRowSorter(tr);
+        tr.setRowFilter(RowFilter.regexFilter(search.toUpperCase()));
+    }//GEN-LAST:event_iNamaKeyReleased
+
+    private void jTable1PropertyChange(java.beans.PropertyChangeEvent evt) {//GEN-FIRST:event_jTable1PropertyChange
+      
+    }//GEN-LAST:event_jTable1PropertyChange
+
+    private void jTable1KeyPressed(java.awt.event.KeyEvent evt) {//GEN-FIRST:event_jTable1KeyPressed
+       
+    }//GEN-LAST:event_jTable1KeyPressed
+
+   
+
+    // Variables declaration - do not modify//GEN-BEGIN:variables
+    private javax.swing.JTextField iNama;
+    private javax.swing.JPanel jPanel1;
+    private javax.swing.JScrollPane jScrollPane1;
+    private javax.swing.JTable jTable1;
+    private javax.swing.JTextField jTextField1;
+    // End of variables declaration//GEN-END:variables
+}

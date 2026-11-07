@@ -9,6 +9,8 @@ use Illuminate\Validation\ValidationException;
 
 class InvoicePaymentService
 {
+    public const PAYMENT_TOLERANCE = 1000.0;
+
     public function __construct(
         protected InvoiceService $invoiceService,
         protected TreasuryService $treasuryService
@@ -37,10 +39,23 @@ class InvoicePaymentService
                 ]);
             }
 
-            if ($nominal > $invoice->sisa_tagihan) {
+            $sisaTagihan = (float) $invoice->sisa_tagihan;
+
+            // Safeguard Auto-Snap: Jika selisih bayar dengan sisa tagihan berada dalam batas toleransi (<= Rp 1.000),
+            // bulatkan otomatis menjadi pas sesuai sisa tagihan.
+            if (
+                $sisaTagihan > 0 &&
+                abs($sisaTagihan - $nominal) > 0 &&
+                abs($sisaTagihan - $nominal) <= self::PAYMENT_TOLERANCE
+            ) {
+                $nominal = $sisaTagihan;
+                $data['nominal_bayar'] = $sisaTagihan;
+            }
+
+            if ($nominal > $sisaTagihan) {
                 throw ValidationException::withMessages([
                     'nominal_bayar' => 'Nominal pembayaran (Rp ' . number_format($nominal, 0, ',', '.') .
-                        ') melebihi sisa tagihan (Rp ' . number_format($invoice->sisa_tagihan, 0, ',', '.') . ').',
+                        ') melebihi sisa tagihan (Rp ' . number_format($sisaTagihan, 0, ',', '.') . ').',
                 ]);
             }
 
@@ -79,6 +94,17 @@ class InvoicePaymentService
 
                 // Sisa tagihan saat ini + nominal pembayaran yang lama adalah batas maksimal baru
                 $maxAllowed = (float) $invoice->sisa_tagihan + (float) $payment->nominal_bayar;
+
+                // Safeguard Auto-Snap pada saat update pembayaran (toleransi <= Rp 1.000)
+                if (
+                    $maxAllowed > 0 &&
+                    abs($maxAllowed - $newNominal) > 0 &&
+                    abs($maxAllowed - $newNominal) <= self::PAYMENT_TOLERANCE
+                ) {
+                    $newNominal = $maxAllowed;
+                    $data['nominal_bayar'] = $maxAllowed;
+                }
+
                 if ($newNominal > $maxAllowed) {
                     throw ValidationException::withMessages([
                         'nominal_bayar' => 'Nominal pembayaran (Rp ' . number_format($newNominal, 0, ',', '.') .

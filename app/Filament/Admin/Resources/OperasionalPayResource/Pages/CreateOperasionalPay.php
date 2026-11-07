@@ -15,4 +15,9 @@ class CreateOperasionalPay extends CreateRecord
     {
         return app(TreasuryService::class)->recordOperasional($data);
     }
+
+    protected function getRedirectUrl(): string
+    {
+        return $this->getResource()::getUrl('index');
+    }
 }

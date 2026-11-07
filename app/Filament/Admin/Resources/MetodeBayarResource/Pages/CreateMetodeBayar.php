@@ -9,4 +9,9 @@ use Filament\Resources\Pages\CreateRecord;
 class CreateMetodeBayar extends CreateRecord
 {
     protected static string $resource = MetodeBayarResource::class;
+
+    protected function getRedirectUrl(): string
+    {
+        return $this->getResource()::getUrl('index');
+    }
 }

@@ -9,4 +9,9 @@ use Filament\Resources\Pages\CreateRecord;
 class CreateMasterItem extends CreateRecord
 {
     protected static string $resource = MasterItemResource::class;
+
+    protected function getRedirectUrl(): string
+    {
+        return $this->getResource()::getUrl('index');
+    }
 }

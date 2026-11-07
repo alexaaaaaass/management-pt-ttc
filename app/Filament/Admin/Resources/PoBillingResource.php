@@ -157,7 +157,6 @@ class PoBillingResource extends Resource
                         Section::make('Item Details (LPB)')
                             ->schema([
                                 Repeater::make('items')
-                                    ->relationship()
                                     ->collapsible()
                                     ->collapsed(false)
                                     ->cloneable(false)

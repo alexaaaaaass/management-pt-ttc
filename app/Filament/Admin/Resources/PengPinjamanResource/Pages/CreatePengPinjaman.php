@@ -9,4 +9,9 @@ use Filament\Resources\Pages\CreateRecord;
 class CreatePengPinjaman extends CreateRecord
 {
     protected static string $resource = PengPinjamanResource::class;
+
+    protected function getRedirectUrl(): string
+    {
+        return $this->getResource()::getUrl('index');
+    }
 }

@@ -101,6 +101,16 @@ class FinishGoodItem extends Model
         return $this->morphMany(SalesOrder::class, 'itemable');
     }
 
+    public function stock()
+    {
+        return $this->hasOne(FinishGoodStock::class, 'finish_good_item_id');
+    }
+
+    public function movements()
+    {
+        return $this->hasMany(FinishGoodMovement::class, 'finish_good_item_id');
+    }
+
     protected static function booted()
     {
         static::saving(function ($model) {
@@ -133,6 +143,13 @@ class FinishGoodItem extends Model
                     $model->ukuran_cetak = $first['ukuran_cetak'] ?? $model->ukuran_cetak;
                 }
             }
+        });
+
+        static::created(function ($model) {
+            FinishGoodStock::firstOrCreate(
+                ['finish_good_item_id' => $model->id],
+                ['on_hand' => 0, 'blocked' => 0]
+            );
         });
 
         static::deleting(function ($model) {
