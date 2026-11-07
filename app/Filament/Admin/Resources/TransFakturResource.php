@@ -292,6 +292,18 @@ protected static ?int $navigationSort = 7;
 
         ])
 
+        ->bulkActions([
+            Tables\Actions\BulkAction::make('infoDataTerpilih')
+                ->label('Info Data Terpilih')
+                ->icon('heroicon-o-check-circle')
+                ->action(function (\Illuminate\Database\Eloquent\Collection $records): void {
+                    \Filament\Notifications\Notification::make()
+                        ->title($records->count() . ' data dipilih')
+                        ->success()
+                        ->send();
+                })
+                ->deselectRecordsAfterCompletion(),
+        ])
         ->actions([
 
             Tables\Actions\Action::make('view')

@@ -50,6 +50,11 @@ class BeritaAcara extends Model
         return $this->belongsTo(Invoice::class);
     }
 
+    public function items()
+    {
+        return $this->hasMany(BeritaAcaraItem::class)->orderBy('urutan')->orderBy('id');
+    }
+
     public static function generateNoBA(): string
     {
         $prefix = 'BA/COMP/' . now()->format('Y') . '/';

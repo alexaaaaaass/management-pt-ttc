@@ -111,11 +111,14 @@ class ApprovalFormResource extends Resource
                                             ->searchable()
                                             ->preload()
                                             ->live()
-                                            ->afterStateUpdated(function ($state, callable $set) {
+                                            ->afterStateUpdated(function ($state, callable $set, callable $get) {
                                                 if (!$state) return;
                                                 $fg = FinishGoodItem::find($state);
                                                 if ($fg) {
-                                                    $set('item_name', $fg->nama_barang);
+                                                    $currentItemName = trim((string) ($get('item_name') ?? ''));
+                                                    if ($currentItemName === '' && strtoupper(trim((string) $fg->nama_barang)) !== 'KERTAS IVORY') {
+                                                        $set('item_name', $fg->nama_barang);
+                                                    }
                                                     $set('jenis', $fg->jenis);
                                                     $set('komponen', $fg->komponen);
                                                     $set('isi', $fg->isi);

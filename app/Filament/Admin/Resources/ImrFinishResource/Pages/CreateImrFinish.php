@@ -20,7 +20,7 @@ class CreateImrFinish extends CreateRecord
         unset($data['imr_items']);
 
         $dept = MasterDepartemen::where('kode', 'FNSH')->first();
-        if ($dept) {
+        if ($dept && empty($data['departemen_id'])) {
             $data['departemen_id'] = $dept->id;
         }
 

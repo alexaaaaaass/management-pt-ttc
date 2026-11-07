@@ -13,6 +13,7 @@ class ImrFinishItem extends Model
 
     protected $fillable = [
         'imr_finish_id',
+        'imr_id',
         'item_id',
         'total_pesanan',
         'qty_request',
@@ -42,6 +43,11 @@ class ImrFinishItem extends Model
         return $this->belongsTo(ImrFinish::class, 'imr_finish_id');
     }
 
+    public function imr()
+    {
+        return $this->belongsTo(ImrFinish::class, 'imr_finish_id');
+    }
+
     public function item()
     {
         return $this->belongsTo(MasterItem::class, 'item_id');
@@ -57,7 +63,7 @@ class ImrFinishItem extends Model
     {
         return max(
             0,
-            $this->qty_approved - $this->qty_issued - $this->qty_returned
+            (float) $this->qty_approved - (float) $this->qty_issued - (float) $this->qty_returned
         );
     }
 
@@ -65,7 +71,7 @@ class ImrFinishItem extends Model
     {
         return max(
             0,
-            $this->qty_issued - $this->qty_returned
+            (float) $this->qty_issued - (float) $this->qty_returned
         );
     }
 }

@@ -98,6 +98,53 @@ class BeritaAcaraResource extends Resource
                             ->downloadable()
                             ->columnSpanFull(),
                     ]),
+                Forms\Components\Section::make('Rincian Barang dan Penolakan')
+                    ->description('Catat jumlah barang dan bukti untuk setiap item yang ditolak.')
+                    ->schema([
+                        Forms\Components\Repeater::make('items')
+                            ->relationship()
+                            ->label('Rincian Item')
+                            ->orderColumn('urutan')
+                            ->defaultItems(1)
+                            ->addActionLabel('Tambah Item')
+                            ->collapsible()
+                            ->columns(3)
+                            ->schema([
+                                Forms\Components\TextInput::make('item_product')
+                                    ->label('Item')
+                                    ->maxLength(255),
+                                Forms\Components\TextInput::make('qty_kedatangan')
+                                    ->label('Kedatangan')
+                                    ->numeric()
+                                    ->minValue(0),
+                                Forms\Components\TextInput::make('qty_penerimaan')
+                                    ->label('Penerimaan')
+                                    ->numeric()
+                                    ->minValue(0),
+                                Forms\Components\TextInput::make('qty_penolakan')
+                                    ->label('Penolakan')
+                                    ->numeric()
+                                    ->minValue(0),
+                                Forms\Components\Textarea::make('catatan_penerimaan')
+                                    ->label('Catatan Penerimaan / Rejection')
+                                    ->rows(3)
+                                    ->columnSpan(2),
+                                Forms\Components\FileUpload::make('foto_referensi')
+                                    ->label('Foto Referensi')
+                                    ->image()
+                                    ->disk('public')
+                                    ->directory('berita-acara/referensi')
+                                    ->visibility('public')
+                                    ->openable(),
+                                Forms\Components\FileUpload::make('foto_fisik')
+                                    ->label('Foto Fisik Datang')
+                                    ->image()
+                                    ->disk('public')
+                                    ->directory('berita-acara/fisik')
+                                    ->visibility('public')
+                                    ->openable(),
+                            ]),
+                    ]),
                 Forms\Components\Section::make('Kronologi dan Penanganan')
                     ->columns(2)
                     ->schema([
@@ -164,6 +211,11 @@ class BeritaAcaraResource extends Resource
             ])
             ->actions([
                 Tables\Actions\ViewAction::make(),
+                Tables\Actions\Action::make('print')
+                    ->label('Cetak BA')
+                    ->icon('heroicon-o-printer')
+                    ->url(fn (BeritaAcara $record): string => route('berita-acaras.pdf', $record))
+                    ->openUrlInNewTab(),
                 Tables\Actions\EditAction::make(),
             ])
             ->bulkActions([

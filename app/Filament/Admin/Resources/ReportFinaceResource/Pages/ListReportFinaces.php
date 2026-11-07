@@ -3,7 +3,6 @@
 namespace App\Filament\Admin\Resources\ReportFinaceResource\Pages;
 
 use App\Filament\Admin\Resources\ReportFinaceResource;
-use Filament\Actions;
 use Filament\Resources\Pages\ListRecords;
 
 class ListReportFinaces extends ListRecords
@@ -12,8 +11,6 @@ class ListReportFinaces extends ListRecords
 
     protected function getHeaderActions(): array
     {
-        return [
-            Actions\CreateAction::make(),
-        ];
+        return [];
     }
 }

@@ -10,13 +10,28 @@ class InvoicePdfController extends Controller
 {
     protected function preparePdf(Invoice $invoice)
     {
-        $invoice->load(['items', 'suratJalan.salesOrder.customer', 'suratJalan.spk']);
+        $invoice->loadMissing([
+            'items',
+            'payments.metodeBayar',
+            'customer',
+            'salesOrder.customer',
+            'salesOrder.itemable',
+            'salesOrder.items.material',
+            'suratJalan.salesOrder.customer',
+            'suratJalan.salesOrder.itemable',
+            'suratJalan.salesOrder.items.material',
+            'suratJalan.spk.packagings',
+        ]);
 
         $logoPath = public_path('images/Logo PT Teknografi.png');
+        if (!file_exists($logoPath)) {
+            $logoPath = public_path('images/logo.png');
+        }
+
         $logoBase64 = '';
         if (file_exists($logoPath)) {
             $logoData = file_get_contents($logoPath);
-            $logoBase64 = 'data:image/svg+xml;base64,' . base64_encode($logoData);
+            $logoBase64 = 'data:image/png;base64,' . base64_encode($logoData);
         }
 
         $pdf = Pdf::loadView('pdf.invoice', [
@@ -24,7 +39,7 @@ class InvoicePdfController extends Controller
             'logoBase64' => $logoBase64,
         ]);
 
-        $pdf->setPaper('A5', 'landscape');
+        $pdf->setPaper('A4', 'landscape');
 
         return $pdf;
     }

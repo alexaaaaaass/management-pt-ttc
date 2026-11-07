@@ -42,6 +42,7 @@ class SuratJalanResource extends Resource
         }
 
         return SalesOrder::with([
+            'customer',
             'itemable',
             'items.material',
             'items.suratJalanItems',
@@ -65,17 +66,73 @@ class SuratJalanResource extends Resource
                     // ==========================================
                     Wizard\Step::make('Sales Order & Kuantitas')
                         ->icon('heroicon-o-shopping-bag')
-                        ->description('Pilih Sales Order acuan, cek stock, dan tentukan kuantiti kirim')
+                        ->description('Pilih Sales Order yang sudah siap kirim (ready), cek stock, dan tentukan kuantiti kirim')
                         ->schema([
                             Forms\Components\Select::make('sales_order_id')
-                                ->label('Sales Order')
-                                ->relationship('salesOrder', 'no_sales_order')
-                                ->searchable()
+                                ->label('Sales Order (Siap Kirim)')
+                                ->placeholder('Pilih Sales Order yang sudah ready / siap kirim...')
+                                ->relationship(
+                                    name: 'salesOrder',
+                                    titleAttribute: 'no_sales_order',
+                                    modifyQueryUsing: function (Builder $query, ?SuratJalan $record) {
+                                        $spkDelivered = "(SELECT COALESCE(SUM(sj.qty_pengiriman), 0) FROM surat_jalans sj WHERE sj.sales_order_id = sales_orders.id)";
+                                        $spkPackedGood = "(SELECT COALESCE(SUM(pkg.grand_total), 0) FROM packagings pkg JOIN master_spk spk ON pkg.spk_id = spk.id WHERE spk.sales_order_id = sales_orders.id AND pkg.jenis_transfer != 'blokir')";
+                                        $fgStockReady = "EXISTS (SELECT 1 FROM finish_good_stocks fgs WHERE fgs.finish_good_item_id = sales_orders.itemable_id AND fgs.on_hand > 0)";
+                                        $materialOrder = "(SELECT COALESCE(SUM(soi.qty), 0) FROM sales_order_items soi WHERE soi.sales_order_id = sales_orders.id)";
+                                        $materialDelivered = "(SELECT COALESCE(SUM(sji.qty_kirim), 0) FROM surat_jalan_items sji JOIN sales_order_items soi ON sji.sales_order_item_id = soi.id WHERE soi.sales_order_id = sales_orders.id)";
+                                        $materialStockReady = "EXISTS (SELECT 1 FROM sales_order_items soi JOIN material_stocks ms ON ms.item_id = soi.master_item_id WHERE soi.sales_order_id = sales_orders.id AND ms.on_hand > 0)";
+
+                                        return $query
+                                            ->with(['customer', 'itemable', 'spk', 'items.material'])
+                                            ->where(function (Builder $q) use ($record, $spkDelivered, $spkPackedGood, $fgStockReady, $materialOrder, $materialDelivered, $materialStockReady) {
+                                                // Hanya tampilkan Sales Order yang SUDAH READY/SIAP KIRIM dan BELUM SELESAI DIKIRIM
+                                                $q->where(function (Builder $readyAndIncomplete) use ($spkDelivered, $spkPackedGood, $fgStockReady, $materialOrder, $materialDelivered, $materialStockReady) {
+                                                    // 1. Mode SPK: ada stok siap kirim dari FinishGoodStock / Packaging > 0 DAN belum selesai dikirim
+                                                    $readyAndIncomplete->where(function (Builder $spkQuery) use ($spkDelivered, $spkPackedGood, $fgStockReady) {
+                                                        $spkQuery->where(function (Builder $typeQ) {
+                                                            $typeQ->where('sales_orders.order_type', 'SPK')
+                                                                ->orWhereNotNull('sales_orders.itemable_id');
+                                                        })
+                                                        ->whereRaw("(($spkPackedGood) > ($spkDelivered) OR $fgStockReady)")
+                                                        ->whereRaw("($spkDelivered) < COALESCE(sales_orders.qty, 0)");
+                                                    })
+                                                    // 2. Mode Material: stok tersedia > 0 DAN belum selesai dikirim
+                                                    ->orWhere(function (Builder $matQuery) use ($materialOrder, $materialDelivered, $materialStockReady) {
+                                                        $matQuery->where('sales_orders.order_type', '!=', 'SPK')
+                                                            ->whereNull('sales_orders.itemable_id')
+                                                            ->whereRaw($materialStockReady)
+                                                            ->whereRaw("($materialDelivered) < ($materialOrder)");
+                                                    });
+                                                });
+
+                                                // Saat Edit Surat Jalan, tetap tampilkan Sales Order milik Surat Jalan ini
+                                                if ($record && $record->sales_order_id) {
+                                                    $q->orWhere('sales_orders.id', $record->sales_order_id);
+                                                }
+                                            });
+                                    }
+                                )
+                                ->getOptionLabelFromRecordUsing(function (SalesOrder $record): string {
+                                    $customer = $record->customer?->nama_customer ?? '-';
+                                    $produk = $record->product_name ?: '-';
+                                    $siapKirim = (float) $record->current_stock;
+                                    $sisaOrder = (float) $record->outstanding_qty;
+
+                                    return sprintf(
+                                        '%s — %s | %s (Siap Kirim: %s pcs | Sisa: %s pcs)',
+                                        $record->no_sales_order,
+                                        $customer,
+                                        $produk,
+                                        number_format($siapKirim, 0, ',', '.'),
+                                        number_format($sisaOrder, 0, ',', '.')
+                                    );
+                                })
+                                ->searchable(['no_sales_order'])
                                 ->preload()
                                 ->live()
                                 ->required()
                                 ->afterStateUpdated(function ($state, callable $set) {
-                                    if (!$state) {
+                                    if (! $state) {
                                         $set('items', []);
                                         $set('order_type', null);
                                         return;
@@ -90,8 +147,16 @@ class SuratJalanResource extends Resource
                                     $mode = $so->mode; 
                                     $set('order_type', $mode);
 
+                                    if (! empty($so->customer?->alamat)) {
+                                        $set('alamat_tujuan', $so->customer->alamat);
+                                    }
+
                                     if ($mode === 'SPK') {
                                         $set('items', []);
+                                        $defaultQty = min((float) $so->current_stock, (float) $so->outstanding_qty);
+                                        if ($defaultQty > 0) {
+                                            $set('qty_pengiriman', $defaultQty);
+                                        }
                                         return;
                                     }
 
@@ -129,7 +194,7 @@ class SuratJalanResource extends Resource
                                         }),
 
                                     Forms\Components\Placeholder::make('stock')
-                                        ->label('Stock Tersedia')
+                                        ->label('Stock Tersedia (Siap Kirim)')
                                         ->content(function (Get $get) {
                                             $so = self::getSalesOrder($get('sales_order_id'));
                                             return number_format($so?->current_stock ?? 0, 0, ',', '.');
@@ -280,10 +345,13 @@ class SuratJalanResource extends Resource
     {
         return parent::getEloquentQuery()
             ->with([
+                'salesOrder.customer',
                 'salesOrder.itemable',
                 'salesOrder.items.material',
                 'salesOrder.spk',
+                'spk',
                 'items.material',
+                'invoice',
             ]);
     }
 
@@ -298,29 +366,37 @@ class SuratJalanResource extends Resource
             ->defaultSort('created_at', 'desc')
             ->columns([
                 Tables\Columns\TextColumn::make('kode_surat_jalan')
+                    ->label('No. Surat Jalan')
                     ->badge()
                     ->color('primary')
-                    ->searchable(),
+                    ->searchable()
+                    ->sortable(),
 
                 Tables\Columns\TextColumn::make('salesOrder.no_sales_order')
                     ->label('No SO')
-                    ->searchable(),
+                    ->searchable()
+                    ->sortable(),
+
+                Tables\Columns\TextColumn::make('salesOrder.customer.nama_customer')
+                    ->label('Customer')
+                    ->searchable()
+                    ->sortable(),
 
                 Tables\Columns\TextColumn::make('nomor_spk')
                     ->label('No SPK')
                     ->getStateUsing(function ($record) {
-                        return $record->salesOrder?->spk?->no_spk ?? '-';
+                        return $record->spk?->no_spk ?? ($record->salesOrder?->spk?->no_spk ?? '-');
                     }),
 
                 Tables\Columns\TextColumn::make('nama_produk')
                     ->label('Produk')
                     ->wrap()
                     ->getStateUsing(function ($record) {
-                        return $record->salesOrder?->product_name ?? '-'; // Menggunakan helper model
+                        return $record->salesOrder?->product_name ?? '-';
                     }),
 
                 Tables\Columns\TextColumn::make('qty')
-                    ->label('Qty Pengiriman')
+                    ->label('Qty Kirim')
                     ->badge()
                     ->color('success')
                     ->getStateUsing(function ($record) {
@@ -338,12 +414,22 @@ class SuratJalanResource extends Resource
                         return number_format($record->items->sum('qty_kirim'));
                     }),
 
-                Tables\Columns\TextColumn::make('transportasi'),
+                Tables\Columns\TextColumn::make('invoice.kode_invoice')
+                    ->label('No. Invoice')
+                    ->badge()
+                    ->color(fn ($state) => $state ? 'success' : 'gray')
+                    ->default('Belum Invoiced'),
 
-                Tables\Columns\TextColumn::make('driver'),
+                Tables\Columns\TextColumn::make('transportasi')
+                    ->label('Transportasi'),
+
+                Tables\Columns\TextColumn::make('driver')
+                    ->label('Driver'),
 
                 Tables\Columns\TextColumn::make('tanggal_surat_jalan')
-                    ->date(),
+                    ->label('Tgl Kirim')
+                    ->date('d/m/Y')
+                    ->sortable(),
             ])
             ->actions([
                 Tables\Actions\ActionGroup::make([

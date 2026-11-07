@@ -4,6 +4,7 @@ namespace App\Filament\Admin\Resources;
 
 use App\Filament\Admin\Resources\ImrFinishResource\Pages;
 use App\Models\ImrFinish;
+use App\Models\MasterDepartemen;
 use App\Models\MasterItem;
 use App\Models\MasterSpk;
 use App\Models\MaterialStock;
@@ -59,12 +60,22 @@ class ImrFinishResource extends Resource
                             ->required()
                             ->relationship('spk', 'no_spk'),
 
+                        Forms\Components\Select::make('departemen_id')
+                            ->label('Departemen Peminta')
+                            ->options(fn () => MasterDepartemen::query()
+                                ->orderBy('nama_departemen')
+                                ->pluck('nama_departemen', 'id')
+                                ->all())
+                            ->default(fn () => MasterDepartemen::where('kode', 'FNSH')->value('id'))
+                            ->searchable()
+                            ->preload(),
+
                         Forms\Components\Textarea::make('catatan')
                             ->label('Catatan IMR')
                             ->rows(2)
                             ->columnSpanFull(),
                     ])
-                    ->columns(3),
+                    ->columns(2),
 
                 Forms\Components\Actions::make([
                     Forms\Components\Actions\Action::make('loadBom')
@@ -258,7 +269,8 @@ class ImrFinishResource extends Resource
                 Tables\Columns\TextColumn::make('departemen.nama_departemen')
                     ->label('Departemen')
                     ->badge()
-                    ->color('primary'),
+                    ->color('primary')
+                    ->toggleable(),
 
                 Tables\Columns\TextColumn::make('items_count')
                     ->label('Jumlah Item')
@@ -270,6 +282,7 @@ class ImrFinishResource extends Resource
                     ->getStateUsing(fn($record) => $record->items->sum('qty_request')),
 
                 Tables\Columns\TextColumn::make('status')
+                    ->label('Status')
                     ->badge()
                     ->sortable()
                     ->color(fn(string $state) => match ($state) {
@@ -282,9 +295,17 @@ class ImrFinishResource extends Resource
                         'Closed'         => 'gray',
                         default          => 'secondary',
                     }),
+
+                Tables\Columns\TextColumn::make('created_at')
+                    ->label('Dibuat')
+                    ->dateTime('d/m/Y H:i')
+                    ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true),
             ])
+            ->defaultSort('created_at', 'desc')
             ->filters([
                 Tables\Filters\SelectFilter::make('status')
+                    ->label('Status')
                     ->options([
                         'Pending'        => 'Pending',
                         'Approved'       => 'Approved',

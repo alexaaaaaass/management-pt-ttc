@@ -310,8 +310,8 @@ body {
                 $subtotal = $itemTotal;
                 $rowCount++;
 
-                $namaItem = $salesOrder->itemable?->nama_barang 
-                    ?: ($salesOrder->product_name 
+                $namaItem = $salesOrder->product_name 
+                    ?: ($salesOrder->itemable?->nama_barang 
                     ?: ($salesOrder->kode_material ?: 'Etiket'));
                 $jenis = $salesOrder->effective_jenis;
                 $komponen = $salesOrder->effective_komponen;

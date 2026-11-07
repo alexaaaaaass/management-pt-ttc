@@ -9,15 +9,17 @@ use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
+use Filament\Tables\Columns\Summarizers\Sum;
 use Illuminate\Database\Eloquent\Builder;
 
 class CoaLedgerResource extends Resource
 {
     protected static ?string $model = CoaMovement::class;
+
     protected static ?string $navigationGroup = 'Finance';
-    protected static ?string $navigationLabel = 'Buku Kas & Bank';
-    protected static ?string $modelLabel = 'Buku Kas & Bank';
-    protected static ?string $pluralModelLabel = 'Buku Kas & Bank';
+    protected static ?string $navigationLabel = 'General Ledger';
+    protected static ?string $modelLabel = 'General Ledger';
+    protected static ?string $pluralModelLabel = 'General Ledger';
     protected static ?int $navigationSort = 11;
     protected static ?string $navigationIcon = 'heroicon-o-book-open';
 
@@ -30,8 +32,8 @@ class CoaLedgerResource extends Resource
     {
         return parent::getEloquentQuery()
             ->with(['coa', 'user'])
-            ->latest('tanggal')
-            ->latest('id');
+            ->orderBy('tanggal')
+            ->orderBy('id');
     }
 
     public static function form(Form $form): Form
@@ -42,7 +44,7 @@ class CoaLedgerResource extends Resource
     public static function table(Table $table): Table
     {
         return $table
-            ->defaultSort('id', 'desc')
+            ->defaultSort('tanggal', 'asc')
             ->columns([
                 Tables\Columns\TextColumn::make('tanggal')
                     ->label('Tanggal')
@@ -51,66 +53,85 @@ class CoaLedgerResource extends Resource
 
                 Tables\Columns\TextColumn::make('coa.kode_akun')
                     ->label('Kode Akun')
+                    ->formatStateUsing(fn ($state) => trim((string) $state))
                     ->searchable()
                     ->sortable(),
 
                 Tables\Columns\TextColumn::make('coa.nama_akun')
                     ->label('Nama Akun')
                     ->searchable()
+                    ->sortable()
                     ->weight('medium'),
 
-                Tables\Columns\BadgeColumn::make('reference_type')
-                    ->label('Tipe Mutasi')
+                Tables\Columns\TextColumn::make('reference_type')
+                    ->label('Sumber Transaksi')
                     ->formatStateUsing(fn ($state) => match ($state) {
-                        'TRANS_KAS'       => 'Kas',
-                        'TRANS_BANK'      => 'Bank',
+                        'TRANS_KAS' => 'Kas',
+                        'TRANS_BANK' => 'Bank',
                         'OPERASIONAL_PAY' => 'Operasional',
-                        'INV_PAYMENT'     => 'Customer AR',
-                        'PO_BILL_PAY'     => 'Supplier AP',
-                        'PAYROLL'         => 'Payroll HRD',
-                        default           => $state,
+                        'INV_PAYMENT' => 'Pembayaran Invoice',
+                        'PO_BILL_PAY' => 'Pembayaran Tagihan PO',
+                        'PAYROLL' => 'Payroll',
+                        default => $state ?: '-',
                     })
-                    ->colors([
-                        'primary' => 'TRANS_KAS',
-                        'info'    => 'TRANS_BANK',
-                        'warning' => 'OPERASIONAL_PAY',
-                        'success' => 'INV_PAYMENT',
-                        'danger'  => 'PO_BILL_PAY',
-                        'purple'  => 'PAYROLL',
-                    ]),
+                    ->badge(),
 
                 Tables\Columns\TextColumn::make('reference_no')
                     ->label('No. Referensi')
                     ->searchable()
-                    ->copyable()
-                    ->badge()
-                    ->color('gray'),
+                    ->copyable(),
 
                 Tables\Columns\TextColumn::make('debit')
-                    ->label('Debit (+)')
-                    ->money('IDR')
+                    ->label('Debit')
+                    ->numeric(decimalPlaces: 2)
                     ->alignRight()
-                    ->color(fn ($record) => $record->debit > 0 ? 'success' : null)
-                    ->formatStateUsing(fn ($record) => $record->debit > 0
-                        ? '+' . number_format($record->debit, 0, ',', '.')
-                        : '-'
+                    ->summarize(
+                        Sum::make()
+                            ->label('Total Debit')
+                            ->numeric(decimalPlaces: 2)
                     ),
 
                 Tables\Columns\TextColumn::make('kredit')
-                    ->label('Kredit (-)')
-                    ->money('IDR')
+                    ->label('Kredit')
+                    ->numeric(decimalPlaces: 2)
                     ->alignRight()
-                    ->color(fn ($record) => $record->kredit > 0 ? 'danger' : null)
-                    ->formatStateUsing(fn ($record) => $record->kredit > 0
-                        ? '-' . number_format($record->kredit, 0, ',', '.')
-                        : '-'
+                    ->summarize(
+                        Sum::make()
+                            ->label('Total Kredit')
+                            ->numeric(decimalPlaces: 2)
                     ),
 
-                Tables\Columns\TextColumn::make('balance_after')
-                    ->label('Saldo Berjalan')
-                    ->money('IDR')
-                    ->alignRight()
-                    ->weight('bold'),
+Tables\Columns\TextColumn::make('balance_after')
+    ->label('Saldo Berjalan')
+    ->state(function ($record) {
+        $saldoAwal = (float) ($record->coa?->saldo_debit ?? 0)
+            - (float) ($record->coa?->saldo_kredit ?? 0);
+
+        $mutasi = CoaMovement::query()
+            ->where('coa_id', $record->coa_id)
+            ->where(function ($query) use ($record) {
+                $query->where('tanggal', '<', $record->tanggal)
+                    ->orWhere(function ($query) use ($record) {
+                        $query->whereDate(
+                            'tanggal',
+                            $record->tanggal->toDateString()
+                        )->where('id', '<=', $record->id);
+                    });
+            })
+            ->selectRaw(
+                'COALESCE(SUM(debit), 0) as total_debit,
+                 COALESCE(SUM(kredit), 0) as total_kredit'
+            )
+            ->first();
+
+        return $saldoAwal
+            + (float) $mutasi->total_debit
+            - (float) $mutasi->total_kredit;
+    })
+    ->money('IDR')
+    ->alignRight()
+    ->weight('bold'),
+
 
                 Tables\Columns\TextColumn::make('remarks')
                     ->label('Keterangan')
@@ -131,26 +152,38 @@ class CoaLedgerResource extends Resource
                 Tables\Filters\SelectFilter::make('reference_type')
                     ->label('Tipe Dokumen')
                     ->options([
-                        'TRANS_KAS'       => 'Kas',
-                        'TRANS_BANK'      => 'Bank',
+                        'TRANS_KAS' => 'Kas',
+                        'TRANS_BANK' => 'Bank',
                         'OPERASIONAL_PAY' => 'Operasional',
-                        'INV_PAYMENT'     => 'Customer AR (Invoice)',
-                        'PO_BILL_PAY'     => 'Supplier AP (Tagihan PO)',
-                        'PAYROLL'         => 'Payroll HRD (Gaji Karyawan)',
+                        'INV_PAYMENT' => 'Pembayaran Invoice',
+                        'PO_BILL_PAY' => 'Pembayaran Tagihan PO',
+                        'PAYROLL' => 'Payroll',
                     ]),
 
                 Tables\Filters\Filter::make('tanggal')
+                    ->label('Periode')
                     ->form([
-                        Forms\Components\DatePicker::make('dari')->label('Tanggal Mulai'),
-                        Forms\Components\DatePicker::make('sampai')->label('Tanggal Akhir'),
+                        Forms\Components\DatePicker::make('dari')
+                            ->label('Tanggal Mulai'),
+                        Forms\Components\DatePicker::make('sampai')
+                            ->label('Tanggal Akhir'),
                     ])
-                    ->query(function (Builder $query, array $data) {
+                    ->query(function (Builder $query, array $data): Builder {
                         return $query
-                            ->when($data['dari'], fn ($q, $d) => $q->whereDate('tanggal', '>=', $d))
-                            ->when($data['sampai'], fn ($q, $d) => $q->whereDate('tanggal', '<=', $d));
+                            ->when(
+                                $data['dari'] ?? null,
+                                fn (Builder $q, $date) =>
+                                    $q->whereDate('tanggal', '>=', $date)
+                            )
+                            ->when(
+                                $data['sampai'] ?? null,
+                                fn (Builder $q, $date) =>
+                                    $q->whereDate('tanggal', '<=', $date)
+                            );
                     }),
             ])
-            ->actions([]);
+            ->actions([])
+            ->bulkActions([]);
     }
 
     public static function getPages(): array

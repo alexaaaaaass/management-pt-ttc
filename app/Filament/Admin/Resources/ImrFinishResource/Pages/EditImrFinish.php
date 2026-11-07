@@ -4,7 +4,6 @@ namespace App\Filament\Admin\Resources\ImrFinishResource\Pages;
 
 use App\Filament\Admin\Resources\ImrFinishResource;
 use App\Models\ImrFinish;
-use Filament\Actions;
 use Filament\Resources\Pages\EditRecord;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;
@@ -15,9 +14,7 @@ class EditImrFinish extends EditRecord
 
     protected function getHeaderActions(): array
     {
-        return [
-            Actions\DeleteAction::make(),
-        ];
+        return [];
     }
 
     protected function mutateFormDataBeforeFill(array $data): array

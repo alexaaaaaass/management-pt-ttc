@@ -32,6 +32,11 @@ class InvoiceService
         return str_pad((string) $nextNumber, 6, '0', STR_PAD_LEFT) . '/INV/' . $period;
     }
 
+    public function generateInvoiceCode(?Carbon $date = null): string
+    {
+        return $this->generateKodeInvoice($date);
+    }
+
     /**
      * Hitung subtotal invoice berdasarkan Surat Jalan dan Sales Order
      */
@@ -136,7 +141,9 @@ class InvoiceService
 
         $paymentsSum = 0.0;
         if ($invoice->exists) {
-            $paymentsSum = (float) $invoice->payments()->sum('nominal_bayar');
+            $paymentsSum = (float) $invoice->payments()
+    ->where('status', 'SUCCESS')
+    ->sum('nominal_bayar');
         }
 
         $totals = $this->calculateTotals(
@@ -204,7 +211,10 @@ class InvoiceService
             $data['sisa_tagihan'] = $totals['sisa_tagihan'];
             $data['status'] = $totals['status'];
 
-            return Invoice::create($data);
+            $invoice = Invoice::create($data);
+            $this->syncDefaultInvoiceItems($invoice);
+
+            return $invoice;
         });
     }
 
@@ -217,9 +227,97 @@ class InvoiceService
             $invoice->fill($data);
             $this->syncInvoiceFinancials($invoice);
             $invoice->save();
+            $this->syncDefaultInvoiceItems($invoice);
 
             return $invoice;
         });
+    }
+
+    /**
+     * Sinkronisasi rincian item invoice otomatis dari Surat Jalan & Sales Order jika belum ada
+     */
+    public function syncDefaultInvoiceItems(Invoice $invoice): void
+    {
+        if (! $invoice->exists) {
+            return;
+        }
+
+        $invoice->loadMissing([
+            'items',
+            'suratJalan.salesOrder.itemable',
+            'suratJalan.salesOrder.orderConfirmation.items',
+            'suratJalan.salesOrder.items.material',
+            'salesOrder.itemable',
+            'salesOrder.orderConfirmation.items',
+            'salesOrder.items.material',
+        ]);
+
+        $sj = $invoice->suratJalan;
+        $so = $invoice->salesOrder ?? $sj?->salesOrder;
+        if (! $so) {
+            return;
+        }
+
+        if ($invoice->items->isEmpty()) {
+            if ($so->mode === 'MULTI_MATERIAL' && $so->items->isNotEmpty()) {
+                foreach ($so->items as $soItem) {
+                    $qty = (float) ($soItem->qty ?? 0);
+                    $harga = (float) ($soItem->harga ?? 0);
+                    $invoice->items()->create([
+                        'item'       => $soItem->material?->nama_master_item ?? 'Material',
+                        'jenis'      => $so->effective_jenis ?? '-',
+                        'komponen'   => $so->effective_komponen ?? '-',
+                        'kertas'     => $so->effective_kertas ?? '-',
+                        'finishing'  => $so->effective_finishing ?? '-',
+                        'qty'        => $qty,
+                        'harga'      => $harga,
+                        'total'      => $qty * $harga,
+                        'keterangan' => '',
+                    ]);
+                }
+            } else {
+                $itemName = $so->product_name;
+                if (empty($itemName) || $itemName === '-') {
+                    $itemName = $so->itemable?->nama_barang
+                        ?? $so->itemable?->nama_master_item
+                        ?? $so->kode_material
+                        ?? 'Barang Cetakan';
+                }
+
+                $qty = (float) ($sj?->qty_pengiriman ?: ($so->qty ?: 1));
+                $harga = (float) ($so->harga_pcs ?? 0);
+                $subtotal = (float) ($invoice->subtotal ?? 0);
+                if ($harga <= 0 && $qty > 0 && $subtotal > 0) {
+                    $harga = $subtotal / $qty;
+                }
+                $total = $subtotal > 0 ? $subtotal : ($qty * $harga);
+                $ket = $invoice->catatan ?: ($sj?->keterangan ?: ($so->catatan ?: ''));
+                if ($ket === '-') {
+                    $ket = '';
+                }
+
+                $komponen = $so->effective_komponen ?? ($so->komponen ?? '-');
+                if ($komponen !== '-') {
+                    $komponen = ucwords(strtolower($komponen));
+                }
+                $kertas = $so->effective_kertas ?? ($so->kertas ?? '-');
+                if ($kertas !== '-') {
+                    $kertas = ucwords(strtolower($kertas));
+                }
+
+                $invoice->items()->create([
+                    'item'       => $itemName,
+                    'jenis'      => $so->effective_jenis ?? ($so->jenis ?? '-'),
+                    'komponen'   => $komponen,
+                    'kertas'     => $kertas,
+                    'finishing'  => $so->effective_finishing ?? ($so->finishing ?? '-'),
+                    'qty'        => $qty,
+                    'harga'      => $harga,
+                    'total'      => $total,
+                    'keterangan' => $ket,
+                ]);
+            }
+        }
     }
 
     /**
@@ -227,7 +325,9 @@ class InvoiceService
      */
     public function refreshInvoicePayment(Invoice $invoice): void
     {
-        $paymentsSum = (float) $invoice->payments()->sum('nominal_bayar');
+       $paymentsSum = (float) $invoice->payments()
+            ->where('status', 'SUCCESS')
+            ->sum('nominal_bayar');
         $uangMuka = (float) ($invoice->uang_muka ?? 0);
         $totalPayment = round($uangMuka + $paymentsSum, 2);
         $grandTotal = (float) $invoice->grand_total;
