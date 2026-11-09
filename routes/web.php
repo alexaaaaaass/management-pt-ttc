@@ -341,6 +341,26 @@ Route::middleware('auth')->group(function () {
         [\App\Http\Controllers\FinancePdfController::class, 'downloadNeraca']
     )->name('finance.report.neraca.download');
 
+    Route::get(
+        '/finance/report/general-ledger/preview',
+        [\App\Http\Controllers\FinancePdfController::class, 'previewGeneralLedger']
+    )->name('finance.report.general-ledger.preview');
+
+    Route::get(
+        '/finance/report/general-ledger/download',
+        [\App\Http\Controllers\FinancePdfController::class, 'downloadGeneralLedger']
+    )->name('finance.report.general-ledger.download');
+
+    Route::get(
+        '/finance/report/trial-balance/preview',
+        [\App\Http\Controllers\FinancePdfController::class, 'previewTrialBalance']
+    )->name('finance.report.trial-balance.preview');
+
+    Route::get(
+        '/finance/report/trial-balance/download',
+        [\App\Http\Controllers\FinancePdfController::class, 'downloadTrialBalance']
+    )->name('finance.report.trial-balance.download');
+
 });
 
 require __DIR__ . '/auth.php';

@@ -82,15 +82,26 @@
             transition: all 0.15s ease;
             box-shadow: 0 2px 4px rgba(0, 0, 0, 0.12);
         }
+        .ttc-btn-blue { background: #2563eb; color: #ffffff; }
+        .ttc-btn-blue:hover { background: #1d4ed8; }
         .ttc-btn-amber { background: #f59e0b; color: #0f172a; }
         .ttc-btn-amber:hover { background: #fbbf24; }
         .ttc-btn-emerald { background: #10b981; color: #052e16; }
         .ttc-btn-emerald:hover { background: #34d399; }
+        .ttc-btn-indigo { background: #4f46e5; color: #ffffff; }
+        .ttc-btn-indigo:hover { background: #4338ca; }
 
         @media print {
             @page {
                 size: A4 landscape;
                 margin: 8mm 8mm;
+            }
+            /* Reset dark mode to pure black-on-white so print is never blank */
+            *, .dark *, .dark {
+                color: #0f172a !important;
+                background-color: transparent !important;
+                box-shadow: none !important;
+                text-shadow: none !important;
             }
             html, body, .fi-body, .fi-layout, .fi-main-ctn, .fi-main, .fi-page, .fi-page-content-wrapper, .fi-section, main {
                 height: auto !important;
@@ -124,9 +135,10 @@
                 overflow: visible !important;
                 width: 100% !important;
             }
-            .ttc-card {
+            .ttc-card, .dark .ttc-card {
                 box-shadow: none !important;
                 border: 1px solid #cbd5e1 !important;
+                background: #ffffff !important;
                 overflow: visible !important;
                 display: block !important;
                 page-break-inside: auto !important;
@@ -140,8 +152,10 @@
                 -webkit-print-color-adjust: exact !important;
                 print-color-adjust: exact !important;
             }
-            .ttc-hero-title {
+            .ttc-hero *, .ttc-hero-title, .ttc-hero-sub {
                 color: #ffffff !important;
+            }
+            .ttc-hero-title {
                 font-size: 15px !important;
             }
             .ttc-hero-sub {
@@ -152,8 +166,9 @@
                 grid-template-columns: repeat(4, 1fr) !important;
                 gap: 8px !important;
             }
-            .ttc-kpi-card {
+            .ttc-kpi-card, .dark .ttc-kpi-card {
                 padding: 8px 10px !important;
+                background: #ffffff !important;
                 border: 1px solid #cbd5e1 !important;
                 break-inside: avoid !important;
             }
@@ -161,14 +176,23 @@
                 overflow: visible !important;
                 display: block !important;
                 padding: 8px 12px !important;
+                width: 100% !important;
             }
             table.ttc-gl-table {
                 width: 100% !important;
                 border-collapse: collapse !important;
-                font-size: 10px !important;
+                font-size: 9.5px !important;
             }
-            table.ttc-gl-table th, table.ttc-gl-table td {
+            table.ttc-gl-table th, .dark table.ttc-gl-table th {
+                background: #f1f5f9 !important;
+                color: #0f172a !important;
+                border: 1px solid #cbd5e1 !important;
                 padding: 5px 6px !important;
+            }
+            table.ttc-gl-table td, .dark table.ttc-gl-table td {
+                padding: 5px 6px !important;
+                border-bottom: 1px solid #cbd5e1 !important;
+                color: #0f172a !important;
             }
             thead {
                 display: table-header-group !important;
@@ -278,14 +302,29 @@
             color: #cbd5e1;
         }
         .ttc-gl-remarks {
-            white-space: normal;
-            min-width: 240px;
-            max-width: 380px;
+            white-space: normal !important;
+            word-break: break-word !important;
+            overflow-wrap: break-word !important;
+            min-width: 250px;
+            max-width: 440px;
             color: #334155;
-            line-height: 1.35;
+            line-height: 1.45;
         }
         .dark .ttc-gl-remarks {
             color: #cbd5e1;
+        }
+        .ttc-gl-account-col {
+            white-space: normal !important;
+            min-width: 190px;
+        }
+        .ttc-nowrap {
+            white-space: nowrap !important;
+        }
+        .ttc-gl-amount {
+            white-space: nowrap !important;
+            text-align: right;
+            min-width: 140px;
+            font-variant-numeric: tabular-nums;
         }
         .ttc-row-active-filter {
             background: #eff6ff;
@@ -423,7 +462,6 @@
             padding: 12px 14px;
             border-bottom: 1px solid #f1f5f9;
             vertical-align: middle;
-            white-space: nowrap;
         }
         .dark table.ttc-gl-table tbody td {
             border-bottom-color: #1f2937;
@@ -476,10 +514,17 @@
                     </div>
                 </div>
                 <div class="ttc-btn-group">
-                    <button type="button" onclick="window.print()" class="ttc-btn" style="background: #3b82f6; color: #ffffff; cursor: pointer;">
-                        🖨️ Cetak / Simpan PDF
-                    </button>
-                    <a href="{{ url('/admin/jurnal-memorials/create') }}" class="ttc-btn ttc-btn-emerald">
+                    <a href="{{ route('finance.report.general-ledger.preview', ['start_date' => $this->startDate, 'end_date' => $this->endDate, 'coa_id' => $this->selectedCoaId, 'ref_type' => $this->selectedRefType]) }}"
+                       target="_blank"
+                       class="ttc-btn ttc-btn-blue">
+                        🖨️ Cetak / Preview PDF
+                    </a>
+                    <a href="{{ route('finance.report.general-ledger.download', ['start_date' => $this->startDate, 'end_date' => $this->endDate, 'coa_id' => $this->selectedCoaId, 'ref_type' => $this->selectedRefType]) }}"
+                       target="_blank"
+                       class="ttc-btn ttc-btn-emerald">
+                        ⬇️ Simpan PDF
+                    </a>
+                    <a href="{{ url('/admin/jurnal-memorials/create') }}" class="ttc-btn ttc-btn-indigo">
                         + Input Jurnal Memorial
                     </a>
                     <a href="{{ url('/admin/report-finaces') }}" class="ttc-btn ttc-btn-amber">
@@ -668,50 +713,50 @@
                 <table class="ttc-gl-table">
                     <thead>
                         <tr>
-                            <th style="text-align: center; width: 48px;">No</th>
-                            <th style="text-align: center;">Tanggal</th>
-                            <th style="text-align: left;">Kode &amp; Nama Akun COA</th>
-                            <th style="text-align: center;">Sumber Transaksi</th>
-                            <th style="text-align: left;">No. Referensi</th>
-                            <th style="text-align: left;">Keterangan / Uraian Transaksi</th>
-                            <th style="text-align: right;">Debit (Rp)</th>
-                            <th style="text-align: right;">Kredit (Rp)</th>
-                            <th style="text-align: right;">Saldo Berjalan Akun</th>
+                            <th class="ttc-nowrap" style="text-align: center; width: 44px;">No</th>
+                            <th class="ttc-nowrap" style="text-align: center; width: 95px;">Tanggal</th>
+                            <th style="text-align: left; min-width: 190px;">Kode &amp; Nama Akun COA</th>
+                            <th class="ttc-nowrap" style="text-align: center; width: 140px;">Sumber Transaksi</th>
+                            <th class="ttc-nowrap" style="text-align: left; width: 150px;">No. Referensi</th>
+                            <th style="text-align: left; min-width: 260px;">Keterangan / Uraian Transaksi</th>
+                            <th class="ttc-nowrap" style="text-align: right; min-width: 135px;">Debit (Rp)</th>
+                            <th class="ttc-nowrap" style="text-align: right; min-width: 135px;">Kredit (Rp)</th>
+                            <th class="ttc-nowrap" style="text-align: right; min-width: 140px;">Saldo Berjalan Akun</th>
                         </tr>
                     </thead>
                     <tbody>
                         @forelse($data['rows'] as $idx => $row)
                             <tr>
-                                <td style="text-align: center; color: #64748b; font-weight: 600;">
+                                <td class="ttc-nowrap" style="text-align: center; color: #64748b; font-weight: 600;">
                                     {{ $idx + 1 }}
                                 </td>
-                                <td style="text-align: center;" class="ttc-gl-date">
+                                <td class="ttc-nowrap ttc-gl-date" style="text-align: center;">
                                     {{ $row['tanggal'] }}
                                 </td>
-                                <td>
+                                <td class="ttc-gl-account-col">
                                     <div style="display: flex; align-items: center; gap: 8px;">
                                         <span class="ttc-code-pill">{{ $row['kode_akun'] }}</span>
                                         <span class="ttc-gl-account-name">{{ $row['nama_akun'] }}</span>
                                     </div>
                                 </td>
-                                <td style="text-align: center;">
+                                <td class="ttc-nowrap" style="text-align: center;">
                                     <span style="display: inline-block; padding: 3px 9px; border-radius: 6px; font-size: 10.5px; font-weight: 800; background: {{ $row['ref_bg'] }}; color: {{ $row['ref_fg'] }};">
                                         {{ $row['ref_label'] }}
                                     </span>
                                 </td>
-                                <td style="font-weight: 700; color: #3b82f6;">
+                                <td class="ttc-nowrap" style="font-weight: 700; color: #3b82f6;">
                                     {{ $row['reference_no'] }}
                                 </td>
                                 <td class="ttc-gl-remarks">
                                     {{ $row['remarks'] }}
                                 </td>
-                                <td style="text-align: right; font-weight: {{ $row['debit'] > 0 ? '800' : '500' }}; color: {{ $row['debit'] > 0 ? '#1d4ed8' : '#cbd5e1' }};">
+                                <td class="ttc-gl-amount" style="font-weight: {{ $row['debit'] > 0 ? '800' : '500' }}; color: {{ $row['debit'] > 0 ? '#1d4ed8' : '#94a3b8' }};">
                                     {{ $row['debit'] > 0 ? $fmt($row['debit'], 2) : '-' }}
                                 </td>
-                                <td style="text-align: right; font-weight: {{ $row['kredit'] > 0 ? '800' : '500' }}; color: {{ $row['kredit'] > 0 ? '#6d28d9' : '#cbd5e1' }};">
+                                <td class="ttc-gl-amount" style="font-weight: {{ $row['kredit'] > 0 ? '800' : '500' }}; color: {{ $row['kredit'] > 0 ? '#6d28d9' : '#94a3b8' }};">
                                     {{ $row['kredit'] > 0 ? $fmt($row['kredit'], 2) : '-' }}
                                 </td>
-                                <td style="text-align: right; font-weight: 800; color: #059669;">
+                                <td class="ttc-gl-amount" style="font-weight: 800; color: #059669;">
                                     {{ $fmt($row['running_balance'], 2) }}
                                 </td>
                             </tr>
@@ -726,9 +771,9 @@
                     <tfoot>
                         <tr>
                             <td colspan="6" style="text-align: left;">TOTAL MUTASI JURNAL UMUM ({{ count($data['rows']) }} BARIS)</td>
-                            <td style="text-align: right; color: #1d4ed8;">{{ $fmt($data['total_debit'], 2) }}</td>
-                            <td style="text-align: right; color: #6d28d9;">{{ $fmt($data['total_kredit'], 2) }}</td>
-                            <td style="text-align: right; color: #059669;">
+                            <td class="ttc-gl-amount" style="color: #1d4ed8;">{{ $fmt($data['total_debit'], 2) }}</td>
+                            <td class="ttc-gl-amount" style="color: #6d28d9;">{{ $fmt($data['total_kredit'], 2) }}</td>
+                            <td class="ttc-gl-amount" style="color: #059669;">
                                 {{ $data['is_balanced'] ? '✓ BALANCE' : 'FILTER AKUN' }}
                             </td>
                         </tr>

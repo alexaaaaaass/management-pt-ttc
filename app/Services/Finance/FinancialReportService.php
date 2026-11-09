@@ -479,5 +479,204 @@ class FinancialReportService
             'is_balanced'                    => $isBalanced,
         ];
     }
+
+    /**
+     * Hitung Data Buku Besar & Jurnal Umum (General Ledger) untuk PDF dan Export
+     */
+    public function getGeneralLedgerReport(
+        ?string $startDate = null,
+        ?string $endDate = null,
+        ?string $coaId = null,
+        ?string $refType = null
+    ): array {
+        $start = $startDate ?: '2026-01-01';
+        $end = $endDate ?: '2026-12-31';
+
+        $allMovementsInPeriod = CoaMovement::with(['coa', 'user'])
+            ->whereDate('tanggal', '>=', $start)
+            ->whereDate('tanggal', '<=', $end)
+            ->orderBy('tanggal', 'asc')
+            ->orderBy('id', 'asc')
+            ->get();
+
+        $runningByCoa = [];
+        foreach ($allMovementsInPeriod->groupBy('coa_id') as $cId => $group) {
+            $coa = $group->first()?->coa;
+            $code = trim((string) ($coa?->kode_akun ?? ''));
+            $isCreditNormal = str_starts_with($code, '2') || str_starts_with($code, '3') || str_starts_with($code, '4');
+
+            $openDebit = (float) ($coa?->saldo_debit ?? 0);
+            $openKredit = (float) ($coa?->saldo_kredit ?? 0);
+
+            $prior = CoaMovement::where('coa_id', $cId)
+                ->whereDate('tanggal', '<', $start)
+                ->selectRaw('COALESCE(SUM(debit),0) as d, COALESCE(SUM(kredit),0) as k')
+                ->first();
+
+            $running = $isCreditNormal
+                ? (($openKredit - $openDebit) + ((float) ($prior->k ?? 0) - (float) ($prior->d ?? 0)))
+                : (($openDebit - $openKredit) + ((float) ($prior->d ?? 0) - (float) ($prior->k ?? 0)));
+
+            foreach ($group as $m) {
+                $d = (float) $m->debit;
+                $k = (float) $m->kredit;
+                $running += $isCreditNormal ? ($k - $d) : ($d - $k);
+                $runningByCoa[$m->id] = round($running, 2);
+            }
+        }
+
+        $filtered = $allMovementsInPeriod->filter(function (CoaMovement $m) use ($coaId, $refType) {
+            if ($coaId !== null && $coaId !== '' && (string) $m->coa_id !== (string) $coaId) {
+                return false;
+            }
+            if ($refType !== null && $refType !== '' && (string) $m->reference_type !== (string) $refType) {
+                return false;
+            }
+            return true;
+        })->values();
+
+        $rows = [];
+        foreach ($filtered as $m) {
+            $code = trim((string) ($m->coa?->kode_akun ?? '-'));
+            $refMeta = match ($m->reference_type) {
+                'INVOICE'          => ['label' => 'Invoice Penjualan'],
+                'INV_PAYMENT'      => ['label' => 'Pembayaran Bon/Invoice'],
+                'OPERASIONAL_PAY'  => ['label' => 'Operasional / Komisi'],
+                'JOURNAL_MEMORIAL' => ['label' => 'Jurnal Memorial / HPP'],
+                'TRANS_KAS'        => ['label' => 'Kas Masuk/Keluar'],
+                'TRANS_BANK'       => ['label' => 'Bank Masuk/Keluar'],
+                'PO_BILLING'       => ['label' => 'Tagihan PO'],
+                'PO_BILL_PAY'      => ['label' => 'Pembayaran PO'],
+                default            => ['label' => $m->reference_type ?: '-'],
+            };
+
+            $rows[] = [
+                'id'              => $m->id,
+                'tanggal'         => Carbon::parse($m->tanggal)->format('d/m/Y'),
+                'coa_id'          => $m->coa_id,
+                'kode_akun'       => $code,
+                'nama_akun'       => $m->coa?->nama_akun ?? '-',
+                'ref_type'        => $m->reference_type,
+                'ref_label'       => $refMeta['label'],
+                'reference_no'    => $m->reference_no ?: '-',
+                'remarks'         => $m->remarks ?: '-',
+                'debit'           => round((float) $m->debit, 2),
+                'kredit'          => round((float) $m->kredit, 2),
+                'running_balance' => $runningByCoa[$m->id] ?? 0.0,
+            ];
+        }
+
+        $totalDebit = round(collect($rows)->sum('debit'), 2);
+        $totalKredit = round(collect($rows)->sum('kredit'), 2);
+        $selisih = round(abs($totalDebit - $totalKredit), 2);
+
+        $selectedAccount = null;
+        if ($coaId) {
+            $selectedAccount = MasterCOA::find($coaId);
+        }
+
+        return [
+            'start_date'        => $start,
+            'end_date'          => $end,
+            'rows'              => $rows,
+            'total_debit'       => $totalDebit,
+            'total_kredit'      => $totalKredit,
+            'selisih'           => $selisih,
+            'is_balanced'       => $selisih < 1.0,
+            'total_rows'        => count($rows),
+            'selected_account'  => $selectedAccount,
+            'selected_ref_type' => $refType,
+        ];
+    }
+
+    /**
+     * Hitung Data Neraca Saldo (Trial Balance) untuk PDF dan Export
+     */
+    public function getTrialBalanceReport(?string $selectedGroup = null, bool $onlyActive = true): array
+    {
+        $movementsByCoa = CoaMovement::query()
+            ->selectRaw('coa_id, COALESCE(SUM(debit),0) as total_debit, COALESCE(SUM(kredit),0) as total_kredit, COUNT(*) as tx_count')
+            ->groupBy('coa_id')
+            ->get()
+            ->keyBy('coa_id');
+
+        $coas = MasterCOA::orderBy('kode_akun')->get();
+        $rows = [];
+
+        $grandMutDebit = 0.0;
+        $grandMutKredit = 0.0;
+        $grandEndDebit = 0.0;
+        $grandEndKredit = 0.0;
+
+        foreach ($coas as $coa) {
+            $code = trim((string) $coa->kode_akun);
+            $mov = $movementsByCoa->get($coa->id);
+
+            $openDebit = round((float) ($coa->saldo_debit ?? 0), 2);
+            $openKredit = round((float) ($coa->saldo_kredit ?? 0), 2);
+            $mutDebit = round((float) ($mov->total_debit ?? 0), 2);
+            $mutKredit = round((float) ($mov->total_kredit ?? 0), 2);
+            $txCount = (int) ($mov->tx_count ?? 0);
+
+            $hasActivity = ($openDebit > 0 || $openKredit > 0 || $mutDebit > 0 || $mutKredit > 0);
+            if ($onlyActive && ! $hasActivity) {
+                continue;
+            }
+
+            if ($selectedGroup !== null && $selectedGroup !== '' && ! str_starts_with($code, $selectedGroup)) {
+                continue;
+            }
+
+            $net = round(($openDebit + $mutDebit) - ($openKredit + $mutKredit), 2);
+            $endDebit = $net > 0 ? $net : 0.0;
+            $endKredit = $net < 0 ? abs($net) : 0.0;
+
+            $firstDigit = substr($code, 0, 1);
+            $groupMeta = match ($firstDigit) {
+                '1' => ['label' => '1 - Aset / Aktiva',      'stmt' => 'NERACA'],
+                '2' => ['label' => '2 - Kewajiban / Utang',  'stmt' => 'NERACA'],
+                '3' => ['label' => '3 - Ekuitas / Modal',    'stmt' => 'NERACA'],
+                '4' => ['label' => '4 - Pendapatan Usaha',   'stmt' => 'LABA RUGI'],
+                '5' => ['label' => '5 - Harga Pokok (HPP)',  'stmt' => 'LABA RUGI'],
+                '6' => ['label' => '6 - Beban Operasional',  'stmt' => 'LABA RUGI'],
+                default => ['label' => 'Lainnya',            'stmt' => 'LAINNYA'],
+            };
+
+            $rows[] = [
+                'id'          => $coa->id,
+                'kode_akun'   => $code,
+                'nama_akun'   => $coa->nama_akun,
+                'group_label' => $groupMeta['label'],
+                'stmt'        => $groupMeta['stmt'],
+                'tx_count'    => $txCount,
+                'open_debit'  => $openDebit,
+                'open_kredit' => $openKredit,
+                'mut_debit'   => $mutDebit,
+                'mut_kredit'  => $mutKredit,
+                'end_debit'   => $endDebit,
+                'end_kredit'  => $endKredit,
+            ];
+
+            $grandMutDebit += $mutDebit;
+            $grandMutKredit += $mutKredit;
+            $grandEndDebit += $endDebit;
+            $grandEndKredit += $endKredit;
+        }
+
+        $isBalanced = round(abs($grandEndDebit - $grandEndKredit), 2) < 1.0;
+
+        return [
+            'rows'              => $rows,
+            'grand_mut_debit'   => round($grandMutDebit, 2),
+            'grand_mut_kredit'  => round($grandMutKredit, 2),
+            'grand_end_debit'   => round($grandEndDebit, 2),
+            'grand_end_kredit'  => round($grandEndKredit, 2),
+            'is_balanced'       => $isBalanced,
+            'total_rows'        => count($rows),
+            'selected_group'    => $selectedGroup,
+            'as_of_date'        => now()->format('d/m/Y'),
+        ];
+    }
 }
+
 

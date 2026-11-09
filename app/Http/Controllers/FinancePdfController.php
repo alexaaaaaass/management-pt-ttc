@@ -583,5 +583,80 @@ class FinancePdfController extends Controller
 
         return $pdf->download('Laporan_Neraca_' . $data['as_of_date'] . '.pdf');
     }
+
+    /*
+    |--------------------------------------------------------------------------
+    | GENERAL LEDGER (BUKU BESAR & JURNAL UMUM)
+    |--------------------------------------------------------------------------
+    */
+
+    public function previewGeneralLedger(Request $request, FinancialReportService $service)
+    {
+        $data = $service->getGeneralLedgerReport(
+            $request->query('start_date'),
+            $request->query('end_date'),
+            $request->query('coa_id'),
+            $request->query('ref_type')
+        );
+
+        $pdf = Pdf::loadView('pdf.general-ledger', [
+            'logoBase64' => $this->getLogoBase64(),
+            'data'       => $data,
+        ])->setPaper('A4', 'landscape');
+
+        return $pdf->stream('General_Ledger_' . $data['start_date'] . '_' . $data['end_date'] . '.pdf');
+    }
+
+    public function downloadGeneralLedger(Request $request, FinancialReportService $service)
+    {
+        $data = $service->getGeneralLedgerReport(
+            $request->query('start_date'),
+            $request->query('end_date'),
+            $request->query('coa_id'),
+            $request->query('ref_type')
+        );
+
+        $pdf = Pdf::loadView('pdf.general-ledger', [
+            'logoBase64' => $this->getLogoBase64(),
+            'data'       => $data,
+        ])->setPaper('A4', 'landscape');
+
+        return $pdf->download('General_Ledger_' . $data['start_date'] . '_' . $data['end_date'] . '.pdf');
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | TRIAL BALANCE (NERACA SALDO)
+    |--------------------------------------------------------------------------
+    */
+
+    public function previewTrialBalance(Request $request, FinancialReportService $service)
+    {
+        $group = $request->query('group');
+        $onlyActive = (bool) $request->query('only_active', true);
+        $data = $service->getTrialBalanceReport($group, $onlyActive);
+
+        $pdf = Pdf::loadView('pdf.trial-balance', [
+            'logoBase64' => $this->getLogoBase64(),
+            'data'       => $data,
+        ])->setPaper('A4', 'landscape');
+
+        return $pdf->stream('Trial_Balance_' . now()->format('Y-m-d') . '.pdf');
+    }
+
+    public function downloadTrialBalance(Request $request, FinancialReportService $service)
+    {
+        $group = $request->query('group');
+        $onlyActive = (bool) $request->query('only_active', true);
+        $data = $service->getTrialBalanceReport($group, $onlyActive);
+
+        $pdf = Pdf::loadView('pdf.trial-balance', [
+            'logoBase64' => $this->getLogoBase64(),
+            'data'       => $data,
+        ])->setPaper('A4', 'landscape');
+
+        return $pdf->download('Trial_Balance_' . now()->format('Y-m-d') . '.pdf');
+    }
 }
+
 
