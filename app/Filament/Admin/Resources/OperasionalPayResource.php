@@ -112,11 +112,33 @@ class OperasionalPayResource extends Resource
 
                                 Grid::make(3)
                                     ->schema([
-                                        TextInput::make('mesin')
-                                            ->label('Mesin / Alat'),
+                                        Select::make('mesin')
+                                            ->label('Alokasi Unit Mesin')
+                                            ->options([
+                                                'Printing Flexo'       => 'Printing Flexo (Mesin Cetak)',
+                                                'Diecut Flexo'         => 'Diecut Flexo (Mesin Pond / Potong)',
+                                                'CTP / Plat Flexo'     => 'CTP / Plat Flexo (Unit Pembuatan Plat)',
+                                                'Kendaraan / Armada'   => 'Kendaraan / Armada Operasional',
+                                                'Umum / Gedung Kantor' => 'Umum / Fasilitas Pabrik & Kantor',
+                                            ])
+                                            ->searchable()
+                                            ->preload()
+                                            ->nullable()
+                                            ->placeholder('Pilih Mesin / Unit (Opsional)'),
 
                                         TextInput::make('jenis')
-                                            ->label('Jenis Pengeluaran'),
+                                            ->label('Jenis Pengeluaran')
+                                            ->datalist([
+                                                'Maintenance & Servis Mesin',
+                                                'Sparepart & Pisau / Karet',
+                                                'Chemical & Pembersih Plat',
+                                                'Bahan Habis Pakai (Consumables)',
+                                                'BBM & Transportasi',
+                                                'Listrik & Air Pabrik',
+                                                'Komisi Sales',
+                                                'ATK & Operasional Kantor',
+                                            ])
+                                            ->placeholder('Pilih / Ketik Jenis Biaya'),
 
                                         TextInput::make('kode')
                                             ->label('Kode Referensi'),
@@ -162,6 +184,19 @@ class OperasionalPayResource extends Resource
                     ->color(fn (?string $state): string => str_contains((string) $state, 'KOMISI') ? 'warning' : 'gray')
                     ->searchable(),
 
+                Tables\Columns\TextColumn::make('mesin')
+                    ->label('Unit Mesin')
+                    ->badge()
+                    ->color(fn (?string $state): string => match ($state) {
+                        'Printing Flexo'   => 'info',
+                        'Diecut Flexo'     => 'warning',
+                        'CTP / Plat Flexo' => 'success',
+                        default            => 'gray',
+                    })
+                    ->placeholder('-')
+                    ->searchable()
+                    ->sortable(),
+
                 Tables\Columns\TextColumn::make('kode')
                     ->label('Ref. Order ID')
                     ->badge()
@@ -198,6 +233,22 @@ class OperasionalPayResource extends Resource
                     ->colors([
                         'success' => 'ACTIVE',
                         'danger'  => 'INACTIVE',
+                    ]),
+            ])
+            ->filters([
+                Tables\Filters\SelectFilter::make('mesin')
+                    ->label('Filter Mesin / Unit')
+                    ->options([
+                        'Printing Flexo'       => 'Printing Flexo',
+                        'Diecut Flexo'         => 'Diecut Flexo',
+                        'CTP / Plat Flexo'     => 'CTP / Plat Flexo',
+                        'Kendaraan / Armada'   => 'Kendaraan / Armada',
+                        'Umum / Gedung Kantor' => 'Umum / Gedung Kantor',
+                    ]),
+                Tables\Filters\SelectFilter::make('status')
+                    ->options([
+                        'ACTIVE'   => 'ACTIVE',
+                        'INACTIVE' => 'INACTIVE',
                     ]),
             ])
             ->bulkActions([

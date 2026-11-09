@@ -503,9 +503,9 @@
                     </div>
 
                     <div class="ttc-field">
-                        <label>Pilih Mesin Cetak</label>
+                        <label>Pilih Unit Mesin</label>
                         <select wire:model.live="selectedMesin" class="ttc-input" style="min-width: 210px;">
-                            <option value="">-- Semua Mesin Cetak --</option>
+                            <option value="">-- Semua Unit Mesin (Flexo) --</option>
                             @foreach ($mesinOptions as $kode => $nama)
                                 <option value="{{ $nama }}">{{ $nama }}</option>
                             @endforeach
@@ -585,7 +585,7 @@
                     {{ $fmt($data['grand_laba']) }}
                 </div>
                 <div class="ttc-kpi-sub" style="color: {{ $data['grand_laba'] >= 0 ? '#065f46' : '#9f1239' }};">
-                    {{ $this->selectedMesin ? 'Filter Mesin: ' . $this->selectedMesin : 'Gabungan Seluruh Unit Mesin Cetak' }}
+                    {{ $this->selectedMesin ? 'Filter Mesin: ' . $this->selectedMesin : 'Gabungan Seluruh Unit Mesin (Flexo)' }}
                 </div>
             </div>
         </div>
@@ -596,7 +596,7 @@
                 <div class="ttc-section-head">
                     <div>
                         <div class="ttc-section-title">
-                            I. Laba Rugi (Mesin) — Rekapitulasi Profitabilitas per Mesin Cetak
+                            I. Laba Rugi (Mesin) — Rekapitulasi Profitabilitas per Unit Mesin (Flexo)
                         </div>
                         <div class="ttc-section-desc">
                             Periode Laporan: {{ \Carbon\Carbon::parse($data['start_date'])->format('d/m/Y') }} s/d {{ \Carbon\Carbon::parse($data['end_date'])->format('d/m/Y') }}

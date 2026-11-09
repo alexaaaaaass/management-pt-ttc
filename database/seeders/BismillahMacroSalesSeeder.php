@@ -266,19 +266,19 @@ class BismillahMacroSalesSeeder extends Seeder
             $rawMaterialMap[$key] = $mItem;
         }
 
-        // Mesin Cetak hanya 3 unit utama (bersihkan duplikat bila ada)
-        MasterPrinting::whereNotIn('nama_mesin', ['SM 74', 'FLEXO', 'GTO 52'])->delete();
+        // 3 Mesin Utama Flexo PT TTC
+        MasterPrinting::whereNotIn('nama_mesin', ['Printing Flexo', 'Diecut Flexo', 'CTP / Plat Flexo'])->delete();
         $mesinSm74 = MasterPrinting::updateOrCreate(
-            ['nama_mesin' => 'SM 74'],
-            ['jenis_mesin' => 'PRINTING', 'kapasitas' => 100, 'proses' => 'OFFSET 4 WARNA', 'status' => 1]
+            ['nama_mesin' => 'Printing Flexo'],
+            ['jenis_mesin' => 'FLEXOGRAPHY', 'kapasitas' => 150, 'proses' => 'CETAK ROLL FLEXO (FULL COLOR)', 'status' => 1]
         );
         $mesinFlexo = MasterPrinting::updateOrCreate(
-            ['nama_mesin' => 'FLEXO'],
-            ['jenis_mesin' => 'PRINTING', 'kapasitas' => 100, 'proses' => 'FLEXO & ROLL', 'status' => 1]
+            ['nama_mesin' => 'Diecut Flexo'],
+            ['jenis_mesin' => 'ROTARY / FLATBED DIECUT', 'kapasitas' => 150, 'proses' => 'POND & DIECUTTING LABEL / BOX', 'status' => 1]
         );
         $mesinGto52 = MasterPrinting::updateOrCreate(
-            ['nama_mesin' => 'GTO 52'],
-            ['jenis_mesin' => 'PRINTING', 'kapasitas' => 80, 'proses' => 'OFFSET KOMERSIAL', 'status' => 1]
+            ['nama_mesin' => 'CTP / Plat Flexo'],
+            ['jenis_mesin' => 'COMPUTER TO PLATE (CTP)', 'kapasitas' => 100, 'proses' => 'PEMBUATAN PLAT FOTOPOLIMER FLEXO', 'status' => 1]
         );
 
         $operatorId = MasterOperator::firstOrCreate(
