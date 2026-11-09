@@ -50,13 +50,13 @@ class InvPaymentResource extends Resource
                                 ->schema([
 
                                     Select::make('invoice_id')
-    ->relationship(
-        'invoice',
-        'kode_invoice'
-    )
-    ->default(request('invoice'))
-    ->disabled(fn () => request()->has('invoice'))
-    ->dehydrated()
+                                        ->relationship(
+                                            'invoice',
+                                            'kode_invoice'
+                                        )
+                                        ->default(request('invoice'))
+                                        ->disabled(fn () => request()->has('invoice'))
+                                        ->dehydrated()
                                         ->getOptionLabelFromRecordUsing(
                                             fn ($record) =>
                                                 $record->kode_invoice .
@@ -66,7 +66,28 @@ class InvPaymentResource extends Resource
                                         ->searchable()
                                         ->preload()
                                         ->required()
-                                        ->live(),
+                                        ->live()
+                                        ->afterStateUpdated(function ($state, Set $set, Get $get) {
+                                            if (! $state) {
+                                                return;
+                                            }
+
+                                            $invoice = Invoice::with(['suratJalan.salesOrder.customer'])->find($state);
+                                            if (! $invoice) {
+                                                return;
+                                            }
+
+                                            $custName = $invoice->suratJalan?->salesOrder?->customer?->nama_customer ?? '';
+                                            $autoKet = 'Pembayaran Invoice ' . $invoice->kode_invoice . ($custName ? ' - ' . $custName : '');
+                                            $currentKet = $get('keterangan');
+                                            if (blank($currentKet) || str_starts_with($currentKet, 'Pembayaran Invoice')) {
+                                                $set('keterangan', $autoKet);
+                                            }
+
+                                            if ($get('full_payment')) {
+                                                $set('nominal_bayar', $invoice->sisa_tagihan);
+                                            }
+                                        }),
 
                                     DatePicker::make('tanggal_bayar')
                                         ->default(now())
@@ -171,7 +192,20 @@ class InvPaymentResource extends Resource
                                 ]),
 
                             Textarea::make('keterangan')
-                                ->rows(3)
+                                ->label('Keterangan / Catatan Pembayaran (Opsional)')
+                                ->placeholder('Otomatis: Pembayaran Invoice ... (Boleh dikosongkan jika tidak ada memo/bukti transfer khusus)')
+                                ->helperText('💡 Otomatis terisi saat invoice dipilih. Boleh diedit jika ingin mencatat no. referensi transfer / catatan bank.')
+                                ->default(function () {
+                                    if (request()->has('invoice')) {
+                                        $inv = Invoice::with(['suratJalan.salesOrder.customer'])->find(request('invoice'));
+                                        if ($inv) {
+                                            $custName = $inv->suratJalan?->salesOrder?->customer?->nama_customer ?? '';
+                                            return 'Pembayaran Invoice ' . $inv->kode_invoice . ($custName ? ' - ' . $custName : '');
+                                        }
+                                    }
+                                    return null;
+                                })
+                                ->rows(3),
 
                         ]),
 
