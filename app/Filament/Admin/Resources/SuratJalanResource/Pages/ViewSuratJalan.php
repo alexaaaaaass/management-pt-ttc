@@ -86,6 +86,12 @@ Section::make()
                             ->badge()
                             ->color('success'),
 
+                        TextEntry::make('invoice_badge')
+                            ->label('')
+                            ->state(fn ($record) => $record->invoice ? 'INVOICE: ' . $record->invoice->kode_invoice : 'BELUM DITAGIHKAN')
+                            ->badge()
+                            ->color(fn ($record) => $record->invoice ? 'primary' : 'gray'),
+
                     ]),
 
                 /*
@@ -123,6 +129,12 @@ Section::make()
                                 '
                             ]),
 
+                        TextEntry::make('so_number_header')
+                            ->label('')
+                            ->state(fn ($record) => 'Sales Order: ' . ($record->salesOrder?->no_sales_order ?? '-'))
+                            ->alignEnd()
+                            ->color('gray'),
+
                     ]),
 
             ]),
@@ -154,6 +166,50 @@ Section::make()
             border-top: 6px solid rgb(37 99 235);
         '
     ]),
+                /*
+                |--------------------------------------------------------------------------
+                | INFORMASI ORDER & INVOICE
+                |--------------------------------------------------------------------------
+                */
+
+                Section::make('INFORMASI ORDER & INVOICE')
+                    ->schema([
+                        Grid::make(4)->schema([
+                            TextEntry::make('salesOrder.no_sales_order')
+                                ->label('No. Sales Order')
+                                ->weight('bold')
+                                ->copyable(),
+
+                            TextEntry::make('salesOrder.no_po_customer')
+                                ->label('PO Customer')
+                                ->weight('bold')
+                                ->default('-'),
+
+                            TextEntry::make('spk.no_spk')
+                                ->label('No. SPK')
+                                ->default('-'),
+
+                            TextEntry::make('invoice_info')
+                                ->label('Invoice Terkait')
+                                ->state(function ($record) {
+                                    if (!$record->invoice) return 'Belum Dibuat Invoice';
+                                    return $record->invoice->kode_invoice . ' • ' . strtoupper($record->invoice->status ?? 'UNPAID');
+                                })
+                                ->badge()
+                                ->color(fn ($record) => $record->invoice ? 'success' : 'gray'),
+                        ]),
+                    ])
+                    ->icon('heroicon-o-document-text')
+                    ->extraAttributes([
+                        'class' => '
+                            rounded-2xl
+                            bg-white dark:bg-gray-900
+                            shadow-sm
+                            border border-gray-200 dark:border-gray-700
+                            p-4
+                        '
+                    ]),
+
                 /*
                 |--------------------------------------------------------------------------
                 | INFORMASI PENGIRIMAN
@@ -246,38 +302,45 @@ Section::make()
                                 TextEntry::make('barang')
                                     ->label('Deskripsi Barang')
                                     ->state(function ($record) {
-
-                                        return
-                                            $record->salesOrder?->itemable?->nama_barang
+                                        return $record->salesOrder?->itemable?->nama_barang
+                                            ?? $record->salesOrder?->product_name
                                             ?? '-';
                                     })
-                                    ->weight('bold'),
-
-                                TextEntry::make('spk.no_spk')
-                                    ->label('No. KIK / SPK'),
+                                    ->weight('bold')
+                                    ->size(TextEntry\TextEntrySize::Large),
 
                                 TextEntry::make('qty_pengiriman')
                                     ->label('Jumlah Dikirim')
                                     ->suffix(' PCS')
                                     ->weight('bold')
+                                    ->color('success')
                                     ->size(TextEntry\TextEntrySize::Large),
+
+                                TextEntry::make('qty_order_so')
+                                    ->label('Total Order SO')
+                                    ->state(fn ($record) => number_format((float) ($record->salesOrder?->qty ?? 0), 0, ',', '.') . ' PCS')
+                                    ->color('gray'),
 
                             ]),
 
-                        Grid::make(1)
+                        Grid::make(4)
                             ->schema([
+                                TextEntry::make('jenis')
+                                    ->label('Jenis')
+                                    ->state(fn ($record) => $record->salesOrder?->effective_jenis ?? '-'),
 
-                                TextEntry::make('po_customer')
-                                    ->label(' ')
-                                    ->state(function ($record) {
+                                TextEntry::make('komponen')
+                                    ->label('Komponen')
+                                    ->state(fn ($record) => $record->salesOrder?->effective_komponen ?? '-'),
 
-                                        return
-                                            'PO Customer: ' .
-                                            ($record->salesOrder?->no_po_customer ?? '-');
-                                    })
-                                    ->color('gray')
+                                TextEntry::make('kertas')
+                                    ->label('Kertas')
+                                    ->state(fn ($record) => $record->salesOrder?->effective_kertas ?? '-'),
 
-                            ])
+                                TextEntry::make('finishing')
+                                    ->label('Finishing')
+                                    ->state(fn ($record) => $record->salesOrder?->effective_finishing ?? '-'),
+                            ]),
 
                     ])
                     ->icon('heroicon-o-cube')

@@ -1,0 +1,563 @@
+MIME-Version: 1.0
+Content-Type: text/html; charset=utf-8
+
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>PRESENTASI ALUR & FITUR SISTEM TTC - INDIGAMA</title>
+    <style>
+        @page {
+            margin: 28px 36px 36px 36px;
+        }
+        body {
+            font-family: 'Helvetica', 'Arial', sans-serif;
+            color: #1e293b;
+            font-size: 11px;
+            line-height: 1.5;
+        }
+        .page-break {
+            page-break-after: always;
+        }
+        /* COVER STYLING */
+        .cover {
+            text-align: center;
+            padding-top: 140px;
+        }
+        .cover-tag {
+            background-color: #2563eb;
+            color: #ffffff;
+            font-size: 11px;
+            font-weight: bold;
+            padding: 6px 16px;
+            border-radius: 20px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            display: inline-block;
+        }
+        .cover-title {
+            font-size: 26px;
+            font-weight: 800;
+            color: #0f172a;
+            margin-top: 25px;
+            line-height: 1.25;
+            text-transform: uppercase;
+        }
+        .cover-subtitle {
+            font-size: 14px;
+            color: #475569;
+            margin-top: 12px;
+            font-weight: 500;
+        }
+        .cover-divider {
+            width: 120px;
+            height: 4px;
+            background-color: #3b82f6;
+            margin: 30px auto;
+            border-radius: 2px;
+        }
+        .cover-info {
+            margin-top: 120px;
+            font-size: 11px;
+            color: #64748b;
+            line-height: 1.8;
+        }
+        .cover-info strong {
+            color: #0f172a;
+        }
+
+        /* HEADER & FOOTER */
+        .header-bar {
+            border-bottom: 2px solid #2563eb;
+            padding-bottom: 6px;
+            margin-bottom: 18px;
+        }
+        .header-title {
+            font-size: 14px;
+            font-weight: bold;
+            color: #1e3a8a;
+            text-transform: uppercase;
+        }
+        .header-sub {
+            font-size: 9px;
+            color: #64748b;
+            float: right;
+            margin-top: -16px;
+        }
+
+        /* HEADINGS */
+        h1 {
+            font-size: 16px;
+            color: #1e3a8a;
+            margin-top: 18px;
+            margin-bottom: 10px;
+            border-bottom: 1px solid #cbd5e1;
+            padding-bottom: 4px;
+            text-transform: uppercase;
+        }
+        h2 {
+            font-size: 12.5px;
+            color: #0f172a;
+            margin-top: 14px;
+            margin-bottom: 6px;
+            background-color: #f1f5f9;
+            padding: 5px 8px;
+            border-left: 4px solid #2563eb;
+        }
+        h3 {
+            font-size: 11px;
+            color: #334155;
+            margin-top: 8px;
+            margin-bottom: 4px;
+            font-weight: bold;
+        }
+
+        p {
+            margin-top: 0;
+            margin-bottom: 8px;
+            text-align: justify;
+        }
+
+        /* TABLES */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 8px;
+            margin-bottom: 14px;
+            font-size: 10px;
+        }
+        th {
+            background-color: #1e3a8a;
+            color: #ffffff;
+            font-weight: bold;
+            text-align: left;
+            padding: 6px 8px;
+            border: 1px solid #1e3a8a;
+        }
+        td {
+            padding: 5px 8px;
+            border: 1px solid #e2e8f0;
+            vertical-align: top;
+        }
+        tr:nth-child(even) td {
+            background-color: #f8fafc;
+        }
+
+        /* BOXES & BADGES */
+        .box-highlight {
+            background-color: #eff6ff;
+            border-left: 4px solid #3b82f6;
+            padding: 10px 12px;
+            margin: 10px 0;
+            border-radius: 4px;
+        }
+        .badge {
+            display: inline-block;
+            padding: 2px 7px;
+            border-radius: 4px;
+            font-size: 9px;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+        .badge-green { background-color: #dcfce7; color: #166534; }
+        .badge-blue { background-color: #dbeafe; color: #1e40af; }
+        .badge-amber { background-color: #fef3c7; color: #92400e; }
+        .badge-gray { background-color: #f1f5f9; color: #475569; }
+
+        /* FLOW DIAGRAMS */
+        .flow-step {
+            background-color: #ffffff;
+            border: 1px solid #cbd5e1;
+            border-radius: 6px;
+            padding: 8px 12px;
+            margin-bottom: 8px;
+        }
+        .step-num {
+            background-color: #2563eb;
+            color: #ffffff;
+            font-weight: bold;
+            padding: 2px 7px;
+            border-radius: 10px;
+            font-size: 9px;
+            margin-right: 6px;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- ============================================================== -->
+    <!-- COVER PAGE                                                     -->
+    <!-- ============================================================== -->
+    <div class="cover">
+        <div class="cover-tag">Dokumen Presentasi &amp; Panduan Eksekutif</div>
+        <div class="cover-title">
+            Blueprint Alur Kerja &amp; Fitur Sistem<br>
+            TTC Enterprise ERP
+        </div>
+        <div class="cover-subtitle">
+            Integrasi Proses Percetakan Offset Packaging: Marketing, Produksi, Logistik, Penjualan, &amp; Akuntansi Finansial
+        </div>
+        <div class="cover-divider"></div>
+        <p style="text-align: center; max-width: 480px; margin: 0 auto; color: #475569; font-size: 11px;">
+            Dokumen resmi perbandingan alur operasional, adopsi modul Bismillah MACRO.xlsm, standardisasi format Indigama 02, dan otomatisasi akuntansi keuangan Multi-Step.
+        </p>
+
+        <div class="cover-info">
+            <strong>PT. TEKNOGRAFI TRI CAWANASKA (TTC)</strong><br>
+            Versi Rilis: 2.5 (Audited &amp; Synchronized)<br>
+            Tanggal Dokumen: 09 November 2026<br>
+            Disusun untuk: Stakeholder, Manajemen, Tim Marketing, &amp; Tim Finance
+        </div>
+    </div>
+
+    <div class="page-break"></div>
+
+    <!-- ============================================================== -->
+    <!-- HALAMAN 1: RINGKASAN EKSEKUTIF & ARSITEKTUR                   -->
+    <!-- ============================================================== -->
+    <div class="header-bar">
+        <span class="header-title">1. Ringkasan Eksekutif &amp; Arsitektur Sistem</span>
+        <span class="header-sub">TTC Enterprise ERP &bull; Dokumen Presentasi</span>
+    </div>
+
+    <div class="box-highlight">
+        <strong>Visi Sistem:</strong> Mengintegrasikan seluruh siklus hidup manufaktur percetakan offset dari penawaran harga pelanggan hingga terbitnya Laporan Laba Rugi dan Neraca secara otomatis, presisi, dan auditable tanpa jeda manual.
+    </div>
+
+    <h2>1.1 Tiga Pilar Penyelarasan Sistem</h2>
+    <p>
+        Sistem TTC Enterprise ERP dibangun melalui harmonisasi 3 basis data utama perusahaan:
+    </p>
+    <table>
+        <thead>
+            <tr>
+                <th style="width: 28%;">Komponen Asal</th>
+                <th style="width: 32%;">Kelebihan / Karakteristik</th>
+                <th style="width: 40%;">Penerapan di Sistem Baru</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><strong>Bismillah MACRO.xlsm</strong></td>
+                <td>Data riil sales order percetakan, perhitungan titipan harga (adjustment unit), komisi marketing 2%, serta voucher pembayaran.</td>
+                <td>Diintegrasikan 100% pada modul <em>Sales Commission Page</em>, Invoice, dan jurnal otomatis akun <code>6101</code> (Beban Komisi Penjualan).</td>
+            </tr>
+            <tr>
+                <td><strong>Sistem Indigama 02</strong></td>
+                <td>Arsitektur ERP manufaktur yang teruji: Approval Form, Order Confirmation, SPK Mesin, Analisa Laba Rugi per Mesin Cetak.</td>
+                <td>Format laporan, struktur menu, kalkulasi HPP bahan baku vs operasional mesin, dan alur bertingkat diadopsi secara presisi.</td>
+            </tr>
+            <tr>
+                <td><strong>TTC Modern Laravel Engine</strong></td>
+                <td>Teknologi Laravel 10 + Filament 3, sistem multi-tier security, database relasional MariaDB/MySQL, dan Multi-Step Accounting.</td>
+                <td>Menjamin performa tinggi, laporan interaktif, audit trail lengkap, dan pembagian hak akses (role-based permissions).</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <h2>1.2 Diagram Alur Bisnis End-to-End</h2>
+    <div class="flow-step">
+        <span class="step-num">1</span> <strong>MARKETING &amp; PRE-ORDER:</strong> 
+        Customer Request &rarr; Form Approval Teknis (Cek Desain, Plat, Warna, Kertas) &rarr; Order Confirmation (OC) &rarr; Sales Order (SO).
+    </div>
+    <div class="flow-step">
+        <span class="step-num">2</span> <strong>KOMISI &amp; ADJUSTMENT:</strong> 
+        Perhitungan Titipan Harga Unit (Adjustment) &amp; Komisi Sales (2%) otomatis terbit di menu <em>Sales Commission</em>.
+    </div>
+    <div class="flow-step">
+        <span class="step-num">3</span> <strong>PERENCANAAN &amp; PRODUKSI (PPIC):</strong> 
+        Penerbitan Surat Perintah Kerja (SPK) &rarr; Alokasi Mesin Cetak (Komori, Ryobi, Sakurai) &rarr; Input Pelaporan Hasil Baik vs Rusak (Waste Sheet).
+    </div>
+    <div class="flow-step">
+        <span class="step-num">4</span> <strong>LOGISTIK &amp; DELIVERY:</strong> 
+        Penerbitan Surat Jalan (SJ) riil &rarr; Toleransi Pengiriman &rarr; Driver &amp; Kendaraan &rarr; Pengiriman ke Gudang Customer.
+    </div>
+    <div class="flow-step">
+        <span class="step-num">5</span> <strong>FINANCE &amp; INVOICING:</strong> 
+        Penarikan Surat Jalan Siap Tagih &rarr; Penentuan Pajak (PPN 11% / Non-PPN) &rarr; Terbit Invoice &rarr; Pelunasan Pembayaran (Kas/Bank).
+    </div>
+    <div class="flow-step">
+        <span class="step-num">6</span> <strong>AKUNTANSI &amp; LAPORAN KEUANGAN:</strong> 
+        Posting Jurnal Otomatis &rarr; Buku Besar (General Ledger) &rarr; Neraca Saldo &rarr; Laba Rugi Global &amp; Laba Rugi Mesin &rarr; Neraca Balance.
+    </div>
+
+    <div class="page-break"></div>
+
+    <!-- ============================================================== -->
+    <!-- HALAMAN 2: DETAIL ALUR MODUL OPERASIONAL                       -->
+    <!-- ============================================================== -->
+    <div class="header-bar">
+        <span class="header-title">2. Detail Modul Operasional: Marketing, Produksi &amp; Logistik</span>
+        <span class="header-sub">TTC Enterprise ERP &bull; Dokumen Presentasi</span>
+    </div>
+
+    <h2>2.1 Modul Marketing (Pre-Sales &amp; Order)</h2>
+    <p>
+        Modul Marketing menangani transaksi komersial awal agar spesifikasi pesanan terkunci rapi sebelum masuk ke lantai produksi:
+    </p>
+    <ul>
+        <li><strong>Master Customer:</strong> Pengelolaan data pelanggan lengkap dengan legalitas, alamat pengiriman multi-cabang, PIC, NPWP, serta preferensi pajak (PKP/PPN atau Non-PPN).</li>
+        <li><strong>Approval Form (AF):</strong> Validasi teknis cetak sebelum order disepakati. Memuat checklist teknis kesiapan Desain/Layout, Film/Plate CTP, Jenis Kertas (Metalize, Ivory, Duplex, HVS), Jumlah Warna (4 warna, 5 warna, spot color), dan Finishing (Spot UV, Emboss, Pond/Die Cut, Lem).</li>
+        <li><strong>Order Confirmation (OC):</strong> Dokumen kesepakatan resmi dengan customer yang mengunci Harga Satuan / PCS, Total Nominal Order, Ketentuan Pembayaran (Term of Payment / TOP), Uang Muka (DP), dan Perkiraan Waktu Pengerjaan (Lead Time).</li>
+        <li><strong>Sales Order (SO):</strong> Konfirmasi pesanan resmi yang mengaktifkan antrean produksi ke bagian PPIC.</li>
+    </ul>
+
+    <h2>2.2 Modul Sales Commission &amp; Adjustment (Macro Adoption)</h2>
+    <p>
+        Mengadopsi formula khusus dari <code>Bismillah MACRO.xlsm</code> (sheet <em>DOC_Comm</em>) untuk menghitung komisi sales &amp; titipan harga secara transparan:
+    </p>
+    <table>
+        <thead>
+            <tr>
+                <th style="width: 25%;">Komponen</th>
+                <th style="width: 40%;">Rumus &amp; Logika</th>
+                <th style="width: 35%;">Dampak Akuntansi</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><strong>Revenue Gross</strong></td>
+                <td><code>Qty Kirim &times; Harga Jual Satuan</code></td>
+                <td>Mencatat potensi bruto penjualan.</td>
+            </tr>
+            <tr>
+                <td><strong>Adjustment (Titipan)</strong></td>
+                <td><code>Qty &times; Nominal Titipan per Unit</code></td>
+                <td>Dialokasikan sebagai penyesuaian harga non-operasional.</td>
+            </tr>
+            <tr>
+                <td><strong>Revenue After Adj.</strong></td>
+                <td><code>Revenue Gross - Total Adjustment</code></td>
+                <td>Basis pengenaan persentase komisi marketing.</td>
+            </tr>
+            <tr>
+                <td><strong>Marketing Comm (2%)</strong></td>
+                <td><code>2% &times; Revenue After Adjustment</code></td>
+                <td>Otomatis dicatat sebagai Beban Komisi Penjualan (Akun <code>6101</code>).</td>
+            </tr>
+            <tr>
+                <td><strong>Net Revenue TTC</strong></td>
+                <td><code>Revenue After Adj. - Marketing Comm</code></td>
+                <td>Pendapatan bersih riil yang diterima perusahaan.</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <h2>2.3 Modul Produksi &amp; Logistik (Delivery)</h2>
+    <ul>
+        <li><strong>SPK (Surat Perintah Kerja):</strong> Diterbitkan per mesin cetak dengan alokasi target lembar plano cetak, pisau pond, dan waktu giliran mesin.</li>
+        <li><strong>Laporan Hasil Cetak (Printing):</strong> Operator mencatat jumlah lembar cetak baik (<em>good run</em>), lembar rusak/rusak setel (<em>waste sheet</em>), serta semi-waste. Data ini otomatis menjadi dasar analisis biaya HPP riil pada Laporan Laba Rugi per Mesin Cetak.</li>
+        <li><strong>Surat Jalan (SJ):</strong> Diterbitkan ketika barang jadi telah lolos Quality Control (QC). Surat Jalan memvalidasi qty riil yang dikirim ke pelanggan, nama driver ekspedisi, dan nomor polisi kendaraan. <em>Surat Jalan inilah yang menjadi syarat mutlak penerbitan Invoice</em>.</li>
+    </ul>
+
+    <div class="page-break"></div>
+
+    <!-- ============================================================== -->
+    <!-- HALAMAN 3: MODUL FINANCE, INVOICE & PAJAK                      -->
+    <!-- ============================================================== -->
+    <div class="header-bar">
+        <span class="header-title">3. Modul Finance: Invoicing, Kas/Bank &amp; Pajak (PPN / Non-PPN)</span>
+        <span class="header-sub">TTC Enterprise ERP &bull; Dokumen Presentasi</span>
+    </div>
+
+    <h2>3.1 Alur Invoicing &amp; Integrasi Tagihan</h2>
+    <p>
+        Proses penagihan di Finance tidak lagi diinput manual, melainkan ditarik langsung dari Surat Jalan yang valid:
+    </p>
+    <div class="box-highlight">
+        <strong>Prinsip Anti-Double Invoice:</strong> Surat Jalan yang sudah dibuatkan invoice akan otomatis terkunci dan tidak bisa ditagihkan dua kali. Finance hanya dapat memilih Surat Jalan yang barangnya benar-benar sudah dikirim.
+    </div>
+
+    <h2>3.2 Penanganan PPN (11%) vs Non-PPN (0%)</h2>
+    <p>
+        Sistem menyediakan fleksibilitas penuh dalam menangani pesanan resmi (Faktur Pajak) dan pesanan non-faktur:
+    </p>
+    <table>
+        <thead>
+            <tr>
+                <th style="width: 25%;">Kategori</th>
+                <th style="width: 35%;">Alur di Form Invoice</th>
+                <th style="width: 40%;">Jurnal Akuntansi Otomatis</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><strong>PPN 11% (PKP)</strong><br><span class="badge badge-green">Pakai Faktur</span></td>
+                <td>Pilih opsi <em>PPN 11%</em>. Sistem otomatis menghitung DPP, PPN 11%, dan Grand Total tagihan secara instan.</td>
+                <td>
+                    (D) 1121 - Piutang Usaha (Gross)<br>
+                    (K) 4101 - Penjualan Usaha (DPP)<br>
+                    (K) 2121 - Utang PPN Keluaran (11%)
+                </td>
+            </tr>
+            <tr>
+                <td><strong>Non-PPN (0%)</strong><br><span class="badge badge-gray">Tanpa Faktur</span></td>
+                <td>Pilih opsi <em>Non-PPN (0%)</em>. Nilai PPN menjadi Rp 0, Grand Total sama dengan nilai subtotal order.</td>
+                <td>
+                    (D) 1121 - Piutang Usaha<br>
+                    (K) 4101 - Penjualan Usaha
+                </td>
+            </tr>
+        </tbody>
+    </table>
+
+    <h2>3.3 Fitur Unggulan Invoice &amp; Penagihan</h2>
+    <ul>
+        <li><strong>Badge Status Pajak &amp; Filter Dropdown:</strong> Tabel Invoice menampilkan badge hijau <em>PPN 11%</em> beserta nominal rupiah pajaknya, atau badge abu-abu <em>NON-PPN</em>. Dilengkapi filter 1-klik untuk menyaring khusus PPN atau Non-PPN.</li>
+        <li><strong>1-Click Action Toggle Pajak:</strong> Finance dapat mengubah invoice yang sudah terbit dari Non-PPN ke PPN 11% (atau sebaliknya) hanya dengan 1 klik pada menu aksi. Sistem otomatis merevisi Grand Total, Sisa Tagihan, dan menjurnal ulang pembukuan akuntansi.</li>
+        <li><strong>Pemotongan DP Otomatis:</strong> Down payment (uang muka) yang dibayarkan saat Order Confirmation otomatis memotong total tagihan invoice sehingga menampilkan <em>Sisa Tagihan (AR)</em> yang akurat.</li>
+        <li><strong>Cetak &amp; Preview Dokumen:</strong> Tombol <em>Preview PDF</em> dan <em>Download PDF</em> siap cetak dengan template profesional berlogo perusahaan, rincian item, terbilang rupiah, dan tanda tangan legal.</li>
+    </ul>
+
+    <h2>3.4 Pelunasan Pembayaran (Invoice Payment)</h2>
+    <ul>
+        <li>Mendukung pembayaran penuh (Lunas / <em>Paid</em>) maupun pembayaran bertahap (Cicilan / <em>Partial</em>).</li>
+        <li>Tersambung ke kasir kas kecil (Kas Tunai) maupun rekening giro bank perusahaan (BCA, Mandiri, BRI, BNI).</li>
+        <li>Setiap pelunasan otomatis memotong buku piutang pelanggan dan menambah saldo kas/bank terkait.</li>
+    </ul>
+
+    <div class="page-break"></div>
+
+    <!-- ============================================================== -->
+    <!-- HALAMAN 4: STRUKTUR REPORT & KEUANGAN EKSEKUTIF                -->
+    <!-- ============================================================== -->
+    <div class="header-bar">
+        <span class="header-title">4. Struktur Menu Report &amp; Laporan Keuangan Eksekutif</span>
+        <span class="header-sub">TTC Enterprise ERP &bull; Dokumen Presentasi</span>
+    </div>
+
+    <h2>4.1 Restrukturisasi Sidebar Menu Report</h2>
+    <p>
+        Untuk menjaga kerapian antarmuka dan kemudahan navigasi manajemen, menu <strong>Report</strong> dikelompokkan secara ringkas menjadi <strong>3 Menu Utama</strong>:
+    </p>
+    <table>
+        <thead>
+            <tr>
+                <th style="width: 25%;">Menu Utama</th>
+                <th style="width: 35%;">Isi / Sub-Fitur</th>
+                <th style="width: 40%;">Tujuan Manajerial</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><strong>1. Report Finance</strong><br><span class="badge badge-blue">Executive Hub</span></td>
+                <td>Sub-tab terpadu:<br>&bull; Laba Rugi (Global)<br>&bull; Laba Rugi (Mesin)<br>&bull; Laporan Neraca<br>&bull; Trial Balance<br>&bull; General Ledger</td>
+                <td>Laporan komprehensif akuntansi, evaluasi kesehatan keuangan, dan audit trail pergerakan kas &amp; utang-piutang.</td>
+            </tr>
+            <tr>
+                <td><strong>2. Report Produksi</strong><br><span class="badge badge-amber">Operasional</span></td>
+                <td>Rekapitulasi SPK harian, output cetak per shift/operator, dan rasio waste paper per jenis kertas.</td>
+                <td>Evaluasi produktivitas lantai pabrik, efisiensi waktu pengerjaan, dan pengendalian tingkat kerusakan bahan.</td>
+            </tr>
+            <tr>
+                <td><strong>3. Report PO VS PB</strong><br><span class="badge badge-green">Supply Chain</span></td>
+                <td>Analisa perbandingan Purchase Order (PO bahan baku) terhadap Penerimaan Barang (PB gudang).</td>
+                <td>Pengawasan ketepatan kirim supplier, pencegahan over-order, dan rekonsiliasi faktur pembelian bahan baku.</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <h2>4.2 Rincian 5 Laporan Keuangan Utama (Report Finance)</h2>
+    <div class="flow-step">
+        <strong>1. Laporan Laba Rugi (Global) &mdash; Multi-Step Income Statement:</strong>
+        <p style="margin-top: 4px; margin-bottom: 0;">
+            Menyajikan perhitungan pendapatan kotor, retur/diskon, Pendapatan Bersih (100% basis), Harga Pokok Penjualan (HPP bahan baku), Laba Kotor (Gross Profit), Beban Operasional (Penjualan, Komisi, Umum, Gaji), Laba Operasional (EBIT), Pendapatan/Beban Lain-Lain, hingga Laba/Rugi Bersih Periode Berjalan lengkap dengan Margin %.
+        </p>
+    </div>
+    <div class="flow-step">
+        <strong>2. Laporan Laba Rugi per Mesin Cetak (RAnalisaAccounting Indigama):</strong>
+        <p style="margin-top: 4px; margin-bottom: 0;">
+            Menganalisis margin keuntungan riil yang disumbangkan oleh masing-masing unit mesin offset (Komori Lithrone, Ryobi, Sakurai Oliver) dengan membandingkan pendapatan cetak terhadap biaya riil kertas, tinta, plat, listrik mesin, dan waste sheet.
+        </p>
+    </div>
+    <div class="flow-step">
+        <strong>3. Laporan Neraca (Balance Sheet) &mdash; Skontro 2 Kolom Sehat &amp; Balance:</strong>
+        <p style="margin-top: 4px; margin-bottom: 0;">
+            Menampilkan posisi keuangan perusahaan dengan perbandingan <em>Total Aktiva (Aset Lancar + Aset Tetap)</em> terhadap <em>Total Pasiva (Kewajiban Jangka Pendek + Ekuitas Modal)</em>. Dilengkapi indikator kesehatan likuiditas (Current Ratio) dan solvabilitas (Debt to Equity). Neraca dipastikan <strong>100% Balance (Aktiva == Pasiva)</strong>.
+        </p>
+    </div>
+    <div class="flow-step">
+        <strong>4. Trial Balance (Neraca Saldo Rekapitulasi):</strong>
+        <p style="margin-top: 4px; margin-bottom: 0;">
+            Tabel rekapitulasi mutasi Debit dan Kredit seluruh Chart of Accounts (COA) untuk memastikan tidak ada pencatatan yang pincang sebelum penutupan buku akhir bulan.
+        </p>
+    </div>
+    <div class="flow-step">
+        <strong>5. General Ledger (Buku Besar Komprehensif):</strong>
+        <p style="margin-top: 4px; margin-bottom: 0;">
+            Menampilkan histori kartu ledger per akun COA (misal: Kas, Bank BCA, Piutang Usaha, Penjualan, Utang PPN). Dilengkapi filter akun, tanggal transaksi, running balance saldo akhir, dan keterangan referensi dokumen sumber.
+        </p>
+    </div>
+
+    <div class="page-break"></div>
+
+    <!-- ============================================================== -->
+    <!-- HALAMAN 5: KESIMPULAN & CHECKLIST KESIAPAN USER                -->
+    <!-- ============================================================== -->
+    <div class="header-bar">
+        <span class="header-title">5. Kesimpulan, Keamanan &amp; Checklist Kesiapan</span>
+        <span class="header-sub">TTC Enterprise ERP &bull; Dokumen Presentasi</span>
+    </div>
+
+    <h2>5.1 Matriks Nilai Tambah bagi Manajemen &amp; User</h2>
+    <table>
+        <thead>
+            <tr>
+                <th style="width: 20%;">Peran User</th>
+                <th style="width: 40%;">Sebelumnya (Manual / Spreadsheet)</th>
+                <th style="width: 40%;">Setelah Menggunakan Sistem Baru</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><strong>Direksi / Owner</strong></td>
+                <td>Menunggu rekap manual akhir bulan, risiko selisih data kas dan piutang, sulit memantau performa per mesin.</td>
+                <td>Dapat melihat Laba Rugi real-time, profitabilitas mesin, dan Neraca keuangan kapan saja dalam 1 klik dari gadget/laptop.</td>
+            </tr>
+            <tr>
+                <td><strong>Tim Marketing</strong></td>
+                <td>Hitungan komisi dan titipan adjustment rawan salah hitung, arsip PO terpisah-pisah.</td>
+                <td>Perhitungan komisi 2% dan adjustment otomatis transparan, status voucher pembayaran komisi tercatat rapi.</td>
+            </tr>
+            <tr>
+                <td><strong>Tim Produksi / PPIC</strong></td>
+                <td>Data waste sheet dan lembar cetak sering tidak sinkron dengan bagian keuangan.</td>
+                <td>Pencatatan hasil baik vs rusak langsung terhubung ke analisa HPP mesin dan Surat Jalan pengiriman.</td>
+            </tr>
+            <tr>
+                <td><strong>Tim Finance &amp; Pajak</strong></td>
+                <td>Harus membuat faktur dan jurnal satu per satu, rawan selisih antara invoice dan buku besar.</td>
+                <td>Tinggal tarik Surat Jalan siap tagih, pilih PPN 11% atau Non-PPN, jurnal piutang &amp; kas/bank ter-posting otomatis.</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <h2>5.2 Keamanan &amp; Integritas Data</h2>
+    <ul>
+        <li><strong>Role-Based Access Control:</strong> Hak akses dipisahkan ketat (Admin, Marketing, Produksi, Gudang, Finance, Direksi). Bagian produksi tidak dapat melihat harga invoice/komisi, dan bagian marketing tidak dapat mengubah jurnal akuntansi.</li>
+        <li><strong>Audit Trail:</strong> Setiap pembuatan, perubahan, dan penghapusan data mencatat waktu transaksi dan identitas pengguna.</li>
+        <li><strong>Database Relational Integrity:</strong> Data yang sudah memiliki referensi transaksi (misal: Customer yang sudah memiliki Invoice) terkunci aman dan tidak dapat terhapus secara tidak sengaja.</li>
+    </ul>
+
+    <h2>5.3 Penutup</h2>
+    <div class="box-highlight">
+        Sistem TTC Enterprise ERP telah siap 100% untuk tahap demonstrasi dan operasional harian. Seluruh alur kerja telah divalidasi dengan data transaksi riil <em>Bismillah MACRO.xlsm</em> dan arsitektur <em>Indigama 02</em>.
+    </div>
+
+    <table style="border: none; margin-top: 35px;">
+        <tr style="background: none;">
+            <td style="border: none; text-align: center; width: 50%;">
+                Mengetahui,<br>
+                <strong>Manajemen PT. TTC</strong><br><br><br><br>
+                ( __________________________ )
+            </td>
+            <td style="border: none; text-align: center; width: 50%;">
+                Disiapkan oleh,<br>
+                <strong>Tim Implementasi Sistem</strong><br><br><br><br>
+                ( __________________________ )
+            </td>
+        </tr>
+    </table>
+
+</body>
+</html>

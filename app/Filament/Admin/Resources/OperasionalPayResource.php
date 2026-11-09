@@ -20,19 +20,21 @@ class OperasionalPayResource extends Resource
 {
     protected static ?string $model = OperasionalPay::class;
     protected static ?string $navigationGroup = 'Finance';
-    protected static ?int $navigationSort = 10;
+    protected static ?int $navigationSort = 4;
     protected static ?string $navigationIcon = 'heroicon-o-credit-card';
+    protected static ?string $modelLabel = 'Transaksi Operasional Keluar';
+    protected static ?string $pluralModelLabel = 'Transaksi Operasional Keluar';
 
     public static function getNavigationLabel(): string
     {
-        return 'Operasional Pay';
+        return 'Operasional Keluar';
     }
 
     public static function form(Form $form): Form
     {
         return $form
             ->schema([
-                Section::make('Transaksi Pengeluaran Operasional')
+                Section::make('Transaksi Operasional Keluar')
                     ->extraAttributes([
                         'class' => 'rounded-3xl border-t-4 border-purple-500 shadow-sm bg-white dark:bg-gray-900',
                     ])
@@ -64,14 +66,16 @@ class OperasionalPayResource extends Resource
                                 Select::make('account_kas_id')
                                     ->label('Akun Kas Pembayar (Kredit)')
                                     ->relationship('accountKas', 'nama_akun')
-                                    ->searchable()
+                                    ->getOptionLabelFromRecordUsing(fn ($record) => trim($record->kode_akun) . ' - ' . $record->nama_akun)
+                                    ->searchable(['kode_akun', 'nama_akun'])
                                     ->preload()
                                     ->required(),
 
                                 Select::make('account_beban_id')
                                     ->label('Akun Beban Operasional (Debit)')
                                     ->relationship('accountBeban', 'nama_akun')
-                                    ->searchable()
+                                    ->getOptionLabelFromRecordUsing(fn ($record) => trim($record->kode_akun) . ' - ' . $record->nama_akun)
+                                    ->searchable(['kode_akun', 'nama_akun'])
                                     ->preload()
                                     ->required(),
                             ]),
@@ -152,12 +156,26 @@ class OperasionalPayResource extends Resource
                     ->date('d/m/Y')
                     ->sortable(),
 
-                Tables\Columns\TextColumn::make('karyawan.nama')
-                    ->label('Karyawan PIC')
+                Tables\Columns\TextColumn::make('jenis')
+                    ->label('Kategori')
+                    ->badge()
+                    ->color(fn (?string $state): string => str_contains((string) $state, 'KOMISI') ? 'warning' : 'gray')
+                    ->searchable(),
+
+                Tables\Columns\TextColumn::make('kode')
+                    ->label('Ref. Order ID')
+                    ->badge()
+                    ->color('info')
+                    ->searchable(),
+
+                Tables\Columns\TextColumn::make('keterangan')
+                    ->label('Uraian / Keterangan')
+                    ->limit(45)
+                    ->tooltip(fn ($record) => $record->keterangan)
                     ->searchable(),
 
                 Tables\Columns\TextColumn::make('accountKas.nama_akun')
-                    ->label('Akun Kas')
+                    ->label('Akun Pembayar')
                     ->searchable(),
 
                 Tables\Columns\TextColumn::make('accountBeban.nama_akun')
@@ -167,7 +185,14 @@ class OperasionalPayResource extends Resource
                 Tables\Columns\TextColumn::make('nominal')
                     ->label('Nominal')
                     ->money('IDR')
-                    ->sortable(),
+                    ->alignRight()
+                    ->weight('bold')
+                    ->sortable()
+                    ->summarize(
+                        Tables\Columns\Summarizers\Sum::make()
+                            ->label('Total Pengeluaran')
+                            ->money('IDR')
+                    ),
 
                 Tables\Columns\BadgeColumn::make('status')
                     ->colors([
@@ -175,7 +200,35 @@ class OperasionalPayResource extends Resource
                         'danger'  => 'INACTIVE',
                     ]),
             ])
+            ->bulkActions([
+                Tables\Actions\BulkAction::make('infoDataTerpilih')
+                    ->label('Info Data Terpilih')
+                    ->icon('heroicon-o-check-circle')
+                    ->action(function (\Illuminate\Database\Eloquent\Collection $records): void {
+                        \Filament\Notifications\Notification::make()
+                            ->title($records->count() . ' data dipilih')
+                            ->success()
+                            ->send();
+                    })
+                    ->deselectRecordsAfterCompletion(),
+            ])
             ->actions([
+                Tables\Actions\Action::make('preview_pdf')
+                    ->label(fn (OperasionalPay $record) => (str_starts_with((string) $record->kode_transaksi, 'COM-') || str_contains((string) $record->jenis, 'KOMISI')) ? 'Form Komisi PDF' : 'Voucher PDF')
+                    ->icon('heroicon-o-printer')
+                    ->color('info')
+                    ->url(fn (OperasionalPay $record) => (str_starts_with((string) $record->kode_transaksi, 'COM-') || str_contains((string) $record->jenis, 'KOMISI'))
+                        ? route('finance.commission.preview', $record->kode ?: $record->kode_transaksi)
+                        : route('finance.voucher.operasional.preview', $record))
+                    ->openUrlInNewTab(),
+                Tables\Actions\Action::make('download_pdf')
+                    ->label('Download')
+                    ->icon('heroicon-o-arrow-down-tray')
+                    ->color('success')
+                    ->url(fn (OperasionalPay $record) => (str_starts_with((string) $record->kode_transaksi, 'COM-') || str_contains((string) $record->jenis, 'KOMISI'))
+                        ? route('finance.commission.download', $record->kode ?: $record->kode_transaksi)
+                        : route('finance.voucher.operasional.download', $record))
+                    ->openUrlInNewTab(),
                 Tables\Actions\ViewAction::make(),
                 Tables\Actions\EditAction::make(),
                 Tables\Actions\DeleteAction::make()

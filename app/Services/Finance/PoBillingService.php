@@ -121,6 +121,8 @@ class PoBillingService
                 $billing->items()->create($item);
             }
 
+            app(TreasuryService::class)->syncPoBilling($billing);
+
             return $billing->load('items');
         });
     }
@@ -161,6 +163,8 @@ class PoBillingService
                 $billing->update($data);
             }
 
+            app(TreasuryService::class)->syncPoBilling($billing);
+
             return $billing->load('items');
         });
     }
@@ -175,6 +179,7 @@ class PoBillingService
                 throw new \Exception('Tidak dapat menghapus Tagihan Supplier karena sudah memiliki riwayat pembayaran.');
             }
 
+            app(TreasuryService::class)->deletePoBilling($billing);
             $billing->items()->delete();
             return (bool) $billing->delete();
         });

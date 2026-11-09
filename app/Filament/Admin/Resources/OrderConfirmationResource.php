@@ -321,7 +321,10 @@ class OrderConfirmationResource extends Resource
                                                 if (!$state) return;
                                                 $fg = FinishGoodItem::find($state);
                                                 if ($fg) {
-                                                    $set('item_name', $fg->nama_barang);
+                                                    $currentItemName = trim((string) ($get('item_name') ?? ''));
+                                                    if ($currentItemName === '' && strtoupper(trim((string) $fg->nama_barang)) !== 'KERTAS IVORY') {
+                                                        $set('item_name', $fg->nama_barang);
+                                                    }
                                                     $set('jenis', $fg->jenis);
                                                     $set('komponen', $fg->komponen);
                                                     $set('isi', $fg->isi);
@@ -341,6 +344,9 @@ class OrderConfirmationResource extends Resource
 
                                                         if ($afItem) {
                                                             $set('approval_form_item_id', $afItem->id);
+                                                            if (!empty($afItem->item_name) && strtoupper(trim($afItem->item_name)) !== 'KERTAS IVORY') {
+                                                                $set('item_name', $afItem->item_name);
+                                                            }
                                                             $set('qty', (float) $afItem->qty);
                                                             if ($afItem->satuan) {
                                                                 $set('satuan', $afItem->satuan);

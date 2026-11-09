@@ -79,24 +79,17 @@ class ApprovalForm extends Model
     }
 
     /**
-     * Generate Nomor Dokumen AF Otomatis
+     * Generate Nomor Dokumen AF Otomatis (Sesuai Bismillah MACRO.xlsm: AF-YY-ROMAWI-CustID-UrutanCustomer)
      * Contoh format: AF-26-IV-C005-003
      */
     public static function generateFormNo(?Customer $customer = null): string
     {
-        $year = date('y');
-        $monthRoman = self::toRoman((int) date('n'));
-        $custCode = $customer ? ($customer->kode_customer ?: 'C' . str_pad($customer->id, 3, '0', STR_PAD_LEFT)) : 'C001';
-        
-        $prefix = "AF-{$year}-{$monthRoman}-{$custCode}-";
-        $countThisMonth = self::where('form_no', 'like', "AF-{$year}-{$monthRoman}-%")->count() + 1;
-        $sequence = str_pad($countThisMonth, 3, '0', STR_PAD_LEFT);
-
-        return $prefix . $sequence;
+        $orderId = self::generateOrderId($customer);
+        return 'AF-' . substr($orderId, 3);
     }
 
     /**
-     * Generate Order ID Otomatis
+     * Generate Order ID Otomatis (Sesuai Bismillah MACRO.xlsm: OR-YY-ROMAWI-CustID-UrutanCustomer)
      * Contoh format: OR-26-IV-C005-003
      */
     public static function generateOrderId(?Customer $customer = null): string
@@ -104,10 +97,12 @@ class ApprovalForm extends Model
         $year = date('y');
         $monthRoman = self::toRoman((int) date('n'));
         $custCode = $customer ? ($customer->kode_customer ?: 'C' . str_pad($customer->id, 3, '0', STR_PAD_LEFT)) : 'C001';
-        
+
         $prefix = "OR-{$year}-{$monthRoman}-{$custCode}-";
-        $countThisMonth = self::where('order_id', 'like', "OR-{$year}-{$monthRoman}-%")->count() + 1;
-        $sequence = str_pad($countThisMonth, 3, '0', STR_PAD_LEFT);
+        $countForCustomer = $customer
+            ? (self::where('customer_id', $customer->id)->count() + 1)
+            : (self::where('order_id', 'like', "OR-{$year}-{$monthRoman}-%")->count() + 1);
+        $sequence = str_pad($countForCustomer, 3, '0', STR_PAD_LEFT);
 
         return $prefix . $sequence;
     }

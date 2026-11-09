@@ -12,6 +12,13 @@ class EditTransKas extends EditRecord
 {
     protected static string $resource = TransKasResource::class;
 
+    public function getHeading(): string
+    {
+        return $this->record?->tipe_transaksi === 'KAS_KELUAR'
+            ? 'Transaksi Kas Keluar'
+            : 'Transaksi Kas Masuk';
+    }
+
     protected function getHeaderActions(): array
     {
         return [

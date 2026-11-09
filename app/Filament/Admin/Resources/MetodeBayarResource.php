@@ -15,7 +15,9 @@ class MetodeBayarResource extends Resource
     protected static ?string $model = MetodeBayar::class;
     protected static ?string $navigationGroup = 'Finance';
     protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
-     protected static ?int $navigationSort = 5;
+    protected static ?int $navigationSort = 15;
+    protected static ?string $modelLabel = 'Master Pembayaran';
+    protected static ?string $pluralModelLabel = 'Master Payment';
     public static function form(Form $form): Form
 {
     return $form
@@ -35,7 +37,7 @@ class MetodeBayarResource extends Resource
 
     public static function getNavigationLabel(): string
 {
-    return 'Metode Bayar';
+    return 'Master Payment';
 }
     
 

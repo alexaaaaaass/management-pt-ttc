@@ -26,9 +26,7 @@ class CreateIMR
 
             foreach ($items as $item) {
 
-                $qtyReq = (float) ($item['qty_request'] ?? ($item['qty_input'] ?? 0));
-
-                if ($qtyReq <= 0) {
+                if (($item['qty_request'] ?? 0) <= 0) {
                     continue;
                 }
 
@@ -36,11 +34,11 @@ class CreateIMR
 
                     'item_id'        => $item['item_id'],
 
-                    'satuan'         => $item['satuan'] ?? '',
+                    'satuan'         => $item['satuan'],
 
-                    'total_pesanan'  => (float) ($item['total_pesanan'] ?? 0),
+                    'total_pesanan'  => $item['total_pesanan'],
 
-                    'qty_request'    => $qtyReq,
+                    'qty_request'    => $item['qty_request'],
 
                     'qty_approved'   => 0,
 
@@ -52,12 +50,6 @@ class CreateIMR
 
                 ]);
 
-            }
-
-            if ($imr->items()->count() === 0) {
-                throw \Illuminate\Validation\ValidationException::withMessages([
-                    'imr_items' => 'Minimal 1 material harus diisi Qty Request lebih besar dari 0.',
-                ]);
             }
 
             return $imr;

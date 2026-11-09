@@ -77,11 +77,12 @@ class MarketingWorkflowService
                 return $approvalForm->orderConfirmation;
             }
 
-            $docNo = OrderConfirmation::generateDocNo($approvalForm->customer);
+            $orderId = $approvalForm->order_id ?: ApprovalForm::generateOrderId($approvalForm->customer);
+            $docNo = OrderConfirmation::generateDocNo($approvalForm->customer, $orderId);
 
             $orderConfirmation = OrderConfirmation::create([
                 'approval_form_id'  => $approvalForm->id,
-                'order_id'          => $approvalForm->order_id ?: ApprovalForm::generateOrderId($approvalForm->customer),
+                'order_id'          => $orderId,
                 'doc_no'            => $docNo,
                 'customer_id'       => $approvalForm->customer_id,
                 'tanggal'           => now(),

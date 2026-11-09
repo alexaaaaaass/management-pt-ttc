@@ -10,7 +10,6 @@ use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
-use Illuminate\Database\Eloquent\Builder;
 
 class MaterialStockResource extends Resource
 {
@@ -102,11 +101,6 @@ class MaterialStockResource extends Resource
 
     ]);
 }
-
-    public static function getEloquentQuery(): Builder
-    {
-        return parent::getEloquentQuery()->with(['item.satuan']);
-    }
 
     public static function getRelations(): array
     {

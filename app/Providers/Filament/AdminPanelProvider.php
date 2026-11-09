@@ -88,9 +88,11 @@ class AdminPanelProvider extends PanelProvider
             ->collapsed(),
 ])
 
-        ->plugins([
-            \BezhanSalleh\FilamentShield\FilamentShieldPlugin::make(),
-        ])
+        ->plugins(
+            class_exists(\BezhanSalleh\FilamentShield\FilamentShieldPlugin::class)
+                ? [\BezhanSalleh\FilamentShield\FilamentShieldPlugin::make()]
+                : []
+        )
 
         
 

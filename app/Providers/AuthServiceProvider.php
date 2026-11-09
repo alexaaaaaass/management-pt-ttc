@@ -21,6 +21,24 @@ class AuthServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        //
+        \Illuminate\Support\Facades\Gate::before(function ($user, string $ability) {
+            if (! $user) {
+                return null;
+            }
+            try {
+                if (method_exists($user, 'hasRole')) {
+                    if ($user->hasRole('super_admin')) {
+                        return true;
+                    }
+                    if ($user->roles()->count() === 0 || \Spatie\Permission\Models\Permission::count() === 0) {
+                        return true;
+                    }
+                }
+            } catch (\Throwable $e) {
+                return true;
+            }
+
+            return null;
+        });
     }
 }

@@ -267,8 +267,18 @@ class PoBillingResource extends Resource
 
     public static function getNavigationLabel(): string
 {
-    return 'Po Billing';
+    return 'Billing of Purchase Order / Penagihan';
 }
+
+    public static function getModelLabel(): string
+    {
+        return 'Billing of Purchase Order / Penagihan';
+    }
+
+    public static function getPluralModelLabel(): string
+    {
+        return 'Billing of Purchase Order / Penagihan';
+    }
 
     public static function table(Table $table): Table
     {

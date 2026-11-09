@@ -219,6 +219,10 @@ class SalesOrderResource extends Resource
                                         $set('itemable_id', $item?->id);
                                         $set('customer_id', $item?->customer_id);
                                         $set('kode_material', $item?->kode_material_produk);
+                                        $currentProductName = trim((string) ($get('product_name') ?? ''));
+                                        if ($currentProductName === '' && $item && strtoupper(trim((string) $item->nama_barang)) !== 'KERTAS IVORY') {
+                                            $set('product_name', $item->nama_barang);
+                                        }
                                         $set('material_item_id', null);
                                         $set('jenis', $item?->jenis);
                                         $set('komponen', $item?->komponen ?? $item?->typeItem?->nama_type_item);
@@ -241,6 +245,11 @@ class SalesOrderResource extends Resource
                                         $set('bom_items', []);
                                     }
                                 }),
+
+                            Forms\Components\TextInput::make('product_name')
+                                ->label('Nama Item / Produk')
+                                ->placeholder('Contoh: DAFI 16')
+                                ->visible(fn(Get $get) => $get('order_type') == 'SPK'),
 
                             Forms\Components\Hidden::make('itemable_type'),
                             Forms\Components\Hidden::make('itemable_id'),
@@ -626,7 +635,7 @@ class SalesOrderResource extends Resource
                                 ->implode(', ');
                         }
 
-                        return $record->itemable?->nama_barang ?? '-';
+                        return $record->product_name ?: ($record->itemable?->nama_barang ?? '-');
                     }),
 
                 Tables\Columns\TextColumn::make('qty')

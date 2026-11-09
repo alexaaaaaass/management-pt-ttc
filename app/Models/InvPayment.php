@@ -87,6 +87,7 @@ class InvPayment extends Model
 
     static::deleted(function ($payment) {
 
+        app(\App\Services\Finance\TreasuryService::class)->deleteInvPayment($payment);
         $payment->invoice?->refreshPayment();
 
     });

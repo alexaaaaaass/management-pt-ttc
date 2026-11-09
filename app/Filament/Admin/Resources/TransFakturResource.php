@@ -18,8 +18,9 @@ use Filament\Tables\Table;
 class TransFakturResource extends Resource
 {
     protected static ?string $model = TransFaktur::class;
-     protected static ?string $navigationGroup = 'Finance';
-protected static ?int $navigationSort = 7;
+    protected static ?string $navigationGroup = 'Finance';
+    protected static ?int $navigationSort = 16;
+    protected static bool $shouldRegisterNavigation = false;
     protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
 
     public static function form(Form $form): Form
@@ -263,8 +264,18 @@ protected static ?int $navigationSort = 7;
 
     public static function getNavigationLabel(): string
 {
-    return 'Trans Faktur';
+    return 'Setting Bill PO & Terima Barang (Material Masuk)';
 }
+
+    public static function getModelLabel(): string
+    {
+        return 'Setting Bill PO & Material Masuk';
+    }
+
+    public static function getPluralModelLabel(): string
+    {
+        return 'Setting Bill PO & Material Masuk';
+    }
 
     public static function table(Table $table): Table
 {
@@ -292,6 +303,18 @@ protected static ?int $navigationSort = 7;
 
         ])
 
+        ->bulkActions([
+            Tables\Actions\BulkAction::make('infoDataTerpilih')
+                ->label('Info Data Terpilih')
+                ->icon('heroicon-o-check-circle')
+                ->action(function (\Illuminate\Database\Eloquent\Collection $records): void {
+                    \Filament\Notifications\Notification::make()
+                        ->title($records->count() . ' data dipilih')
+                        ->success()
+                        ->send();
+                })
+                ->deselectRecordsAfterCompletion(),
+        ])
         ->actions([
 
             Tables\Actions\Action::make('view')

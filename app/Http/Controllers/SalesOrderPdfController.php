@@ -15,7 +15,7 @@ class SalesOrderPdfController extends Controller
 
     public function preview(SalesOrder $salesOrder)
     {
-        $salesOrder->loadMissing(['customer', 'itemable', 'items.material']);
+        $salesOrder->loadMissing(['customer', 'itemable', 'items.material', 'orderConfirmation.items']);
 
         $pdf = Pdf::loadView(
             'pdf.sales-order',
@@ -27,7 +27,7 @@ class SalesOrderPdfController extends Controller
 
     public function download(SalesOrder $salesOrder)
     {
-        $salesOrder->loadMissing(['customer', 'itemable', 'items.material']);
+        $salesOrder->loadMissing(['customer', 'itemable', 'items.material', 'orderConfirmation.items']);
 
         $pdf = Pdf::loadView(
             'pdf.sales-order',

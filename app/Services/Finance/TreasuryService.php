@@ -2,10 +2,17 @@
 
 namespace App\Services\Finance;
 
+use App\Models\CoaClass;
 use App\Models\CoaMovement;
+use App\Models\Gaji;
+use App\Models\Invoice;
 use App\Models\InvPayment;
+use App\Models\JournalEntry;
+use App\Models\JournalEntryLine;
+use App\Models\Karyawan;
 use App\Models\MasterCOA;
 use App\Models\OperasionalPay;
+use App\Models\PoBilling;
 use App\Models\PoBillPay;
 use App\Models\PoBillPayItem;
 use App\Models\TransKas;
@@ -16,6 +23,252 @@ use Illuminate\Validation\ValidationException;
 
 class TreasuryService
 {
+    /*
+    |--------------------------------------------------------------------------
+    | DEFAULT COA RESOLVER (INTEGRASI AKUNTANSI DOUBLE-ENTRY TTC & INDIGAMA)
+    |--------------------------------------------------------------------------
+    */
+
+    /**
+     * Cari akun MasterCOA berdasarkan prioritas kode_akun atau nama_akun,
+     * dengan fallback pembuatan akun otomatis bila database masih kosong.
+     */
+    public function resolveCoa(array $codes, array $nameKeywords = [], array $fallbackAttributes = []): ?MasterCOA
+    {
+        foreach ($codes as $code) {
+            $found = MasterCOA::where('kode_akun', $code)
+                ->orWhere('kode_akun', 'like', $code . '%')
+                ->orderByRaw('CASE WHEN kode_akun = ? THEN 0 ELSE 1 END', [$code])
+                ->first();
+            if ($found) {
+                return $found;
+            }
+        }
+
+        foreach ($nameKeywords as $keyword) {
+            $found = MasterCOA::where('nama_akun', 'like', '%' . $keyword . '%')->first();
+            if ($found) {
+                return $found;
+            }
+        }
+
+        if (! empty($fallbackAttributes)) {
+            $karyawanId = Karyawan::value('id');
+            $coaClassId = CoaClass::value('id');
+            if ($karyawanId && $coaClassId) {
+                return MasterCOA::firstOrCreate(
+                    ['kode_akun' => $fallbackAttributes['kode_akun']],
+                    array_merge([
+                        'karyawan_id'         => $karyawanId,
+                        'coa_class_id'        => $coaClassId,
+                        'periode'             => now()->format('Y-m'),
+                        'gudang'              => 'TTC',
+                        'saldo_debit'         => 0,
+                        'saldo_kredit'        => 0,
+                        'nominal_default'     => 0,
+                        'status'              => 'aktif',
+                        'level'               => 3,
+                        'posting'             => 'Yes',
+                    ], $fallbackAttributes)
+                );
+            }
+        }
+
+        return null;
+    }
+
+    public function resolvePiutangCoa(?int $excludeCoaId = null): ?MasterCOA
+    {
+        $coa = $this->resolveCoa(
+            ['1121', '112.001', '1120'],
+            ['Piutang - Barang Jadi IDR', 'Piutang Usaha'],
+            [
+                'kode_akun'           => '1121',
+                'nama_akun'           => 'Piutang - Barang Jadi IDR',
+                'account_type'        => 'Asset',
+                'account_class'       => 'Current - AR',
+                'financial_statement' => 'Balance Sheet',
+                'normal_balance'      => 'Debit',
+            ]
+        );
+
+        if ($coa && $excludeCoaId && (int) $coa->id === (int) $excludeCoaId) {
+            return MasterCOA::where('id', '!=', $excludeCoaId)
+                ->where(function ($q) {
+                    $q->where('kode_akun', 'like', '112%')
+                        ->orWhere('nama_akun', 'like', '%Piutang%');
+                })
+                ->first();
+        }
+
+        return $coa;
+    }
+
+    public function resolvePendapatanPenjualanCoa(): ?MasterCOA
+    {
+        return $this->resolveCoa(
+            ['4101', '401.001', '4100', '4000'],
+            ['Penjualan Barang Jadi - IDR', 'Penjualan Barang Jadi', 'Pendapatan Usaha'],
+            [
+                'kode_akun'           => '4101',
+                'nama_akun'           => 'Penjualan Barang Jadi - IDR',
+                'account_type'        => 'Revenue',
+                'account_class'       => 'Revenue - Sales',
+                'financial_statement' => 'Income Statement',
+                'normal_balance'      => 'Credit',
+            ]
+        );
+    }
+
+    public function resolvePpnKeluaranCoa(): ?MasterCOA
+    {
+        return $this->resolveCoa(
+            ['2121', '214.001', '2120'],
+            ['PPN Terutang', 'PPN Keluaran', 'Hutang Pajak'],
+            [
+                'kode_akun'           => '2121',
+                'nama_akun'           => 'PPN Terutang',
+                'account_type'        => 'Liability',
+                'account_class'       => 'Current - Tax',
+                'financial_statement' => 'Balance Sheet',
+                'normal_balance'      => 'Credit',
+            ]
+        );
+    }
+
+    public function resolveUangMukaPenjualanCoa(): ?MasterCOA
+    {
+        return $this->resolveCoa(
+            ['2151', '2150'],
+            ['Uang Muka Penjualan - IDR', 'Uang Muka Penjualan'],
+            [
+                'kode_akun'           => '2151',
+                'nama_akun'           => 'Uang Muka Penjualan - IDR',
+                'account_type'        => 'Liability',
+                'account_class'       => 'Customer Advance',
+                'financial_statement' => 'Balance Sheet',
+                'normal_balance'      => 'Credit',
+            ]
+        );
+    }
+
+    public function resolvePersediaanBahanCoa(): ?MasterCOA
+    {
+        return $this->resolveCoa(
+            ['1141', '5101', '1140'],
+            ['Persediaan Bahan Baku', 'Pemakaian Bahan Baku - Produksi'],
+            [
+                'kode_akun'           => '1141',
+                'nama_akun'           => 'Persediaan Bahan Baku',
+                'account_type'        => 'Asset',
+                'account_class'       => 'Current - Inventory',
+                'financial_statement' => 'Balance Sheet',
+                'normal_balance'      => 'Debit',
+            ]
+        );
+    }
+
+    public function resolvePpnMasukanCoa(): ?MasterCOA
+    {
+        return $this->resolveCoa(
+            ['1171', '1170'],
+            ['PPN Masukan', 'Pajak Dibayar di Muka'],
+            [
+                'kode_akun'           => '1171',
+                'nama_akun'           => 'PPN Masukan',
+                'account_type'        => 'Asset',
+                'account_class'       => 'Tax Receivable',
+                'financial_statement' => 'Balance Sheet',
+                'normal_balance'      => 'Debit',
+            ]
+        );
+    }
+
+    public function resolveHutangUsahaCoa(?int $excludeCoaId = null): ?MasterCOA
+    {
+        $coa = $this->resolveCoa(
+            ['2111', '211.001', '2110'],
+            ['Utang Usaha - Bahan Baku IDR', 'Utang Usaha', 'Hutang Dagang'],
+            [
+                'kode_akun'           => '2111',
+                'nama_akun'           => 'Utang Usaha - Bahan Baku IDR',
+                'account_type'        => 'Liability',
+                'account_class'       => 'Current - Payable',
+                'financial_statement' => 'Balance Sheet',
+                'normal_balance'      => 'Credit',
+            ]
+        );
+
+        if ($coa && $excludeCoaId && (int) $coa->id === (int) $excludeCoaId) {
+            return MasterCOA::where('id', '!=', $excludeCoaId)
+                ->where(function ($q) {
+                    $q->where('kode_akun', 'like', '211%')
+                        ->orWhere('nama_akun', 'like', '%Utang%')
+                        ->orWhere('nama_akun', 'like', '%Hutang%');
+                })
+                ->first();
+        }
+
+        return $coa;
+    }
+
+    public function resolveBebanGajiCoa(?Gaji $gaji = null): ?MasterCOA
+    {
+        $deptCode = strtoupper((string) ($gaji?->karyawan?->departemen?->kode ?? ''));
+        if (in_array($deptCode, ['PRNT', 'SPOTUV', 'SPOTHL', 'PROD', 'FIN'])) {
+            $prodCoa = $this->resolveCoa(
+                ['5201', '5200'],
+                ['Gaji Produksi', 'Tenaga Kerja Langsung']
+            );
+            if ($prodCoa) {
+                return $prodCoa;
+            }
+        }
+
+        return $this->resolveCoa(
+            ['6301', '6201', '5201', '6101'],
+            ['Gaji Karyawan Umum', 'Gaji Administrasi', 'Gaji Produksi', 'Beban Gaji'],
+            [
+                'kode_akun'           => '6301',
+                'nama_akun'           => 'Gaji Karyawan Umum',
+                'account_type'        => 'Expense',
+                'account_class'       => 'Expense - Labor',
+                'financial_statement' => 'Income Statement',
+                'normal_balance'      => 'Debit',
+            ]
+        );
+    }
+
+    public function resolveDefaultLawanKasCoa(string $tipeTransaksi, ?int $excludeCoaId = null): ?MasterCOA
+    {
+        if ($tipeTransaksi === 'KAS_MASUK') {
+            return $this->resolveCoa(
+                ['4540', '3100', '1112'],
+                ['Pendapatan Lain-lain', 'Modal Awal Pemilik', 'Bank BCA'],
+                [
+                    'kode_akun'           => '4540',
+                    'nama_akun'           => 'Pendapatan Lain-lain',
+                    'account_type'        => 'Revenue',
+                    'account_class'       => 'Revenue - Other',
+                    'financial_statement' => 'Income Statement',
+                    'normal_balance'      => 'Credit',
+                ]
+            );
+        }
+
+        return $this->resolveCoa(
+            ['6610', '6206', '1112'],
+            ['Biaya Miscellaneous', 'Alat Tulis Kantor', 'Beban Lain-lain'],
+            [
+                'kode_akun'           => '6610',
+                'nama_akun'           => 'Biaya Miscellaneous',
+                'account_type'        => 'Expense',
+                'account_class'       => 'Expense - Other',
+                'financial_statement' => 'Income Statement',
+                'normal_balance'      => 'Debit',
+            ]
+        );
+    }
     /*
     |--------------------------------------------------------------------------
     | RUNNING BALANCE & MOVEMENT ENGINE
@@ -37,7 +290,7 @@ class TreasuryService
         }
 
         $coa = MasterCOA::find($coaId);
-        return $coa ? $coa->saldo_awal : 0.0;
+        return $coa ? ((float) $coa->saldo_debit - (float) $coa->saldo_kredit) : 0.0;
     }
 
     /**
@@ -108,7 +361,7 @@ class TreasuryService
             return;
         }
 
-        $runningBalance = (float) $coa->saldo_awal;
+        $runningBalance = (float) $coa->saldo_debit - (float) $coa->saldo_kredit;
 
         $movements = CoaMovement::where('coa_id', $coaId)
             ->orderBy('tanggal', 'asc')
@@ -199,6 +452,33 @@ class TreasuryService
         return 'OPR-' . str_pad((string) $nextId, 5, '0', STR_PAD_LEFT);
     }
 
+    /**
+     * Generate Kode Jurnal Memorial: JRN-Ym-0001
+     */
+    public function generateKodeJurnal(?Carbon $date = null): string
+    {
+        $date = $date ?? now();
+        $prefix = 'JRN-' . $date->format('Ym') . '-';
+
+        if (! \Illuminate\Support\Facades\Schema::hasTable('journal_entries')) {
+            return $prefix . '0001';
+        }
+
+        $last = JournalEntry::where('kode_jurnal', 'like', "{$prefix}%")
+            ->orderByDesc('id')
+            ->first();
+
+        $nextNumber = 1;
+        if ($last && preg_match('/-(\d+)$/', $last->kode_jurnal, $matches)) {
+            $nextNumber = ((int) $matches[1]) + 1;
+        } else {
+            $count = JournalEntry::where('kode_jurnal', 'like', "{$prefix}%")->count();
+            $nextNumber = $count + 1;
+        }
+
+        return $prefix . str_pad((string) $nextNumber, 4, '0', STR_PAD_LEFT);
+    }
+
     /*
     |--------------------------------------------------------------------------
     | TRANSAKSI KAS (TransKas)
@@ -227,6 +507,13 @@ class TreasuryService
                 throw ValidationException::withMessages([
                     'account_kas_id' => 'Akun Kas wajib dipilih.',
                 ]);
+            }
+
+            if (empty($data['account_bank_id']) || (int) $data['account_bank_id'] === (int) $kasId) {
+                $defaultLawan = $this->resolveDefaultLawanKasCoa($tipe, (int) $kasId);
+                if ($defaultLawan) {
+                    $data['account_bank_id'] = $defaultLawan->id;
+                }
             }
 
             if (empty($data['kode_transaksi']) || $data['kode_transaksi'] === 'AUTO') {
@@ -290,6 +577,11 @@ class TreasuryService
         $refNo = $kas->kode_transaksi;
         $desc = $kas->keterangan ?? "Transaksi {$kas->tipe_transaksi} {$refNo}";
 
+        $lawanCoaId = $kas->account_bank_id;
+        if (! $lawanCoaId || (int) $lawanCoaId === (int) $kas->account_kas_id) {
+            $lawanCoaId = $this->resolveDefaultLawanKasCoa($kas->tipe_transaksi, (int) $kas->account_kas_id)?->id;
+        }
+
         if ($kas->tipe_transaksi === 'KAS_MASUK') {
             // Kas bertambah (DEBIT)
             $this->postMovement([
@@ -304,9 +596,9 @@ class TreasuryService
             ]);
 
             // Lawan (Bank/Sumber) bila berbeda akun (KREDIT)
-            if ($kas->account_bank_id && $kas->account_bank_id != $kas->account_kas_id) {
+            if ($lawanCoaId && (int) $lawanCoaId !== (int) $kas->account_kas_id) {
                 $this->postMovement([
-                    'coa_id'         => $kas->account_bank_id,
+                    'coa_id'         => $lawanCoaId,
                     'tanggal'        => $tanggal,
                     'reference_type' => 'TRANS_KAS',
                     'reference_id'   => $kas->id,
@@ -329,17 +621,17 @@ class TreasuryService
                 'remarks'        => $desc,
             ]);
 
-            // Tujuan (Bank/Tujuan) bila berbeda akun (DEBIT)
-            if ($kas->account_bank_id && $kas->account_bank_id != $kas->account_kas_id) {
+            // Tujuan (Bank/Tujuan/Beban) bila berbeda akun (DEBIT)
+            if ($lawanCoaId && (int) $lawanCoaId !== (int) $kas->account_kas_id) {
                 $this->postMovement([
-                    'coa_id'         => $kas->account_bank_id,
+                    'coa_id'         => $lawanCoaId,
                     'tanggal'        => $tanggal,
                     'reference_type' => 'TRANS_KAS',
                     'reference_id'   => $kas->id,
                     'reference_no'   => $refNo,
                     'movement_type'  => 'DEBIT',
                     'nominal'        => $nominal,
-                    'remarks'        => "Setoran ke {$desc}",
+                    'remarks'        => "Setoran/Pengeluaran ke {$desc}",
                 ]);
             }
         }
@@ -612,12 +904,115 @@ class TreasuryService
 
     /*
     |--------------------------------------------------------------------------
+    | AR INVOICE ACCRUAL HOOKS (Invoice)
+    |--------------------------------------------------------------------------
+    */
+
+    public function postInvoice(Invoice $invoice): void
+    {
+        if (in_array($invoice->status, ['Draft', 'Cancelled'], true)) {
+            return;
+        }
+
+        $grandTotal = round((float) ($invoice->grand_total ?? 0), 2);
+        if ($grandTotal <= 0) {
+            return;
+        }
+
+        $refNo = $invoice->kode_invoice ?? 'INV-' . $invoice->id;
+        $tanggal = $invoice->tanggal_invoice
+            ? Carbon::parse($invoice->tanggal_invoice)->toDateString()
+            : now()->toDateString();
+        $namaCustomer = $invoice->customer?->nama_customer ?? 'Customer';
+
+        $subtotal = (float) ($invoice->subtotal ?? 0);
+        $ppnPersen = max(0.0, (float) ($invoice->ppn ?? 0));
+        $ppnNominal = round(($subtotal * $ppnPersen) / 100, 2);
+        if ($ppnNominal >= $grandTotal) {
+            $ppnNominal = 0.0;
+        }
+        $pendapatanNominal = round($grandTotal - $ppnNominal, 2);
+
+        $piutangCoa = $this->resolvePiutangCoa();
+        $pendapatanCoa = $this->resolvePendapatanPenjualanCoa();
+        $ppnKeluaranCoa = $ppnNominal > 0 ? $this->resolvePpnKeluaranCoa() : null;
+
+        if (! $piutangCoa || ! $pendapatanCoa) {
+            return;
+        }
+
+        // 1. DEBIT: Piutang Usaha bertambah sebesar Grand Total Tagihan
+        $this->postMovement([
+            'coa_id'         => $piutangCoa->id,
+            'tanggal'        => $tanggal,
+            'reference_type' => 'INVOICE',
+            'reference_id'   => $invoice->id,
+            'reference_no'   => $refNo,
+            'movement_type'  => 'DEBIT',
+            'nominal'        => $grandTotal,
+            'remarks'        => "Pengakuan Piutang Penjualan Invoice {$refNo} ({$namaCustomer})",
+        ]);
+
+        // 2. KREDIT: Pendapatan Penjualan (DPP + Ongkir - Diskon)
+        if ($ppnKeluaranCoa && $ppnNominal > 0 && $pendapatanNominal > 0) {
+            $this->postMovement([
+                'coa_id'         => $pendapatanCoa->id,
+                'tanggal'        => $tanggal,
+                'reference_type' => 'INVOICE',
+                'reference_id'   => $invoice->id,
+                'reference_no'   => $refNo,
+                'movement_type'  => 'KREDIT',
+                'nominal'        => $pendapatanNominal,
+                'remarks'        => "Pendapatan Penjualan Invoice {$refNo} ({$namaCustomer})",
+            ]);
+
+            $this->postMovement([
+                'coa_id'         => $ppnKeluaranCoa->id,
+                'tanggal'        => $tanggal,
+                'reference_type' => 'INVOICE',
+                'reference_id'   => $invoice->id,
+                'reference_no'   => $refNo,
+                'movement_type'  => 'KREDIT',
+                'nominal'        => $ppnNominal,
+                'remarks'        => "PPN Keluaran Invoice {$refNo} ({$namaCustomer})",
+            ]);
+        } else {
+            $this->postMovement([
+                'coa_id'         => $pendapatanCoa->id,
+                'tanggal'        => $tanggal,
+                'reference_type' => 'INVOICE',
+                'reference_id'   => $invoice->id,
+                'reference_no'   => $refNo,
+                'movement_type'  => 'KREDIT',
+                'nominal'        => $grandTotal,
+                'remarks'        => "Pendapatan Penjualan Invoice {$refNo} ({$namaCustomer})",
+            ]);
+        }
+    }
+
+    public function syncInvoice(Invoice $invoice): void
+    {
+        $this->deleteMovementsFor('INVOICE', $invoice->id);
+        $this->postInvoice($invoice);
+    }
+
+    public function deleteInvoice(Invoice $invoice): void
+    {
+        $this->deleteMovementsFor('INVOICE', $invoice->id);
+    }
+
+    /*
+    |--------------------------------------------------------------------------
     | AR INVOICE PAYMENT HOOKS (InvPayment)
     |--------------------------------------------------------------------------
     */
 
     public function postInvPayment(InvPayment $payment): void
     {
+        // Hanya pembayaran berhasil yang boleh menambah mutasi kas/bank.
+        if (strtoupper((string) $payment->status) !== 'SUCCESS') {
+            return;
+        }
         if (empty($payment->coa_id)) {
             return;
         }
@@ -632,16 +1027,33 @@ class TreasuryService
         $tanggal = $payment->tanggal_bayar ? Carbon::parse($payment->tanggal_bayar)->toDateString() : now()->toDateString();
         $desc = "Penerimaan Pembayaran Customer Invoice {$refNo}";
 
+        // 1. DEBIT: Kas/Bank bertambah
         $this->postMovement([
             'coa_id'         => $payment->coa_id,
             'tanggal'        => $tanggal,
             'reference_type' => 'INV_PAYMENT',
             'reference_id'   => $payment->id,
             'reference_no'   => $refNo,
-            'movement_type'  => 'DEBIT', // Kas/Bank bertambah
+            'movement_type'  => 'DEBIT',
             'nominal'        => $nominal,
             'remarks'        => $desc,
         ]);
+
+        // 2. KREDIT: Piutang Usaha berkurang (Prinsip Double-Entry Indigama)
+        $piutangCoa = $this->resolvePiutangCoa((int) $payment->coa_id);
+
+        if ($piutangCoa && (int) $piutangCoa->id !== (int) $payment->coa_id) {
+            $this->postMovement([
+                'coa_id'         => $piutangCoa->id,
+                'tanggal'        => $tanggal,
+                'reference_type' => 'INV_PAYMENT',
+                'reference_id'   => $payment->id,
+                'reference_no'   => $refNo,
+                'movement_type'  => 'KREDIT',
+                'nominal'        => $nominal,
+                'remarks'        => "Pelunasan Piutang Invoice {$refNo}",
+            ]);
+        }
     }
 
     public function syncInvPayment(InvPayment $payment): void
@@ -653,6 +1065,99 @@ class TreasuryService
     public function deleteInvPayment(InvPayment $payment): void
     {
         $this->deleteMovementsFor('INV_PAYMENT', $payment->id);
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | AP SUPPLIER BILLING ACCRUAL HOOKS (PoBilling)
+    |--------------------------------------------------------------------------
+    */
+
+    public function postPoBilling(PoBilling $billing): void
+    {
+        $grandTotal = round((float) ($billing->grand_total ?? 0), 2);
+        if ($grandTotal <= 0) {
+            return;
+        }
+
+        $refNo = $billing->kode_tagihan ?? 'BILL-' . $billing->id;
+        $tanggal = $billing->tanggal_transaksi
+            ? Carbon::parse($billing->tanggal_transaksi)->toDateString()
+            : now()->toDateString();
+        $namaSupplier = $billing->supplier?->nama_supplier ?? 'Supplier';
+
+        $ppnNominal = max(0.0, round((float) ($billing->ppn ?? 0), 2));
+        if ($ppnNominal >= $grandTotal) {
+            $ppnNominal = 0.0;
+        }
+        $dppNominal = round($grandTotal - $ppnNominal, 2);
+
+        $persediaanCoa = $this->resolvePersediaanBahanCoa();
+        $ppnMasukanCoa = $ppnNominal > 0 ? $this->resolvePpnMasukanCoa() : null;
+        $hutangCoa = $this->resolveHutangUsahaCoa();
+
+        if (! $persediaanCoa || ! $hutangCoa) {
+            return;
+        }
+
+        // 1. DEBIT: Persediaan Bahan Baku (+ PPN Masukan bila ada)
+        if ($ppnMasukanCoa && $ppnNominal > 0 && $dppNominal > 0) {
+            $this->postMovement([
+                'coa_id'         => $persediaanCoa->id,
+                'tanggal'        => $tanggal,
+                'reference_type' => 'PO_BILLING',
+                'reference_id'   => $billing->id,
+                'reference_no'   => $refNo,
+                'movement_type'  => 'DEBIT',
+                'nominal'        => $dppNominal,
+                'remarks'        => "Pembelian / Persediaan Tagihan {$refNo} ({$namaSupplier})",
+            ]);
+
+            $this->postMovement([
+                'coa_id'         => $ppnMasukanCoa->id,
+                'tanggal'        => $tanggal,
+                'reference_type' => 'PO_BILLING',
+                'reference_id'   => $billing->id,
+                'reference_no'   => $refNo,
+                'movement_type'  => 'DEBIT',
+                'nominal'        => $ppnNominal,
+                'remarks'        => "PPN Masukan Tagihan {$refNo} ({$namaSupplier})",
+            ]);
+        } else {
+            $this->postMovement([
+                'coa_id'         => $persediaanCoa->id,
+                'tanggal'        => $tanggal,
+                'reference_type' => 'PO_BILLING',
+                'reference_id'   => $billing->id,
+                'reference_no'   => $refNo,
+                'movement_type'  => 'DEBIT',
+                'nominal'        => $grandTotal,
+                'remarks'        => "Pembelian / Persediaan Tagihan {$refNo} ({$namaSupplier})",
+            ]);
+        }
+
+        // 2. KREDIT: Utang Usaha bertambah
+        $this->postMovement([
+            'coa_id'         => $hutangCoa->id,
+            'tanggal'        => $tanggal,
+            'reference_type' => 'PO_BILLING',
+            'reference_id'   => $billing->id,
+            'reference_no'   => $refNo,
+            'movement_type'  => 'KREDIT',
+            'nominal'        => $grandTotal,
+            'remarks'        => "Pengakuan Hutang Usaha Tagihan {$refNo} ({$namaSupplier})",
+        ]);
+    }
+
+    public function syncPoBilling(PoBilling $billing): void
+    {
+        $this->deleteMovementsFor('PO_BILLING', $billing->id);
+        $this->postPoBilling($billing);
+    }
+
+    public function deletePoBilling(PoBilling $billing): void
+    {
+        $this->deleteMovementsFor('PO_BILLING', $billing->id);
     }
 
     /*
@@ -674,7 +1179,7 @@ class TreasuryService
                 continue;
             }
 
-            // Kas/Bank berkurang membayar supplier (KREDIT)
+            // 1. KREDIT: Kas/Bank berkurang membayar supplier
             if ($item->coa_kredit_id) {
                 $this->postMovement([
                     'coa_id'         => $item->coa_kredit_id,
@@ -688,10 +1193,15 @@ class TreasuryService
                 ]);
             }
 
-            // Hutang dagang berkurang (DEBIT) bila akun debit ditentukan
-            if ($item->coa_debit_id && $item->coa_debit_id != $item->coa_kredit_id) {
+            // 2. DEBIT: Hutang dagang berkurang (fallback otomatis ke Utang Usaha 2111 bila kosong)
+            $debitCoaId = $item->coa_debit_id;
+            if (! $debitCoaId || (int) $debitCoaId === (int) $item->coa_kredit_id) {
+                $debitCoaId = $this->resolveHutangUsahaCoa((int) $item->coa_kredit_id)?->id;
+            }
+
+            if ($debitCoaId && (int) $debitCoaId !== (int) $item->coa_kredit_id) {
                 $this->postMovement([
-                    'coa_id'         => $item->coa_debit_id,
+                    'coa_id'         => $debitCoaId,
                     'tanggal'        => $tanggal,
                     'reference_type' => 'PO_BILL_PAY',
                     'reference_id'   => $payment->id,
@@ -737,7 +1247,7 @@ class TreasuryService
         $namaKaryawan = $gaji->karyawan?->nama ?? "Karyawan #{$gaji->karyawan_id}";
         $desc = "Pembayaran Gaji Karyawan {$namaKaryawan} Periode {$gaji->periode} ({$refNo})";
 
-        // Kas/Bank berkurang (KREDIT)
+        // 1. KREDIT: Kas/Bank berkurang
         $this->postMovement([
             'coa_id'         => $gaji->account_kas_id,
             'tanggal'        => $tanggal,
@@ -748,6 +1258,21 @@ class TreasuryService
             'nominal'        => $nominal,
             'remarks'        => $desc,
         ]);
+
+        // 2. DEBIT: Beban Gaji bertambah (Double-Entry)
+        $bebanGajiCoa = $this->resolveBebanGajiCoa($gaji);
+        if ($bebanGajiCoa && (int) $bebanGajiCoa->id !== (int) $gaji->account_kas_id) {
+            $this->postMovement([
+                'coa_id'         => $bebanGajiCoa->id,
+                'tanggal'        => $tanggal,
+                'reference_type' => 'PAYROLL',
+                'reference_id'   => $gaji->id,
+                'reference_no'   => $refNo,
+                'movement_type'  => 'DEBIT',
+                'nominal'        => $nominal,
+                'remarks'        => "Beban Gaji Karyawan {$namaKaryawan} Periode {$gaji->periode} ({$refNo})",
+            ]);
+        }
     }
 
     public function syncPayroll(\App\Models\Gaji $gaji): void
@@ -761,6 +1286,214 @@ class TreasuryService
     public function deletePayroll(\App\Models\Gaji $gaji): void
     {
         $this->deleteMovementsFor('PAYROLL', $gaji->id);
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | JURNAL MEMORIAL / PENYESUAIAN (JournalEntry - Adopsi TranMemorial Indigama)
+    |--------------------------------------------------------------------------
+    */
+
+    /**
+     * Validasi dan hitung total Debit & Kredit dari rincian baris jurnal
+     */
+    protected function validateAndSummarizeJournalLines(array $lines): array
+    {
+        if (count($lines) < 2) {
+            throw ValidationException::withMessages([
+                'lines' => 'Jurnal Memorial minimal harus terdiri dari 2 baris akun (pasangan Debit dan Kredit).',
+            ]);
+        }
+
+        $totalDebit = 0.0;
+        $totalKredit = 0.0;
+        $cleanLines = [];
+
+        foreach ($lines as $idx => $line) {
+            $coaId = $line['coa_id'] ?? null;
+            if (! $coaId) {
+                throw ValidationException::withMessages([
+                    "lines.{$idx}.coa_id" => 'Akun COA pada setiap baris wajib dipilih.',
+                ]);
+            }
+
+            $debit = max(0.0, round((float) ($line['debit'] ?? 0), 2));
+            $kredit = max(0.0, round((float) ($line['kredit'] ?? 0), 2));
+
+            if ($debit <= 0 && $kredit <= 0) {
+                throw ValidationException::withMessages([
+                    'lines' => 'Setiap baris jurnal harus memiliki nominal Debit atau Kredit lebih dari 0.',
+                ]);
+            }
+
+            if ($debit > 0 && $kredit > 0) {
+                throw ValidationException::withMessages([
+                    'lines' => 'Satu baris jurnal tidak boleh mengisi kolom Debit dan Kredit sekaligus.',
+                ]);
+            }
+
+            $totalDebit += $debit;
+            $totalKredit += $kredit;
+
+            $cleanLines[] = [
+                'coa_id'     => (int) $coaId,
+                'keterangan' => $line['keterangan'] ?? null,
+                'debit'      => $debit,
+                'kredit'     => $kredit,
+            ];
+        }
+
+        $totalDebit = round($totalDebit, 2);
+        $totalKredit = round($totalKredit, 2);
+
+        if (abs($totalDebit - $totalKredit) >= 0.01) {
+            $selisih = abs($totalDebit - $totalKredit);
+            throw ValidationException::withMessages([
+                'lines' => sprintf(
+                    'Jurnal tidak seimbang (Unbalanced)! Total Debit (Rp %s) harus sama persis dengan Total Kredit (Rp %s). Selisih: Rp %s.',
+                    number_format($totalDebit, 0, ',', '.'),
+                    number_format($totalKredit, 0, ',', '.'),
+                    number_format($selisih, 0, ',', '.')
+                ),
+            ]);
+        }
+
+        return [
+            'total_debit'  => $totalDebit,
+            'total_kredit' => $totalKredit,
+            'lines'        => $cleanLines,
+        ];
+    }
+
+    public function recordJournalMemorial(array $data): JournalEntry
+    {
+        return DB::transaction(function () use ($data) {
+            $linesInput = $data['lines'] ?? [];
+            unset($data['lines']);
+
+            $summary = $this->validateAndSummarizeJournalLines($linesInput);
+
+            if (empty($data['kode_jurnal']) || $data['kode_jurnal'] === 'AUTO') {
+                $data['kode_jurnal'] = $this->generateKodeJurnal(
+                    isset($data['tanggal']) ? Carbon::parse($data['tanggal']) : null
+                );
+            }
+
+            if (empty($data['tanggal'])) {
+                $data['tanggal'] = now()->toDateString();
+            }
+
+            if (empty($data['periode'])) {
+                $data['periode'] = Carbon::parse($data['tanggal'])->format('F Y');
+            }
+
+            if (empty($data['status'])) {
+                $data['status'] = 'POSTED';
+            }
+
+            $data['total_debit'] = $summary['total_debit'];
+            $data['total_kredit'] = $summary['total_kredit'];
+            $data['created_by'] = $data['created_by'] ?? auth()->id();
+
+            /** @var JournalEntry $journal */
+            $journal = JournalEntry::create($data);
+
+            foreach ($summary['lines'] as $line) {
+                $journal->lines()->create($line);
+            }
+
+            $journal->load('lines');
+            $this->syncJournalMemorialMovements($journal);
+
+            return $journal;
+        });
+    }
+
+    public function updateJournalMemorial(JournalEntry $journal, array $data): JournalEntry
+    {
+        return DB::transaction(function () use ($journal, $data) {
+            $journal = JournalEntry::lockForUpdate()->findOrFail($journal->id);
+
+            $linesInput = $data['lines'] ?? null;
+            unset($data['lines']);
+
+            if ($linesInput !== null) {
+                $summary = $this->validateAndSummarizeJournalLines($linesInput);
+                $data['total_debit'] = $summary['total_debit'];
+                $data['total_kredit'] = $summary['total_kredit'];
+
+                $journal->update($data);
+                $journal->lines()->delete();
+
+                foreach ($summary['lines'] as $line) {
+                    $journal->lines()->create($line);
+                }
+            } else {
+                $journal->update($data);
+            }
+
+            $journal->load('lines');
+            $this->syncJournalMemorialMovements($journal);
+
+            return $journal;
+        });
+    }
+
+    public function deleteJournalMemorial(JournalEntry $journal): bool
+    {
+        return DB::transaction(function () use ($journal) {
+            $id = $journal->id;
+            $journal->lines()->delete();
+            $deleted = $journal->delete();
+            $this->deleteMovementsFor('JOURNAL_MEMORIAL', $id);
+            return (bool) $deleted;
+        });
+    }
+
+    public function syncJournalMemorialMovements(JournalEntry $journal): void
+    {
+        $this->deleteMovementsFor('JOURNAL_MEMORIAL', $journal->id);
+
+        if (strtoupper((string) $journal->status) !== 'POSTED') {
+            return;
+        }
+
+        $journal->loadMissing('lines');
+        $tanggal = $journal->tanggal ? Carbon::parse($journal->tanggal)->toDateString() : now()->toDateString();
+        $refNo = $journal->kode_jurnal;
+        $headerDesc = $journal->keterangan ?: "Jurnal {$journal->jenis_jurnal} {$refNo}";
+
+        foreach ($journal->lines as $line) {
+            $debit = (float) $line->debit;
+            $kredit = (float) $line->kredit;
+            $remarks = $line->keterangan ? "{$headerDesc} - {$line->keterangan}" : $headerDesc;
+
+            if ($debit > 0) {
+                $this->postMovement([
+                    'coa_id'         => $line->coa_id,
+                    'tanggal'        => $tanggal,
+                    'reference_type' => 'JOURNAL_MEMORIAL',
+                    'reference_id'   => $journal->id,
+                    'reference_no'   => $refNo,
+                    'movement_type'  => 'DEBIT',
+                    'nominal'        => $debit,
+                    'remarks'        => $remarks,
+                    'created_by'     => $journal->created_by ?? auth()->id(),
+                ]);
+            } elseif ($kredit > 0) {
+                $this->postMovement([
+                    'coa_id'         => $line->coa_id,
+                    'tanggal'        => $tanggal,
+                    'reference_type' => 'JOURNAL_MEMORIAL',
+                    'reference_id'   => $journal->id,
+                    'reference_no'   => $refNo,
+                    'movement_type'  => 'KREDIT',
+                    'nominal'        => $kredit,
+                    'remarks'        => $remarks,
+                    'created_by'     => $journal->created_by ?? auth()->id(),
+                ]);
+            }
+        }
     }
 
     /*
@@ -788,6 +1521,10 @@ class TreasuryService
         }
 
         if (\App\Models\Gaji::where('account_kas_id', $coa->id)->exists()) {
+            return false;
+        }
+
+        if (\Illuminate\Support\Facades\Schema::hasTable('journal_entry_lines') && JournalEntryLine::where('coa_id', $coa->id)->exists()) {
             return false;
         }
 

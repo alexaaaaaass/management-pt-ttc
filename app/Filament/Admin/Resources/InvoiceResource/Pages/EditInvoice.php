@@ -25,6 +25,19 @@ class EditInvoice extends EditRecord
         ];
     }
 
+    protected function mutateFormDataBeforeFill(array $data): array
+    {
+        $grandTotal = (float) ($data['grand_total'] ?? 0);
+        $uangMuka = (float) ($data['uang_muka'] ?? 0);
+        $paymentsSum = (float) $this->record->payments()->where('status', 'SUCCESS')->sum('nominal_bayar');
+        $totalPayment = $uangMuka + $paymentsSum;
+
+        $data['total_payment'] = $totalPayment;
+        $data['sisa_tagihan'] = max(0, $grandTotal - $totalPayment);
+
+        return $data;
+    }
+
     protected function mutateFormDataBeforeSave(array $data): array
     {
         $subtotal = (float) ($data['subtotal'] ?? 0);
@@ -38,8 +51,12 @@ class EditInvoice extends EditRecord
         $ppnNominal = ($subtotal * $ppn) / 100;
         $grandTotal = $subtotal - $diskonNominal - $potongan + $ppnNominal + $ongkir;
 
+        $paymentsSum = (float) $this->record->payments()->where('status', 'SUCCESS')->sum('nominal_bayar');
+        $totalPayment = $uangMuka + $paymentsSum;
+
         $data['grand_total'] = $grandTotal;
-        $data['sisa_tagihan'] = $grandTotal - $uangMuka;
+        $data['total_payment'] = $totalPayment;
+        $data['sisa_tagihan'] = max(0, $grandTotal - $totalPayment);
 
         return $data;
     }

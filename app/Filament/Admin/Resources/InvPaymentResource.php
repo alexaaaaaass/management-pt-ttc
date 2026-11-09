@@ -256,55 +256,103 @@ class InvPaymentResource extends Resource
 
     public static function getNavigationLabel(): string
 {
-    return 'Inv Payment';
+    return 'Pembayaran Bon/Cicilan';
 }
+
+    public static function getModelLabel(): string
+    {
+        return 'Pembayaran Bon/Cicilan';
+    }
+
+    public static function getPluralModelLabel(): string
+    {
+        return 'Pembayaran Bon/Cicilan';
+    }
     
 
     public static function table(Table $table): Table
-{
-    return $table
-        ->columns([
+    {
+        return $table
+            ->defaultSort('tanggal_bayar', 'asc')
+            ->columns([
+                Tables\Columns\TextColumn::make('invoice.kode_invoice')
+                    ->label('No. Invoice')
+                    ->badge()
+                    ->color('primary')
+                    ->searchable()
+                    ->sortable(),
 
-            Tables\Columns\TextColumn::make(
-                'invoice.kode_invoice'
-            )
-                ->label('Invoice')
-                ->searchable(),
+                Tables\Columns\TextColumn::make('invoice.order_id')
+                    ->label('Order ID')
+                    ->badge()
+                    ->color('info')
+                    ->searchable(),
 
-            Tables\Columns\TextColumn::make(
-                'invoice.suratJalan.salesOrder.customer.nama_customer'
-            )
-                ->label('Customer'),
+                Tables\Columns\TextColumn::make('customer_name')
+                    ->label('Customer')
+                    ->getStateUsing(fn ($record) => $record->invoice?->customer?->nama_customer ?? $record->invoice?->suratJalan?->salesOrder?->customer?->nama_customer ?? '-')
+                    ->weight('bold')
+                    ->searchable(query: function (Builder $query, string $search): Builder {
+                        return $query->whereHas('invoice.customer', fn ($q) => $q->where('nama_customer', 'like', "%{$search}%"));
+                    }),
 
-          Tables\Columns\TextColumn::make('nominal_bayar')
-    ->label('Nominal Bayar')
-    ->money('IDR')
-    ->badge()
-    ->color('success')
-                ->money('IDR'),
+                Tables\Columns\TextColumn::make('tanggal_bayar')
+                    ->label('Tgl. Bayar')
+                    ->date('d/m/Y')
+                    ->sortable(),
 
-            Tables\Columns\TextColumn::make(
-                'tanggal_bayar'
-            )
-                ->date('d/m/Y'),
+                Tables\Columns\TextColumn::make('coa.nama_akun')
+                    ->label('Rekening Bank')
+                    ->badge()
+                    ->color('gray')
+                    ->searchable(),
 
-            Tables\Columns\TextColumn::make(
-                'metodeBayar.metode_pembayaran'
-            )
-                ->label('Metode'),
-            Tables\Columns\BadgeColumn::make('invoice.status')
-                ->label('Status Invoice')
-                ->color(fn (string $state): string => match ($state) {
-                    'Paid' => 'success',
-                    'Partial' => 'warning',
-                    'Unpaid' => 'danger',
-                    default => 'gray',
+                Tables\Columns\TextColumn::make('nominal_bayar')
+                    ->label('Nominal Diterima')
+                    ->money('IDR')
+                    ->alignRight()
+                    ->weight('bold')
+                    ->color('success')
+                    ->sortable()
+                    ->summarize(
+                        Tables\Columns\Summarizers\Sum::make()
+                            ->label('Total Pembayaran Diterima')
+                            ->money('IDR')
+                    ),
+
+                Tables\Columns\TextColumn::make('keterangan')
+                    ->label('Keterangan (DP / Termin / Pelunasan)')
+                    ->limit(45)
+                    ->tooltip(fn ($record) => $record->keterangan)
+                    ->searchable(),
+
+                Tables\Columns\TextColumn::make('invoice.status')
+                    ->label('Status Invoice')
+                    ->badge()
+                    ->formatStateUsing(fn (?string $state): string => strtoupper((string) $state))
+                    ->color(fn (?string $state): string => match (strtolower((string) $state)) {
+                        'paid' => 'success',
+                        'partial' => 'warning',
+                        'unpaid' => 'danger',
+                        default => 'gray',
+                    }),
+            ])
+        ->bulkActions([
+            Tables\Actions\BulkAction::make('infoDataTerpilih')
+                ->label('Info Data Terpilih')
+                ->icon('heroicon-o-check-circle')
+                ->action(function (\Illuminate\Database\Eloquent\Collection $records): void {
+                    \Filament\Notifications\Notification::make()
+                        ->title($records->count() . ' data dipilih')
+                        ->success()
+                        ->send();
                 })
-
+                ->deselectRecordsAfterCompletion(),
         ])
         ->actions([
             Tables\Actions\EditAction::make(),
-            Tables\Actions\DeleteAction::make(),
+            Tables\Actions\DeleteAction::make()
+                ->using(fn ($record) => app(\App\Services\Finance\InvoicePaymentService::class)->deletePayment($record)),
         ]);
 }
 

@@ -2,17 +2,14 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class ImrFinishItem extends Model
 {
-    use HasFactory;
-
     protected $table = 'imr_finish_items';
 
     protected $fillable = [
-        'imr_finish_id',
+        'imr_id',
         'item_id',
         'total_pesanan',
         'qty_request',
@@ -23,23 +20,9 @@ class ImrFinishItem extends Model
         'catatan',
     ];
 
-    protected $casts = [
-        'total_pesanan' => 'float',
-        'qty_request'   => 'float',
-        'qty_approved'  => 'float',
-        'qty_issued'    => 'float',
-        'qty_returned'  => 'float',
-    ];
-
-    /*
-    |--------------------------------------------------------------------------
-    | Relations
-    |--------------------------------------------------------------------------
-    */
-
-    public function imrFinish()
+    public function imr()
     {
-        return $this->belongsTo(ImrFinish::class, 'imr_finish_id');
+        return $this->belongsTo(ImrFinish::class, 'imr_id');
     }
 
     public function item()
@@ -47,17 +30,11 @@ class ImrFinishItem extends Model
         return $this->belongsTo(MasterItem::class, 'item_id');
     }
 
-    /*
-    |--------------------------------------------------------------------------
-    | Accessors
-    |--------------------------------------------------------------------------
-    */
-
     public function getQtyRemainingAttribute(): float
     {
         return max(
             0,
-            $this->qty_approved - $this->qty_issued - $this->qty_returned
+            (float) $this->qty_approved - (float) $this->qty_issued
         );
     }
 
@@ -65,7 +42,7 @@ class ImrFinishItem extends Model
     {
         return max(
             0,
-            $this->qty_issued - $this->qty_returned
+            (float) $this->qty_issued - (float) $this->qty_returned
         );
     }
 }

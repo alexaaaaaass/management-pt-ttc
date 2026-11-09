@@ -11,6 +11,13 @@ class CreateTransKasBank extends CreateRecord
 {
     protected static string $resource = TransKasBankResource::class;
 
+    public function getHeading(): string
+    {
+        return (request()->query('type') ?? 'BANK_MASUK') === 'BANK_KELUAR'
+            ? 'Transaksi Bank Keluar'
+            : 'Transaksi Bank Masuk';
+    }
+
     protected function mutateFormDataBeforeCreate(array $data): array
     {
         $data['tipe_transaksi'] = $data['tipe_transaksi']

@@ -3,7 +3,6 @@
 namespace App\Filament\Admin\Resources\ReportPoVsPbResource\Pages;
 
 use App\Filament\Admin\Resources\ReportPoVsPbResource;
-use Filament\Actions;
 use Filament\Resources\Pages\ListRecords;
 
 class ListReportPoVsPbs extends ListRecords
@@ -12,8 +11,6 @@ class ListReportPoVsPbs extends ListRecords
 
     protected function getHeaderActions(): array
     {
-        return [
-            Actions\CreateAction::make(),
-        ];
+        return [];
     }
 }

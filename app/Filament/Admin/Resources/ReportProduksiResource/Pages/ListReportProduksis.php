@@ -3,7 +3,6 @@
 namespace App\Filament\Admin\Resources\ReportProduksiResource\Pages;
 
 use App\Filament\Admin\Resources\ReportProduksiResource;
-use Filament\Actions;
 use Filament\Resources\Pages\ListRecords;
 
 class ListReportProduksis extends ListRecords
@@ -12,8 +11,6 @@ class ListReportProduksis extends ListRecords
 
     protected function getHeaderActions(): array
     {
-        return [
-            Actions\CreateAction::make(),
-        ];
+        return [];
     }
 }

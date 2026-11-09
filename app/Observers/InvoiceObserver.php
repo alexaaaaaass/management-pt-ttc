@@ -35,5 +35,7 @@ class InvoiceObserver
         if ($invoice->payments()->exists()) {
             throw new \Exception('Tidak dapat menghapus Invoice karena sudah memiliki riwayat pembayaran.');
         }
+
+        app(\App\Services\Finance\TreasuryService::class)->deleteInvoice($invoice);
     }
 }

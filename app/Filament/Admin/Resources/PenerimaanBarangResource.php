@@ -11,7 +11,6 @@ use Filament\Tables;
 use Filament\Tables\Table;
 use Filament\Tables\Actions\Action;
 use Filament\Tables\Actions\ActionGroup;
-use Illuminate\Database\Eloquent\Builder;
 
 class PenerimaanBarangResource extends Resource
 {
@@ -266,15 +265,6 @@ class PenerimaanBarangResource extends Resource
 ])
             ->bulkActions([
                 Tables\Actions\DeleteBulkAction::make(),
-            ]);
-    }
-
-    public static function getEloquentQuery(): Builder
-    {
-        return parent::getEloquentQuery()
-            ->with([
-                'purchaseOrder',
-                'externalReturns',
             ]);
     }
 

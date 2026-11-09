@@ -252,8 +252,18 @@ protected static ?int $navigationSort = 12;
 
     public static function getNavigationLabel(): string
 {
-    return 'Po Bill Pay';
+    return 'Payment Order / Pembayaran Order';
 }
+
+    public static function getModelLabel(): string
+    {
+        return 'Payment Order / Pembayaran Order';
+    }
+
+    public static function getPluralModelLabel(): string
+    {
+        return 'Payment Order / Pembayaran Order';
+    }
 
    public static function table(Table $table): Table
 {
