@@ -455,12 +455,7 @@
     </tr>
 </table>
 
-<div class="invoice-title">
-    INVOICE
-    @if($isPaid)
-        <span style="display: inline-block; margin-left: 10px; background-color: #16a34a; color: #ffffff; font-size: 9px; font-weight: bold; padding: 2px 8px; border-radius: 3px; vertical-align: middle; letter-spacing: 1px;">LUNAS (PAID)</span>
-    @endif
-</div>
+<div class="invoice-title">INVOICE</div>
 
 <table class="items">
     <colgroup>
@@ -550,37 +545,16 @@
                     <td class="total-curr">{{ $potongan > 0 ? 'IDR' : '' }}</td>
                     <td class="total-value">{{ $potongan > 0 ? number_format($potongan, 0, '.', ',') : '' }}</td>
                 </tr>
-                @if($dp > 0)
                 <tr>
                     <td class="total-label">DP</td>
-                    <td class="total-curr">IDR</td>
-                    <td class="total-value">{{ number_format($dp, 0, '.', ',') }}</td>
+                    <td class="total-curr">{{ $dp > 0 ? 'IDR' : '' }}</td>
+                    <td class="total-value">{{ $dp > 0 ? number_format($dp, 0, '.', ',') : '' }}</td>
                 </tr>
-                @else
-                <tr>
-                    <td class="total-label">DP</td>
-                    <td class="total-curr"></td>
-                    <td class="total-value"></td>
-                </tr>
-                @endif
                 <tr class="grand">
                     <td class="total-label">Total</td>
                     <td class="total-curr">IDR</td>
                     <td class="total-value">{{ number_format($displayTotal, 0, '.', ',') }}</td>
                 </tr>
-                @if($isPaid)
-                <tr>
-                    <td class="total-label" style="font-size: 8px; color: #16a34a; font-weight: bold; padding-top: 3px;">Status Pembayaran</td>
-                    <td class="total-curr" style="font-size: 8px; color: #16a34a; font-weight: bold; padding-top: 3px;"></td>
-                    <td class="total-value" style="font-size: 8px; color: #16a34a; font-weight: bold; padding-top: 3px;">LUNAS (PAID)</td>
-                </tr>
-                @elseif($totalPaid > 0 && $sisaTagihan > 0)
-                <tr>
-                    <td class="total-label" style="font-size: 8px; color: #ea580c; padding-top: 3px;">Sisa Tagihan</td>
-                    <td class="total-curr" style="font-size: 8px; color: #ea580c; padding-top: 3px;">IDR</td>
-                    <td class="total-value" style="font-size: 8px; color: #ea580c; font-weight: bold; padding-top: 3px;">{{ number_format($sisaTagihan, 0, '.', ',') }}</td>
-                </tr>
-                @endif
             </table>
         </td>
     </tr>
