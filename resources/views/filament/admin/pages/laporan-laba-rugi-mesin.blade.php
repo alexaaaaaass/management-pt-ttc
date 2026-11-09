@@ -513,7 +513,7 @@
                     </div>
 
                     <div class="ttc-field">
-                        <label>Mode Tampilan (Indigama)</label>
+                        <label>Mode Tampilan Laporan</label>
                         <select wire:model.live="viewMode" class="ttc-input" style="min-width: 230px;">
                             <option value="ALL">Laba Rugi (Mesin) + Detail</option>
                             <option value="SUMMARY">Laba Rugi (Mesin) Saja</option>
@@ -705,7 +705,7 @@
                             II. Laba Rugi (Mesin)-Detail — Rincian Pendapatan &amp; Pengeluaran Per Mesin
                         </div>
                         <div class="ttc-section-desc">
-                            Menampilkan rincian komponen Pendapatan (Detail) dan Pengeluaran (Detail) per unit mesin cetak sesuai format Indigama 02
+                            Menampilkan rincian komponen Pendapatan (Detail) dan Pengeluaran (Detail) per unit mesin cetak &amp; finishing
                         </div>
                     </div>
                 </div>

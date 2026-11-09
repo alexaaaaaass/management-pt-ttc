@@ -308,7 +308,7 @@
             <div class="ttc-hero">
                 <div>
                     <div>
-                        <span class="ttc-badge-amber">Summary Account — Indigama RSummaryAccount</span>
+                        <span class="ttc-badge-amber">Summary Account — Neraca Saldo</span>
                         <span class="ttc-hero-sub">PT. Teknografi Tri Cawanaska</span>
                     </div>
                     <div class="ttc-hero-title">

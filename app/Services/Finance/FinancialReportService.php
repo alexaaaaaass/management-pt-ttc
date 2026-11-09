@@ -189,7 +189,7 @@ class FinancialReportService
     }
 
     /**
-     * Hitung Laporan Laba Rugi per Mesin Cetak (Adopsi RAnalisaAccounting / Laba Rugi Mesin Indigama)
+     * Hitung Laporan Laba Rugi per Unit Mesin Produksi
      */
     public function getMachineProfitabilityReport(?string $startDate = null, ?string $endDate = null): array
     {

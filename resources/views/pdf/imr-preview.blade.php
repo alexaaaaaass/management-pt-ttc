@@ -81,18 +81,18 @@ HEADER
 <td width="58%">
 
     <h2 style="margin:0">
-        CV. Indigama Khatulistiwa
+        PT. TEKNOGRAFI TRI CAWANASKA
     </h2>
 
-    Dsn. Blimbing RT 02 RW 11, Ds. Bulusari, Kec. Gempol<br>
+    Pergudangan Sentra Singosari<br>
 
-    Pasuruan, Jawa Timur 67155<br>
+    Ardimulyo, Singosari, Malang<br>
 
     Email :
-    indigama.khatulistiwa01@gmail.com<br>
+    teknografitricawanaska@gmail.com<br>
 
     Telp :
-    081703101012
+    +62895 3391 07709
 
 </td>
 

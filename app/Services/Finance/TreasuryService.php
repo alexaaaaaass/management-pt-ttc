@@ -25,7 +25,7 @@ class TreasuryService
 {
     /*
     |--------------------------------------------------------------------------
-    | DEFAULT COA RESOLVER (INTEGRASI AKUNTANSI DOUBLE-ENTRY TTC & INDIGAMA)
+    | DEFAULT COA RESOLVER (INTEGRASI AKUNTANSI DOUBLE-ENTRY TTC)
     |--------------------------------------------------------------------------
     */
 
@@ -1039,7 +1039,7 @@ class TreasuryService
             'remarks'        => $desc,
         ]);
 
-        // 2. KREDIT: Piutang Usaha berkurang (Prinsip Double-Entry Indigama)
+        // 2. KREDIT: Piutang Usaha berkurang (Prinsip Double-Entry)
         $piutangCoa = $this->resolvePiutangCoa((int) $payment->coa_id);
 
         if ($piutangCoa && (int) $piutangCoa->id !== (int) $payment->coa_id) {
@@ -1290,7 +1290,7 @@ class TreasuryService
 
     /*
     |--------------------------------------------------------------------------
-    | JURNAL MEMORIAL / PENYESUAIAN (JournalEntry - Adopsi TranMemorial Indigama)
+    | JURNAL MEMORIAL / PENYESUAIAN (JournalEntry - Double-Entry General Journal)
     |--------------------------------------------------------------------------
     */
 
