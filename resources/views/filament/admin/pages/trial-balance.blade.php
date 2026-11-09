@@ -327,10 +327,32 @@
 
         .ttc-table-wrap {
             width: 100%;
-            overflow-x: auto;
+            overflow-x: auto !important;
+            -webkit-overflow-scrolling: touch;
+            padding-bottom: 8px;
+            scrollbar-width: thin;
+            scrollbar-color: #3b82f6 #1e293b;
+        }
+        .ttc-table-wrap::-webkit-scrollbar {
+            height: 10px;
+        }
+        .ttc-table-wrap::-webkit-scrollbar-track {
+            background: #f1f5f9;
+            border-radius: 6px;
+        }
+        .dark .ttc-table-wrap::-webkit-scrollbar-track {
+            background: #1e293b;
+        }
+        .ttc-table-wrap::-webkit-scrollbar-thumb {
+            background: #3b82f6;
+            border-radius: 6px;
+        }
+        .ttc-table-wrap::-webkit-scrollbar-thumb:hover {
+            background: #2563eb;
         }
         table.ttc-tb-table {
             width: 100%;
+            min-width: 1220px;
             border-collapse: collapse;
             font-size: 12.5px;
             font-variant-numeric: tabular-nums;
@@ -441,7 +463,7 @@
                     <a href="{{ url('/admin/coa-ledgers') }}" class="ttc-btn ttc-btn-amber">
                         General Ledger (Buku Besar)
                     </a>
-                    <a href="{{ url('/admin/master-c-o-a-s') }}" class="ttc-btn ttc-btn-emerald" style="background: #059669;">
+                    <a href="{{ url('/admin/master-c-o-as') }}" class="ttc-btn ttc-btn-emerald" style="background: #059669;">
                         Master COA
                     </a>
                 </div>
@@ -519,15 +541,15 @@
                 <table class="ttc-tb-table">
                     <thead>
                         <tr>
-                            <th style="text-align: left;">Kode Akun</th>
-                            <th style="text-align: left;">Nama Akun (Chart of Accounts)</th>
-                            <th style="text-align: center;">Kelompok Akun</th>
-                            <th class="ttc-nowrap" style="text-align: center;">Laporan</th>
-                            <th class="ttc-nowrap" style="text-align: center;">Jml. Jurnal</th>
-                            <th class="ttc-nowrap" style="text-align: right;">Mutasi Debit (Rp)</th>
-                            <th class="ttc-nowrap" style="text-align: right;">Mutasi Kredit (Rp)</th>
-                            <th class="ttc-nowrap" style="text-align: right;">Saldo Akhir Debit</th>
-                            <th class="ttc-nowrap" style="text-align: right;">Saldo Akhir Kredit</th>
+                            <th class="ttc-nowrap" style="text-align: left; width: 95px;">Kode Akun</th>
+                            <th style="text-align: left; min-width: 230px;">Nama Akun (Chart of Accounts)</th>
+                            <th class="ttc-nowrap" style="text-align: center; width: 160px;">Kelompok Akun</th>
+                            <th class="ttc-nowrap" style="text-align: center; width: 100px;">Laporan</th>
+                            <th class="ttc-nowrap" style="text-align: center; width: 90px;">Jml. Jurnal</th>
+                            <th class="ttc-nowrap" style="text-align: right; min-width: 140px;">Mutasi Debit (Rp)</th>
+                            <th class="ttc-nowrap" style="text-align: right; min-width: 140px;">Mutasi Kredit (Rp)</th>
+                            <th class="ttc-nowrap" style="text-align: right; min-width: 145px;">Saldo Akhir Debit</th>
+                            <th class="ttc-nowrap" style="text-align: right; min-width: 145px;">Saldo Akhir Kredit</th>
                         </tr>
                     </thead>
                     <tbody>

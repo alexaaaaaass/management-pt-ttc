@@ -321,6 +321,44 @@
             color: #64748b;
         }
 
+        .ttc-kpi-profit {
+            background: #f0fdf4;
+            border-left-color: #059669 !important;
+        }
+        .ttc-kpi-profit .ttc-kpi-label { color: #065f46; }
+        .ttc-kpi-profit .ttc-kpi-value { color: #047857; }
+        .ttc-kpi-profit .ttc-kpi-sub { color: #065f46; }
+        .ttc-kpi-profit .ttc-kpi-pill { background: #bbf7d0; color: #064e3b; }
+
+        .dark .ttc-kpi-profit {
+            background: rgba(6, 78, 59, 0.25) !important;
+            border-color: #065f46 !important;
+            border-left-color: #10b981 !important;
+        }
+        .dark .ttc-kpi-profit .ttc-kpi-label { color: #6ee7b7 !important; }
+        .dark .ttc-kpi-profit .ttc-kpi-value { color: #34d399 !important; }
+        .dark .ttc-kpi-profit .ttc-kpi-sub { color: #a7f3d0 !important; }
+        .dark .ttc-kpi-profit .ttc-kpi-pill { background: rgba(16, 185, 129, 0.25) !important; color: #6ee7b7 !important; border: 1px solid #059669; }
+
+        .ttc-kpi-loss {
+            background: #fff1f2;
+            border-left-color: #e11d48 !important;
+        }
+        .ttc-kpi-loss .ttc-kpi-label { color: #9f1239; }
+        .ttc-kpi-loss .ttc-kpi-value { color: #be123c; }
+        .ttc-kpi-loss .ttc-kpi-sub { color: #9f1239; }
+        .ttc-kpi-loss .ttc-kpi-pill { background: #fecdd3; color: #881337; }
+
+        .dark .ttc-kpi-loss {
+            background: rgba(159, 18, 57, 0.25) !important;
+            border-color: #9f1239 !important;
+            border-left-color: #f43f5e !important;
+        }
+        .dark .ttc-kpi-loss .ttc-kpi-label { color: #fda4af !important; }
+        .dark .ttc-kpi-loss .ttc-kpi-value { color: #fb7185 !important; }
+        .dark .ttc-kpi-loss .ttc-kpi-sub { color: #fecdd3 !important; }
+        .dark .ttc-kpi-loss .ttc-kpi-pill { background: rgba(225, 29, 72, 0.25) !important; color: #fda4af !important; border: 1px solid #e11d48; }
+
         .ttc-section-head {
             padding: 18px 28px;
             background: #f8fafc;
@@ -349,10 +387,31 @@
 
         .ttc-table-wrap {
             padding: 20px 28px 28px 28px;
-            overflow-x: auto;
+            overflow-x: auto !important;
+            -webkit-overflow-scrolling: touch;
+            scrollbar-width: thin;
+            scrollbar-color: #3b82f6 #1e293b;
+        }
+        .ttc-table-wrap::-webkit-scrollbar {
+            height: 10px;
+        }
+        .ttc-table-wrap::-webkit-scrollbar-track {
+            background: #f1f5f9;
+            border-radius: 6px;
+        }
+        .dark .ttc-table-wrap::-webkit-scrollbar-track {
+            background: #1e293b;
+        }
+        .ttc-table-wrap::-webkit-scrollbar-thumb {
+            background: #3b82f6;
+            border-radius: 6px;
+        }
+        .ttc-table-wrap::-webkit-scrollbar-thumb:hover {
+            background: #2563eb;
         }
         table.ttc-pl-table {
             width: 100%;
+            min-width: 900px;
             border-collapse: separate;
             border-spacing: 0;
             font-size: 14px;
@@ -519,19 +578,19 @@
                 <div class="ttc-kpi-sub">Laba Operasional (EBIT): <strong>{{ $fmt($data['laba_operasional']) }}</strong></div>
             </div>
 
-            <div class="ttc-kpi-card" style="border-left-color: {{ $data['laba_bersih'] >= 0 ? '#059669' : '#e11d48' }}; background: {{ $data['laba_bersih'] >= 0 ? '#f0fdf4' : '#fff1f2' }};">
+            <div class="ttc-kpi-card {{ $data['laba_bersih'] >= 0 ? 'ttc-kpi-profit' : 'ttc-kpi-loss' }}">
                 <div class="ttc-kpi-top">
-                    <span class="ttc-kpi-label" style="color: {{ $data['laba_bersih'] >= 0 ? '#065f46' : '#9f1239' }};">
+                    <span class="ttc-kpi-label">
                         {{ $data['laba_bersih'] >= 0 ? 'Laba Bersih (Net Profit)' : 'Rugi Bersih (Net Loss)' }}
                     </span>
-                    <span class="ttc-kpi-pill" style="background: {{ $data['laba_bersih'] >= 0 ? '#bbf7d0' : '#fecdd3' }}; color: {{ $data['laba_bersih'] >= 0 ? '#064e3b' : '#881337' }};">
+                    <span class="ttc-kpi-pill">
                         {{ $data['margin_bersih_persen'] }}%
                     </span>
                 </div>
-                <div class="ttc-kpi-value" style="color: {{ $data['laba_bersih'] >= 0 ? '#047857' : '#be123c' }};">
+                <div class="ttc-kpi-value">
                     {{ $fmt($data['laba_bersih']) }}
                 </div>
-                <div class="ttc-kpi-sub" style="color: {{ $data['laba_bersih'] >= 0 ? '#065f46' : '#9f1239' }};">
+                <div class="ttc-kpi-sub">
                     Periode {{ \Carbon\Carbon::parse($data['start_date'])->format('d/m/Y') }} - {{ \Carbon\Carbon::parse($data['end_date'])->format('d/m/Y') }}
                 </div>
             </div>

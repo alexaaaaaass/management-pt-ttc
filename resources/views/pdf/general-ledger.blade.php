@@ -178,7 +178,7 @@
             <td class="kpi-card" style="border-left-color: {{ $data['is_balanced'] ? '#059669' : '#e11d48' }};">
                 <div class="kpi-label">Status Neraca (Balance)</div>
                 <div class="kpi-val" style="color: {{ $data['is_balanced'] ? '#047857' : '#be123c' }};">
-                    {{ $data['is_balanced'] ? '✓ SEIMBANG (BALANCE)' : 'SELISIH ' . $fmt($data['selisih']) }}
+                    {{ $data['is_balanced'] ? 'SEIMBANG (BALANCE)' : 'SELISIH ' . $fmt($data['selisih']) }}
                 </div>
             </td>
         </tr>
@@ -233,7 +233,7 @@
                 <td colspan="6" style="text-align: left;">TOTAL MUTASI JURNAL ({{ number_format($data['total_rows'], 0, ',', '.') }} BARIS)</td>
                 <td class="text-right text-debit">{{ $fmt($data['total_debit']) }}</td>
                 <td class="text-right text-kredit">{{ $fmt($data['total_kredit']) }}</td>
-                <td class="text-right text-saldo">{{ $data['is_balanced'] ? '✓ BALANCE' : 'FILTER AKUN' }}</td>
+                <td class="text-right text-saldo">{{ $data['is_balanced'] ? 'BALANCE' : 'FILTER AKUN' }}</td>
             </tr>
         </tfoot>
     </table>
@@ -250,3 +250,4 @@
     </table>
 </body>
 </html>
+

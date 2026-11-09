@@ -434,10 +434,32 @@
 
         .ttc-table-wrap {
             width: 100%;
-            overflow-x: auto;
+            overflow-x: auto !important;
+            -webkit-overflow-scrolling: touch;
+            padding-bottom: 8px;
+            scrollbar-width: thin;
+            scrollbar-color: #3b82f6 #1e293b;
+        }
+        .ttc-table-wrap::-webkit-scrollbar {
+            height: 10px;
+        }
+        .ttc-table-wrap::-webkit-scrollbar-track {
+            background: #f1f5f9;
+            border-radius: 6px;
+        }
+        .dark .ttc-table-wrap::-webkit-scrollbar-track {
+            background: #1e293b;
+        }
+        .ttc-table-wrap::-webkit-scrollbar-thumb {
+            background: #3b82f6;
+            border-radius: 6px;
+        }
+        .ttc-table-wrap::-webkit-scrollbar-thumb:hover {
+            background: #2563eb;
         }
         table.ttc-gl-table {
             width: 100%;
+            min-width: 1250px;
             border-collapse: collapse;
             font-size: 12.5px;
             font-variant-numeric: tabular-nums;

@@ -169,7 +169,7 @@
             <td class="kpi-card" style="border-left-color: {{ $data['is_balanced'] ? '#059669' : '#d97706' }};">
                 <div class="kpi-label">Status Neraca Saldo</div>
                 <div class="kpi-val" style="color: {{ $data['is_balanced'] ? '#047857' : '#b45309' }};">
-                    {{ $data['is_balanced'] ? '✓ SEIMBANG (BALANCE)' : 'FILTER KELOMPOK' }}
+                    {{ $data['is_balanced'] ? 'SEIMBANG (BALANCE)' : 'FILTER KELOMPOK' }}
                 </div>
             </td>
         </tr>
@@ -241,3 +241,4 @@
     </table>
 </body>
 </html>
+

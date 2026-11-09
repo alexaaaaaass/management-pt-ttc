@@ -448,6 +448,19 @@
             border-color: #1e3a8a;
             color: #93c5fd !important;
         }
+        tr.ttc-bs-tot td {
+            background: #e2e8f0;
+            color: #0f172a;
+            font-weight: 800;
+            padding: 12px 14px;
+            border-top: 1.5px solid #cbd5e1;
+            border-bottom: 1.5px solid #cbd5e1;
+        }
+        .dark tr.ttc-bs-tot td {
+            background: #1e293b !important;
+            color: #f8fafc !important;
+            border-color: #334155 !important;
+        }
         .ttc-col-foot {
             padding: 18px 24px;
             color: #ffffff;
@@ -708,7 +721,7 @@
                                     </tr>
                                 @endif
 
-                                <tr style="background: #e2e8f0; font-weight: 800;">
+                                <tr class="ttc-bs-tot">
                                     <td colspan="2" style="padding: 12px 14px;">TOTAL KEWAJIBAN (LIABILITIES)</td>
                                     <td style="padding: 12px 14px; text-align: right; font-variant-numeric: tabular-nums;">{{ $fmt($data['total_kewajiban']) }}</td>
                                 </tr>

@@ -361,6 +361,9 @@ Route::middleware('auth')->group(function () {
         [\App\Http\Controllers\FinancePdfController::class, 'downloadTrialBalance']
     )->name('finance.report.trial-balance.download');
 
+    // Route alias / redirect untuk Master COA agar URL /admin/master-c-o-a-s tidak pernah 404
+    Route::redirect('/admin/master-c-o-a-s', '/admin/master-c-o-as');
+
 });
 
 require __DIR__ . '/auth.php';
