@@ -409,11 +409,20 @@ Content-Type: text/html; charset=utf-8
         <li><strong>Cetak &amp; Preview Dokumen:</strong> Tombol <em>Preview PDF</em> dan <em>Download PDF</em> siap cetak dengan template profesional berlogo perusahaan, rincian item, terbilang rupiah, dan tanda tangan legal.</li>
     </ul>
 
-    <h2>3.4 Pelunasan Pembayaran (Invoice Payment)</h2>
+    <h2>3.4 Pelunasan Pembayaran (Invoice Payment) &amp; Matching Multi-Pesanan</h2>
     <ul>
-        <li>Mendukung pembayaran penuh (Lunas / <em>Paid</em>) maupun pembayaran bertahap (Cicilan / <em>Partial</em>).</li>
-        <li>Tersambung ke kasir kas kecil (Kas Tunai) maupun rekening giro bank perusahaan (BCA, Mandiri, BRI, BNI).</li>
-        <li>Setiap pelunasan otomatis memotong buku piutang pelanggan dan menambah saldo kas/bank terkait.</li>
+        <li><strong>Mendukung Pembayaran Penuh &amp; Bertahap:</strong> Fleksibel untuk pelunasan lunas (<em>Paid</em>) maupun cicilan bertahap (<em>Partial</em>) dengan pemantauan sisa piutang secara <em>real-time</em>.</li>
+        <li><strong>Alur Pesanan Jamak (Multi-Order / Multi-Item):</strong>
+            <ul>
+                <li><em>Multi-Item dalam 1 Order:</em> Satu nomor PO customer dapat memuat banyak item produk sekaligus menggunakan mode Multi-Material. Seluruh item tercakup dalam satu Surat Jalan dan satu Invoice dengan total tagihan terkonsolidasi.</li>
+                <li><em>Pelunasan Pembayaran Gelondongan (1 Transfer untuk Banyak Invoice):</em> Jika pelanggan mentransfer 1 nominal sekaligus untuk melunasi beberapa nomor invoice, kasir dapat memanfaatkan tombol aksi <strong>"Create &amp; Create Another"</strong>. Setiap invoice dialokasikan nominalnya masing-masing dengan mencantumkan nomor referensi transfer yang sama pada memo, sehingga seluruh invoice langsung berstatus Lunas (Piutang = Rp 0) dan mutasi rekening koran bank tercatat akurat.</li>
+            </ul>
+        </li>
+        <li><strong>Auto-Fill Keterangan Otomatis:</strong> Saat invoice dipilih pada form pembayaran, kolom <em>Keterangan</em> langsung terisi otomatis format standar <code>Pembayaran Invoice [No. Invoice] - [Nama Customer]</code>, mengurangi beban ketik kasir dan mencegah salah input.</li>
+        <li><strong>Ayat Jurnal Akuntansi Otomatis 100%:</strong> Begitu pembayaran disimpan, mesin akuntansi (Treasury Service) langsung memposting ayat jurnal berpasangan (Double-Entry) ke Buku Besar:
+            <br>&bull; (Debit) Akun Kas/Bank Tujuan
+            <br>&bull; (Kredit) Akun Piutang Usaha Pelanggan
+        </li>
     </ul>
 
     <div class="page-break"></div>
@@ -457,7 +466,7 @@ Content-Type: text/html; charset=utf-8
         </tbody>
     </table>
 
-    <h2>4.2 Rincian 5 Laporan Keuangan Utama (Report Finance)</h2>
+    <h2>4.2 Rincian 5 Laporan Keuangan Utama &amp; Fitur Interaktif Terkini</h2>
     <div class="flow-step">
         <strong>1. Laporan Laba Rugi (Global) &mdash; Multi-Step Income Statement:</strong>
         <p style="margin-top: 4px; margin-bottom: 0;">
@@ -479,14 +488,23 @@ Content-Type: text/html; charset=utf-8
     <div class="flow-step">
         <strong>4. Trial Balance (Neraca Saldo Rekapitulasi):</strong>
         <p style="margin-top: 4px; margin-bottom: 0;">
-            Tabel rekapitulasi mutasi Debit dan Kredit seluruh Chart of Accounts (COA) untuk memastikan tidak ada pencatatan yang pincang sebelum penutupan buku akhir bulan.
+            Tabel rekapitulasi mutasi Debit dan Kredit seluruh Chart of Accounts (COA) untuk memastikan tidak ada pencatatan yang pincang sebelum penutupan buku akhir bulan. Dilengkapi tombol ekspor PDF server-side.
         </p>
     </div>
     <div class="flow-step">
         <strong>5. General Ledger (Buku Besar Komprehensif):</strong>
         <p style="margin-top: 4px; margin-bottom: 0;">
-            Menampilkan histori kartu ledger per akun COA (misal: Kas, Bank BCA, Piutang Usaha, Penjualan, Utang PPN). Dilengkapi filter akun, tanggal transaksi, running balance saldo akhir, dan keterangan referensi dokumen sumber.
+            Menampilkan histori kartu ledger per akun COA (misal: Kas, Bank BCA, Piutang Usaha, Penjualan, Utang PPN). Dilengkapi filter akun, tanggal transaksi, running balance saldo akhir, wrap teks uraian yang rapi tanpa tumpang tindih, serta tombol server-side Preview &amp; Download PDF resmi.
         </p>
+    </div>
+
+    <div class="box-highlight" style="margin-top: 12px; margin-bottom: 8px;">
+        <strong>Penyempurnaan Tampilan &amp; Navigasi Terbaru (Update Fix):</strong>
+        <ul style="margin-top: 4px; margin-bottom: 0; padding-left: 18px;">
+            <li><strong>Live Preview &amp; Download PDF (Server-Side DomPDF):</strong> General Ledger dan Trial Balance kini memiliki tombol <em>Preview PDF</em> (tab browser interaktif) dan <em>Download PDF</em> (file langsung unduh) tanpa blank screen dan berformat bersih.</li>
+            <li><strong>Optimalisasi Dark Mode Nyaman &amp; Kontras Tinggi:</strong> Modul finance diselaraskan dengan kontras tinggi, teks dan badge jelas terbaca, serta proteksi <em>print-safe</em> (otomatis kembali ke latar putih saat dicetak ke PDF/kertas).</li>
+            <li><strong>Tabel Responsif &amp; Akses Cepat Master COA:</strong> Tabel pembukuan lebar didukung <em>smooth horizontal scroll</em> tanpa terpotong, serta tombol shortcut langsung menuju Master COA terhubung 100% aktif tanpa error 404.</li>
+        </ul>
     </div>
 
     <div class="page-break"></div>
