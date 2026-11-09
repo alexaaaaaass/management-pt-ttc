@@ -9,4 +9,9 @@ use Filament\Resources\Pages\CreateRecord;
 class CreateMasterKonversi extends CreateRecord
 {
     protected static string $resource = MasterKonversiResource::class;
+
+    protected function getRedirectUrl(): string
+    {
+        return $this->getResource()::getUrl('index');
+    }
 }

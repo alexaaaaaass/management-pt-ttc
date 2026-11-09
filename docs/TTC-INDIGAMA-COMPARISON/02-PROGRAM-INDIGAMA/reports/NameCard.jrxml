@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<jasperReport xmlns="http://jasperreports.sourceforge.net/jasperreports" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://jasperreports.sourceforge.net/jasperreports http://jasperreports.sourceforge.net/xsd/jasperreport.xsd" name="Report" columnCount="3" pageWidth="595" pageHeight="842" whenNoDataType="AllSectionsNoDetail" columnWidth="185" leftMargin="20" rightMargin="20" topMargin="20" bottomMargin="20" whenResourceMissingType="Empty" uuid="6e2799f7-66ad-4c92-b56b-f8f944663eee">
+	<property name="template.type" value="columnar"/>
+	<property name="ireport.zoom" value="2.1961500000000043"/>
+	<property name="ireport.x" value="0"/>
+	<property name="ireport.y" value="0"/>
+	<style name="Title" forecolor="#000000" fontName="Times New Roman" fontSize="50" isBold="false" pdfFontName="Times-Bold"/>
+	<style name="SubTitle" forecolor="#666666" fontName="Times New Roman" fontSize="18" isBold="false" pdfFontName="Times-Roman"/>
+	<style name="Column header" forecolor="#666666" fontName="Times New Roman" fontSize="14" isBold="true" pdfFontName="Times-Roman"/>
+	<style name="Detail" mode="Transparent" fontName="Times New Roman" pdfFontName="Times-Roman"/>
+	<style name="Row" mode="Transparent" fontName="Times New Roman" pdfFontName="Times-Roman">
+		<conditionalStyle>
+			<conditionExpression><![CDATA[$V{REPORT_COUNT}%2 == 0]]></conditionExpression>
+			<style mode="Opaque" backcolor="#F0EFEF"/>
+		</conditionalStyle>
+	</style>
+	<parameter name="jenis" class="java.lang.String"/>
+	<parameter name="periode" class="java.lang.String"/>
+	<parameter name="gudang" class="java.lang.String"/>
+	<parameter name="title" class="java.lang.String"/>
+	<parameter name="pt" class="java.lang.String"/>
+	<parameter name="alamat" class="java.lang.String"/>
+	<parameter name="telp" class="java.lang.String"/>
+	<parameter name="mail" class="java.lang.String"/>
+	<parameter name="terbilang" class="java.lang.String"/>
+	<parameter name="pengaju" class="java.lang.String"/>
+	<parameter name="dtran1" class="java.lang.String"/>
+	<parameter name="dtran2" class="java.lang.String"/>
+	<queryString>
+		<![CDATA[]]>
+	</queryString>
+	<field name="nik" class="java.lang.String"/>
+	<field name="nama" class="java.lang.String"/>
+	<background>
+		<band splitType="Stretch"/>
+	</background>
+	<detail>
+		<band height="255" splitType="Stretch">
+			<image scaleImage="FillFrame">
+				<reportElement x="19" y="12" width="145" height="229" uuid="84a3e32e-7087-44a4-9ad4-bedec11f086f"/>
+				<imageExpression><![CDATA["report\\namecard1.jpg"]]></imageExpression>
+			</image>
+			<textField>
+				<reportElement x="19" y="47" width="145" height="18" uuid="0d7e70a2-c8b0-4dfc-a9b8-597c403f07d6"/>
+				<textElement textAlignment="Center" verticalAlignment="Middle">
+					<font size="9" isBold="true"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$P{pt}]]></textFieldExpression>
+			</textField>
+			<image scaleImage="FillFrame">
+				<reportElement x="65" y="26" width="53" height="19" uuid="ee264089-297f-4238-97eb-ad19713c8f05"/>
+				<box>
+					<pen lineWidth="0.0"/>
+					<topPen lineWidth="0.0"/>
+					<leftPen lineWidth="0.0"/>
+					<bottomPen lineWidth="0.0"/>
+					<rightPen lineWidth="0.0"/>
+				</box>
+				<imageExpression><![CDATA["report\\logo.jpg"]]></imageExpression>
+			</image>
+			<image>
+				<reportElement x="54" y="90" width="76" height="76" uuid="5b9344ec-74d0-42a4-b450-05060796066e"/>
+				<imageExpression><![CDATA[com.google.zxing.client.j2se.MatrixToImageWriter.toBufferedImage(
+    new com.google.zxing.qrcode.QRCodeWriter().encode(
+        $F{nik},
+        com.google.zxing.BarcodeFormat.QR_CODE, 800, 800
+    )
+)]]></imageExpression>
+			</image>
+			<textField>
+				<reportElement x="33" y="209" width="118" height="12" uuid="605da37c-c902-4e07-aaca-efa96800e63a"/>
+				<textElement textAlignment="Center" verticalAlignment="Middle">
+					<font fontName="Times New Roman" size="9" isBold="true"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{nik}]]></textFieldExpression>
+			</textField>
+			<textField>
+				<reportElement x="33" y="192" width="118" height="16" uuid="abb28d87-1297-4d1a-ae90-da52c92ec093"/>
+				<textElement textAlignment="Center" verticalAlignment="Middle">
+					<font fontName="Cambria" size="9" isBold="true"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{nama}]]></textFieldExpression>
+			</textField>
+			<line>
+				<reportElement x="28" y="75" width="127" height="1" uuid="ee5b9aa1-7267-41a4-b8e0-fd9b025aa348"/>
+				<graphicElement>
+					<pen lineWidth="0.5" lineStyle="Dashed"/>
+				</graphicElement>
+			</line>
+		</band>
+	</detail>
+</jasperReport>

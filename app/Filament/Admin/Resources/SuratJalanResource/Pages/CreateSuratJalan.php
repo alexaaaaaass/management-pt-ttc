@@ -35,6 +35,6 @@ class CreateSuratJalan extends CreateRecord
 
     protected function getRedirectUrl(): string
     {
-        return SuratJalanResource::getUrl('index');
+        return $this->getResource()::getUrl('index');
     }
 }

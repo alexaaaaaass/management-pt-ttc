@@ -9,4 +9,9 @@ use Filament\Resources\Pages\CreateRecord;
 class CreatePaymentEntryGood extends CreateRecord
 {
     protected static string $resource = PaymentEntryGoodResource::class;
+
+    protected function getRedirectUrl(): string
+    {
+        return $this->getResource()::getUrl('index');
+    }
 }

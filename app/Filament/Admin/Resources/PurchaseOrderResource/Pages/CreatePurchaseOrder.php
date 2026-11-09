@@ -29,8 +29,6 @@ class CreatePurchaseOrder extends CreateRecord
 
     protected function getRedirectUrl(): string
     {
-        return static::getResource()::getUrl('edit', [
-            'record' => $this->record,
-        ]);
+        return $this->getResource()::getUrl('index');
     }
 }

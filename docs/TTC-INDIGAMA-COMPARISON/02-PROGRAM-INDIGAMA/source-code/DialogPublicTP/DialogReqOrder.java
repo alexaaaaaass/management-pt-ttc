@@ -1,0 +1,399 @@
+/*
+ * To change this license header, choose License Headers in Project Properties.
+ * To change this template file, choose Tools | Templates
+ * and open the template in the editor.
+ */
+package DialogPublicTP;
+
+import static Main.DefaultProgram.deffProgram;
+import Main.MenuAdmin;
+import static Main.MenuAdmin.keyssDef;
+import Tools.ConnectDB;
+import java.awt.Dialog;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.text.DecimalFormat;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+import javax.swing.JScrollPane;
+import javax.swing.JTable;
+import javax.swing.JTextField;
+import javax.swing.RowFilter;
+import javax.swing.event.DocumentEvent;
+import javax.swing.event.DocumentListener;
+import javax.swing.table.DefaultTableModel;
+import javax.swing.table.TableRowSorter;
+import okhttp3.FormBody;
+import okhttp3.RequestBody;
+import org.json.simple.JSONArray;
+import org.json.simple.JSONObject;
+import rf4declare.Rf4declare;
+
+/**
+ *
+ * @author SAN-SBY-ITPRO4
+ */
+public class DialogReqOrder extends javax.swing.JDialog {
+
+    ConnectDB con = new ConnectDB();
+    rf4declare.Rf4declare rfa = new Rf4declare();
+    ResultSet rs;
+    String sql;
+    String id="",cnbkt="",cnbkt_print="";
+    int barisEdit=-1;
+    String akses="TRANSAKSI OPRASIONAL KELUAR";
+    public Boolean status = false;
+    public String kode,groupBarang, namaBarang,unit,kode_supplier,supplier,nik,nik_name;
+    public Double big_value,small_value;
+    private TableRowSorter sorter;
+    private DefaultTableModel model;
+    private JScrollPane scrollPane;
+    public DialogReqOrder() {
+        this.setModalityType(Dialog.ModalityType.APPLICATION_MODAL); 
+        initComponents();
+        setLocationRelativeTo(null);
+        tcodes.setText(deffProgram.get("ccode"));
+        
+        loadData();
+    }
+
+    private void loadData(){
+        sql = "select a.id,a.cnbkt,a.ccode,a.ccodeDest,a.cyear,a.dtran,a.cdesc,\n" +
+            "b.cname as gudang,sum(c.ntotal) as total,d.kode_supplier,d.cname as supplier,a.nik,a.nik_cname \n" +
+            "from TranPurchaseReq a join MGudang b on a.ccode=b.ccode\n" +
+            "join TranPurchaseReq_detail c on a.cnbkt=c.cnbkt and a.ccode=b.ccode\n" +
+            "left join MSupplier d on c.kode_supplier=d.kode_supplier\n" +
+            "where a.capv=1 and a.ccode='"+tcodes.getText()+"' and a.cnbkt like '%"+tbuktis.getText()+"%'\n" +
+            "and a.cdesc like '%"+tkets.getText()+"%' "
+                + "group by a.id,a.cnbkt,a.ccode,a.ccodeDest,a.cyear,a.dtran,a.cdesc,b.cname,d.kode_supplier,d.cname,a.nik,a.nik_cname "
+                + " order by a.cnbkt desc\n"
+                + "";
+        System.out.println(sql);
+        rs = con.queryResult(sql);
+        rfa.clear_table(MenuAdmin.keyssDef, jTable2);
+        DefaultTableModel model = (DefaultTableModel) jTable2.getModel();
+        int nomor=1;
+        try {
+            while(rs.next()){
+                model.addRow(new Object[]{
+                    rs.getString("id"),String.valueOf(nomor++),
+                    rs.getString("gudang"),
+                    rs.getString("cnbkt"),rfa.DateString(keyssDef, rs.getDate("dtran"),"dd/MM/yyyy"),
+                    rs.getString("cdesc"),rs.getDouble("total"),
+                    rs.getString("kode_supplier"),
+                    rs.getString("supplier"),
+                    rs.getString("nik"),
+                    rs.getString("nik_cname"),
+                    
+                });
+            }
+        } catch (SQLException ex) {
+            ex.printStackTrace();
+        }
+        for (int i = 0; i < jTable2.getColumnCount(); i++) {
+            jTable2.getColumnModel().getColumn(i).setPreferredWidth(jTable2.getColumnModel().getColumn(i).getWidth()*2);
+            jTable2.getColumnModel().getColumn(i).setMinWidth(jTable2.getColumnModel().getColumn(i).getWidth()*2);
+        }
+        jTable2.setAutoResizeMode(JTable.AUTO_RESIZE_OFF);
+    }
+   
+    private TableRowSorter getRowSorter() {
+    if (sorter == null){
+      sorter = new TableRowSorter(model);
+    }
+    return sorter;
+  }
+  /**
+  * Mendeklarasikan aksi txtFilter
+  */
+  private void aksiTxtFilter(final JTextField data) {
+    data.getDocument().addDocumentListener(new DocumentListener() {
+        @Override
+        public void insertUpdate(DocumentEvent e) {
+          changedUpdate(e);
+        }
+        @Override
+        public void removeUpdate(DocumentEvent e) {
+          changedUpdate(e);
+        }
+        @Override
+        public void changedUpdate(DocumentEvent e) {
+          if (data.getText().length() <= 0){
+            getRowSorter().setRowFilter(null);
+          } else{
+            getRowSorter().setRowFilter(RowFilter.regexFilter(data.getText()));
+          }
+        }
+
+
+      });
+  }
+    
+    
+    /**
+     * This method is called from within the constructor to initialize the form.
+     * WARNING: Do NOT modify this code. The content of this method is always
+     * regenerated by the Form Editor.
+     */
+    @SuppressWarnings("unchecked")
+    // <editor-fold defaultstate="collapsed" desc="Generated Code">//GEN-BEGIN:initComponents
+    private void initComponents() {
+
+        jPanel1 = new javax.swing.JPanel();
+        jPanel6 = new javax.swing.JPanel();
+        jLabel12 = new javax.swing.JLabel();
+        tbuktis = new javax.swing.JTextField();
+        tkets = new javax.swing.JTextField();
+        jButton7 = new javax.swing.JButton();
+        jLabel15 = new javax.swing.JLabel();
+        jLabel13 = new javax.swing.JLabel();
+        tcodes = new javax.swing.JTextField();
+        jButton15 = new javax.swing.JButton();
+        jScrollPane3 = new javax.swing.JScrollPane();
+        jTable2 = new javax.swing.JTable();
+        jTextField13 = new javax.swing.JTextField();
+        jScrollPane2 = new javax.swing.JScrollPane();
+        jTable3 = new javax.swing.JTable();
+        jTextField11 = new javax.swing.JTextField();
+
+        setDefaultCloseOperation(javax.swing.WindowConstants.DISPOSE_ON_CLOSE);
+        setTitle("List Request Order");
+
+        jPanel1.setLayout(new org.netbeans.lib.awtextra.AbsoluteLayout());
+
+        jPanel6.setBorder(javax.swing.BorderFactory.createTitledBorder("Filter"));
+        jPanel6.setLayout(new org.netbeans.lib.awtextra.AbsoluteLayout());
+
+        jLabel12.setText("Gudang");
+        jPanel6.add(jLabel12, new org.netbeans.lib.awtextra.AbsoluteConstraints(20, 30, 40, 20));
+
+        tbuktis.addKeyListener(new java.awt.event.KeyAdapter() {
+            public void keyPressed(java.awt.event.KeyEvent evt) {
+                tbuktisKeyPressed(evt);
+            }
+        });
+        jPanel6.add(tbuktis, new org.netbeans.lib.awtextra.AbsoluteConstraints(320, 30, 140, -1));
+
+        tkets.addKeyListener(new java.awt.event.KeyAdapter() {
+            public void keyPressed(java.awt.event.KeyEvent evt) {
+                tketsKeyPressed(evt);
+            }
+        });
+        jPanel6.add(tkets, new org.netbeans.lib.awtextra.AbsoluteConstraints(100, 60, 580, -1));
+
+        jButton7.setIcon(new javax.swing.ImageIcon(getClass().getResource("/icon/Search_More_15px.png"))); // NOI18N
+        jButton7.setText("Cari");
+        jButton7.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                jButton7ActionPerformed(evt);
+            }
+        });
+        jPanel6.add(jButton7, new org.netbeans.lib.awtextra.AbsoluteConstraints(590, 20, 90, -1));
+
+        jLabel15.setText("Keterangan");
+        jPanel6.add(jLabel15, new org.netbeans.lib.awtextra.AbsoluteConstraints(20, 60, -1, 20));
+
+        jLabel13.setText("No Bukti");
+        jPanel6.add(jLabel13, new org.netbeans.lib.awtextra.AbsoluteConstraints(260, 30, 40, 20));
+
+        tcodes.setEditable(false);
+        tcodes.addFocusListener(new java.awt.event.FocusAdapter() {
+            public void focusLost(java.awt.event.FocusEvent evt) {
+                tcodesFocusLost(evt);
+            }
+        });
+        jPanel6.add(tcodes, new org.netbeans.lib.awtextra.AbsoluteConstraints(100, 30, 110, -1));
+
+        jButton15.setIcon(new javax.swing.ImageIcon(getClass().getResource("/icon/Search_More_15px.png"))); // NOI18N
+        jButton15.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                jButton15ActionPerformed(evt);
+            }
+        });
+        jPanel6.add(jButton15, new org.netbeans.lib.awtextra.AbsoluteConstraints(210, 30, 30, -1));
+
+        jPanel1.add(jPanel6, new org.netbeans.lib.awtextra.AbsoluteConstraints(10, 10, 1210, 90));
+
+        jTable2.setModel(new javax.swing.table.DefaultTableModel(
+            new Object [][] {
+                {null, null, null, null, null, null, null, null, null, null, null},
+                {null, null, null, null, null, null, null, null, null, null, null},
+                {null, null, null, null, null, null, null, null, null, null, null},
+                {null, null, null, null, null, null, null, null, null, null, null}
+            },
+            new String [] {
+                "id", "No", "Gudang", "Nomor Bukti", "Tanggal", "Keterangan", "Nominal Total", "Kode Supplier", "Supplier", "nik", "Pengaju"
+            }
+        ) {
+            Class[] types = new Class [] {
+                java.lang.Object.class, java.lang.Object.class, java.lang.Object.class, java.lang.Object.class, java.lang.Object.class, java.lang.Object.class, java.lang.Double.class, java.lang.Object.class, java.lang.Object.class, java.lang.Object.class, java.lang.Object.class
+            };
+            boolean[] canEdit = new boolean [] {
+                false, false, false, false, false, false, false, false, false, false, false
+            };
+
+            public Class getColumnClass(int columnIndex) {
+                return types [columnIndex];
+            }
+
+            public boolean isCellEditable(int rowIndex, int columnIndex) {
+                return canEdit [columnIndex];
+            }
+        });
+        jTable2.setAutoResizeMode(javax.swing.JTable.AUTO_RESIZE_OFF);
+        jTable2.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                jTable2MouseClicked(evt);
+            }
+        });
+        jScrollPane3.setViewportView(jTable2);
+        if (jTable2.getColumnModel().getColumnCount() > 0) {
+            jTable2.getColumnModel().getColumn(0).setMinWidth(0);
+            jTable2.getColumnModel().getColumn(0).setMaxWidth(0);
+            jTable2.getColumnModel().getColumn(1).setMinWidth(50);
+            jTable2.getColumnModel().getColumn(1).setMaxWidth(50);
+            jTable2.getColumnModel().getColumn(7).setMinWidth(0);
+            jTable2.getColumnModel().getColumn(7).setMaxWidth(0);
+            jTable2.getColumnModel().getColumn(9).setMinWidth(0);
+            jTable2.getColumnModel().getColumn(9).setMaxWidth(0);
+        }
+
+        jPanel1.add(jScrollPane3, new org.netbeans.lib.awtextra.AbsoluteConstraints(10, 100, 1210, 240));
+
+        jTextField13.setEditable(false);
+        jTextField13.setBackground(new java.awt.Color(204, 204, 255));
+        jTextField13.setFont(new java.awt.Font("Tahoma", 3, 11)); // NOI18N
+        jTextField13.setText("Detail");
+        jPanel1.add(jTextField13, new org.netbeans.lib.awtextra.AbsoluteConstraints(10, 370, 1210, -1));
+
+        jTable3.setModel(new javax.swing.table.DefaultTableModel(
+            new Object [][] {
+                {null, null, null, null, null, null, null, null},
+                {null, null, null, null, null, null, null, null},
+                {null, null, null, null, null, null, null, null},
+                {null, null, null, null, null, null, null, null}
+            },
+            new String [] {
+                "Group", "Product", "Desc", "Qty", "Harga", "Total ", "Disc", "Total All"
+            }
+        ) {
+            Class[] types = new Class [] {
+                java.lang.Object.class, java.lang.Object.class, java.lang.Object.class, java.lang.Double.class, java.lang.Double.class, java.lang.Double.class, java.lang.Double.class, java.lang.Double.class
+            };
+            boolean[] canEdit = new boolean [] {
+                false, false, false, false, false, false, false, false
+            };
+
+            public Class getColumnClass(int columnIndex) {
+                return types [columnIndex];
+            }
+
+            public boolean isCellEditable(int rowIndex, int columnIndex) {
+                return canEdit [columnIndex];
+            }
+        });
+        jScrollPane2.setViewportView(jTable3);
+
+        jPanel1.add(jScrollPane2, new org.netbeans.lib.awtextra.AbsoluteConstraints(10, 390, 1210, 120));
+
+        jTextField11.setEditable(false);
+        jTextField11.setBackground(new java.awt.Color(255, 255, 255));
+        jTextField11.setFont(new java.awt.Font("Tahoma", 3, 11)); // NOI18N
+        jTextField11.setHorizontalAlignment(javax.swing.JTextField.LEFT);
+        jTextField11.setText("Double Click to Continue");
+        jPanel1.add(jTextField11, new org.netbeans.lib.awtextra.AbsoluteConstraints(10, 340, 310, -1));
+
+        javax.swing.GroupLayout layout = new javax.swing.GroupLayout(getContentPane());
+        getContentPane().setLayout(layout);
+        layout.setHorizontalGroup(
+            layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addComponent(jPanel1, javax.swing.GroupLayout.DEFAULT_SIZE, 1228, Short.MAX_VALUE)
+        );
+        layout.setVerticalGroup(
+            layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addComponent(jPanel1, javax.swing.GroupLayout.DEFAULT_SIZE, 522, Short.MAX_VALUE)
+        );
+
+        pack();
+    }// </editor-fold>//GEN-END:initComponents
+
+    private void tbuktisKeyPressed(java.awt.event.KeyEvent evt) {//GEN-FIRST:event_tbuktisKeyPressed
+        if(evt.getKeyCode()==10)  loadData();
+    }//GEN-LAST:event_tbuktisKeyPressed
+
+    private void tketsKeyPressed(java.awt.event.KeyEvent evt) {//GEN-FIRST:event_tketsKeyPressed
+        if(evt.getKeyCode()==10)  loadData();        // TODO add your handling code here:
+    }//GEN-LAST:event_tketsKeyPressed
+
+    private void jButton7ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton7ActionPerformed
+        loadData();
+    }//GEN-LAST:event_jButton7ActionPerformed
+
+    private void jTable2MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_jTable2MouseClicked
+        if(evt.getClickCount() == 2) {
+            int baris = jTable2.getSelectedRow();
+            id = jTable2.getValueAt(baris, 0).toString();
+            if(jTable2.getValueAt(baris, 3)!= null) kode = jTable2.getValueAt(baris, 3).toString();
+            if(jTable2.getValueAt(baris, 7)!= null) kode_supplier = jTable2.getValueAt(baris, 7).toString();
+            if(jTable2.getValueAt(baris, 8)!= null) supplier = jTable2.getValueAt(baris, 8).toString();
+            nik = jTable2.getValueAt(baris,9).toString();
+            nik_name = jTable2.getValueAt(baris,10).toString();
+            status = true;
+            dispose();
+        } else if(evt.getClickCount() == 1) {
+            int baris = jTable2.getSelectedRow();
+            String bkt = jTable2.getValueAt(baris, 3).toString();
+            sql="select a.*,b.cnameProduct \n" +
+            "from TranPurchaseReq_detail a join MProduk b on a.cgroup=b.cgroup and a.cproduct=b.cproduct\n" +
+            "where a.cnbkt = '"+bkt+"' and a.capv=1";
+            rfa.clear_table(MenuAdmin.keyssDef, jTable3);
+            DefaultTableModel model = (DefaultTableModel) jTable3.getModel();
+            rs = con.queryResult(sql);
+            try {
+                while(rs.next()){
+                    model.addRow(new Object[]{
+                        rs.getString("cgroup"),rs.getString("cproduct"),rs.getString("cnameProduct"),
+                        rs.getDouble("nqty"),rs.getDouble("nprice"),rs.getDouble("nqty")*rs.getDouble("nprice"),
+                        rs.getDouble("ndisc"),rs.getDouble("ntotal"),rs.getString("nunit")
+                    });
+                }
+            } catch (SQLException ex) {
+                ex.printStackTrace();
+            }
+
+        }
+    }//GEN-LAST:event_jTable2MouseClicked
+
+    private void tcodesFocusLost(java.awt.event.FocusEvent evt) {//GEN-FIRST:event_tcodesFocusLost
+        // TODO add your handling code here:
+    }//GEN-LAST:event_tcodesFocusLost
+
+    private void jButton15ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton15ActionPerformed
+        DialogGudang a = new DialogGudang();
+        a.setVisible(true);
+        if(!"".equals(a.ccode)){
+            tcodes.setText(a.ccode);
+        }
+    }//GEN-LAST:event_jButton15ActionPerformed
+
+   
+
+    // Variables declaration - do not modify//GEN-BEGIN:variables
+    private javax.swing.JButton jButton15;
+    private javax.swing.JButton jButton7;
+    private javax.swing.JLabel jLabel12;
+    private javax.swing.JLabel jLabel13;
+    private javax.swing.JLabel jLabel15;
+    private javax.swing.JPanel jPanel1;
+    private javax.swing.JPanel jPanel6;
+    private javax.swing.JScrollPane jScrollPane2;
+    private javax.swing.JScrollPane jScrollPane3;
+    private javax.swing.JTable jTable2;
+    private javax.swing.JTable jTable3;
+    private javax.swing.JTextField jTextField11;
+    private javax.swing.JTextField jTextField13;
+    private javax.swing.JTextField tbuktis;
+    private javax.swing.JTextField tcodes;
+    private javax.swing.JTextField tkets;
+    // End of variables declaration//GEN-END:variables
+}

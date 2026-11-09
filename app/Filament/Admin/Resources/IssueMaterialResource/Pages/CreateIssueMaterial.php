@@ -9,4 +9,9 @@ use Filament\Resources\Pages\CreateRecord;
 class CreateIssueMaterial extends CreateRecord
 {
     protected static string $resource = IssueMaterialResource::class;
+
+    protected function getRedirectUrl(): string
+    {
+        return $this->getResource()::getUrl('index');
+    }
 }

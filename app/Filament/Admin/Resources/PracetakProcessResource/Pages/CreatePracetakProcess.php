@@ -9,4 +9,9 @@ use Filament\Resources\Pages\CreateRecord;
 class CreatePracetakProcess extends CreateRecord
 {
     protected static string $resource = PracetakProcessResource::class;
+
+    protected function getRedirectUrl(): string
+    {
+        return $this->getResource()::getUrl('index');
+    }
 }

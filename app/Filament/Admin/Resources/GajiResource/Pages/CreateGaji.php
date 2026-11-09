@@ -15,4 +15,9 @@ class CreateGaji extends CreateRecord
     {
         return app(PayrollService::class)->recordPayroll($data);
     }
+
+    protected function getRedirectUrl(): string
+    {
+        return $this->getResource()::getUrl('index');
+    }
 }

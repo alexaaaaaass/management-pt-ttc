@@ -13,4 +13,9 @@ class CreatePenerimaanBarang extends CreateRecord
     {
         $this->record->processReceiving();
     }
+
+    protected function getRedirectUrl(): string
+    {
+        return $this->getResource()::getUrl('index');
+    }
 }
