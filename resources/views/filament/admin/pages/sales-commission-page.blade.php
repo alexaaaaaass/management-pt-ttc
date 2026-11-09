@@ -261,6 +261,29 @@
             color: #f8fafc;
             border-top-color: #475569;
         }
+        .ttc-comm-text-main {
+            color: #0f172a;
+        }
+        .dark .ttc-comm-text-main {
+            color: #f8fafc;
+        }
+        .ttc-comm-text-sub {
+            color: #475569;
+        }
+        .dark .ttc-comm-text-sub {
+            color: #94a3b8;
+        }
+        .ttc-comm-pill-summary {
+            background: #eff6ff;
+            color: #1d4ed8;
+        }
+        .dark .ttc-comm-pill-summary {
+            background: rgba(30, 58, 138, 0.35);
+            color: #93c5fd;
+        }
+            color: #f8fafc;
+            border-top-color: #475569;
+        }
         .ttc-act-btn {
             display: inline-flex;
             align-items: center;
@@ -359,29 +382,29 @@
                         @foreach($commissionRows as $row)
                             <tr>
                                 <td>
-                                    <div style="font-weight: 800; color: #1e40af; font-size: 12.5px;">
+                                    <div style="font-weight: 800; color: #3b82f6; font-size: 12.5px;">
                                         {{ $row['comm_no'] }}
                                     </div>
-                                    <div style="font-size: 11px; font-weight: 600; color: #475569; margin-top: 2px;">
+                                    <div class="ttc-comm-text-sub" style="font-size: 11px; font-weight: 600; margin-top: 2px;">
                                         Order: {{ $row['order_id'] }}
                                     </div>
                                 </td>
                                 <td style="white-space: normal; min-width: 190px;">
-                                    <div style="font-weight: 700; color: #0f172a; line-height: 1.3;">
+                                    <div class="ttc-comm-text-main" style="font-weight: 700; line-height: 1.3;">
                                         {{ $row['customer'] }}
                                     </div>
-                                    <div style="display: inline-block; margin-top: 3px; padding: 2px 8px; border-radius: 5px; background: #eff6ff; color: #1d4ed8; font-size: 10.5px; font-weight: 700;">
+                                    <div class="ttc-comm-pill-summary" style="display: inline-block; margin-top: 3px; padding: 2px 8px; border-radius: 5px; font-size: 10.5px; font-weight: 700;">
                                         {{ $row['summary'] }}
                                     </div>
                                 </td>
-                                <td style="text-align: center; color: #475569; font-weight: 600;">
+                                <td style="text-align: center; font-weight: 600;" class="ttc-comm-text-sub">
                                     {{ \Carbon\Carbon::parse($row['date'])->format('d/m/Y') }}
                                 </td>
                                 <td style="text-align: right;">
-                                    <div style="font-weight: 700; color: #0f172a;">
+                                    <div class="ttc-comm-text-main" style="font-weight: 700;">
                                         Rp {{ number_format($row['revenue'], 0, ',', '.') }}
                                     </div>
-                                    <div style="font-size: 11px; color: #64748b; margin-top: 2px;">
+                                    <div style="font-size: 11px; color: #94a3b8; margin-top: 2px;">
                                         Qty: {{ number_format($row['qty'], 0, ',', '.') }} Pcs
                                     </div>
                                 </td>

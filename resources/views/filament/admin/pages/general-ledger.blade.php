@@ -253,6 +253,77 @@
             border-color: #93c5fd;
             color: #1d4ed8;
         }
+        .dark .ttc-preset-btn {
+            background-color: #1e293b;
+            border-color: #334155;
+            color: #e2e8f0;
+        }
+        .dark .ttc-preset-btn:hover {
+            background-color: #334155;
+            border-color: #60a5fa;
+            color: #93c5fd;
+        }
+        .ttc-gl-account-name {
+            font-weight: 700;
+            color: #0f172a;
+        }
+        .dark .ttc-gl-account-name {
+            color: #f8fafc;
+        }
+        .ttc-gl-date {
+            font-weight: 600;
+            color: #334155;
+        }
+        .dark .ttc-gl-date {
+            color: #cbd5e1;
+        }
+        .ttc-gl-remarks {
+            white-space: normal;
+            min-width: 240px;
+            max-width: 380px;
+            color: #334155;
+            line-height: 1.35;
+        }
+        .dark .ttc-gl-remarks {
+            color: #cbd5e1;
+        }
+        .ttc-row-active-filter {
+            background: #eff6ff;
+        }
+        .dark .ttc-row-active-filter {
+            background: rgba(30, 58, 138, 0.3) !important;
+        }
+        .ttc-gl-filter-btn {
+            padding: 5px 11px;
+            border-radius: 6px;
+            font-size: 11px;
+            font-weight: 700;
+            cursor: pointer;
+            border: 1px solid #cbd5e1;
+            background-color: #ffffff;
+            color: #334155;
+            transition: all 0.15s ease;
+        }
+        .ttc-gl-filter-btn:hover {
+            background-color: #eff6ff;
+            color: #1d4ed8;
+            border-color: #93c5fd;
+        }
+        .dark .ttc-gl-filter-btn {
+            border-color: #374151;
+            background-color: #1e293b;
+            color: #e2e8f0;
+        }
+        .dark .ttc-gl-filter-btn:hover {
+            background-color: #334155;
+            color: #93c5fd;
+            border-color: #60a5fa;
+        }
+        .ttc-gl-filter-btn-selected {
+            background-color: #1d4ed8 !important;
+            color: #ffffff !important;
+            border-color: #1d4ed8 !important;
+        }
 
         .ttc-kpi-grid {
             display: grid;
@@ -544,11 +615,11 @@
                             @php
                                 $isSelected = (string) $this->selectedCoaId === (string) $acc['coa_id'];
                             @endphp
-                            <tr style="{{ $isSelected ? 'background: #eff6ff;' : '' }}">
+                            <tr class="{{ $isSelected ? 'ttc-row-active-filter' : '' }}">
                                 <td>
                                     <span class="ttc-code-pill">{{ $acc['kode_akun'] }}</span>
                                 </td>
-                                <td style="font-weight: 700; color: #0f172a;">
+                                <td class="ttc-gl-account-name">
                                     {{ $acc['nama_akun'] }}
                                 </td>
                                 <td style="text-align: center;">
@@ -571,7 +642,7 @@
                                 <td style="text-align: center;" class="ttc-hide-print">
                                     <button type="button"
                                             wire:click="filterByAccount({{ $acc['coa_id'] }})"
-                                            style="padding: 5px 11px; border-radius: 6px; font-size: 11px; font-weight: 700; cursor: pointer; border: 1px solid {{ $isSelected ? '#1d4ed8' : '#cbd5e1' }}; background-color: {{ $isSelected ? '#1d4ed8' : '#ffffff' }}; color: {{ $isSelected ? '#ffffff' : '#334155' }};">
+                                            class="ttc-gl-filter-btn {{ $isSelected ? 'ttc-gl-filter-btn-selected' : '' }}">
                                         {{ $isSelected ? '✓ Sedang Difilter' : 'Lihat Mutasi Akun' }}
                                     </button>
                                 </td>
@@ -614,13 +685,13 @@
                                 <td style="text-align: center; color: #64748b; font-weight: 600;">
                                     {{ $idx + 1 }}
                                 </td>
-                                <td style="text-align: center; font-weight: 600; color: #334155;">
+                                <td style="text-align: center;" class="ttc-gl-date">
                                     {{ $row['tanggal'] }}
                                 </td>
                                 <td>
                                     <div style="display: flex; align-items: center; gap: 8px;">
                                         <span class="ttc-code-pill">{{ $row['kode_akun'] }}</span>
-                                        <span style="font-weight: 700; color: #0f172a;">{{ $row['nama_akun'] }}</span>
+                                        <span class="ttc-gl-account-name">{{ $row['nama_akun'] }}</span>
                                     </div>
                                 </td>
                                 <td style="text-align: center;">
@@ -628,10 +699,10 @@
                                         {{ $row['ref_label'] }}
                                     </span>
                                 </td>
-                                <td style="font-weight: 700; color: #1e40af;">
+                                <td style="font-weight: 700; color: #3b82f6;">
                                     {{ $row['reference_no'] }}
                                 </td>
-                                <td style="white-space: normal; min-width: 240px; max-width: 380px; color: #334155; line-height: 1.35;">
+                                <td class="ttc-gl-remarks">
                                     {{ $row['remarks'] }}
                                 </td>
                                 <td style="text-align: right; font-weight: {{ $row['debit'] > 0 ? '800' : '500' }}; color: {{ $row['debit'] > 0 ? '#1d4ed8' : '#cbd5e1' }};">

@@ -182,6 +182,10 @@
             justify-content: space-between;
             gap: 16px;
         }
+        .dark .ttc-filter-bar {
+            background: #1f2937;
+            border-top-color: #374151;
+        }
         .ttc-filter-inputs {
             display: flex;
             flex-wrap: wrap;
@@ -197,6 +201,9 @@
             color: #475569;
             margin-bottom: 6px;
         }
+        .dark .ttc-field label {
+            color: #9ca3af;
+        }
         .ttc-input {
             border: 1px solid #cbd5e1;
             background-color: #ffffff;
@@ -206,6 +213,11 @@
             font-size: 13px;
             font-weight: 500;
             min-width: 180px;
+        }
+        .dark .ttc-input {
+            background-color: #111827;
+            border-color: #374151;
+            color: #f9fafb;
         }
         select.ttc-input {
             padding-right: 38px !important;
@@ -227,12 +239,19 @@
             padding: 18px 22px;
             box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
         }
+        .dark .ttc-kpi-card {
+            background: #111827;
+            border-color: #1f2937;
+        }
         .ttc-kpi-label {
             font-size: 11px;
             font-weight: 700;
             text-transform: uppercase;
             letter-spacing: 0.05em;
             color: #64748b;
+        }
+        .dark .ttc-kpi-label {
+            color: #9ca3af;
         }
         .ttc-kpi-value {
             font-size: 21px;
@@ -242,11 +261,17 @@
             white-space: nowrap;
             font-variant-numeric: tabular-nums;
         }
+        .dark .ttc-kpi-value {
+            color: #f8fafc;
+        }
         .ttc-kpi-sub {
             margin-top: 6px;
             font-size: 12px;
             color: #64748b;
             white-space: nowrap;
+        }
+        .dark .ttc-kpi-sub {
+            color: #9ca3af;
         }
 
         .ttc-table-wrap {
@@ -270,14 +295,27 @@
             border-bottom: 2px solid #cbd5e1;
             white-space: nowrap;
         }
+        .dark table.ttc-tb-table thead th {
+            background: #1e293b;
+            color: #cbd5e1;
+            border-bottom-color: #334155;
+        }
         table.ttc-tb-table tbody td {
             padding: 12px 14px;
             border-bottom: 1px solid #f1f5f9;
             vertical-align: middle;
             white-space: nowrap;
+            color: #334155;
+        }
+        .dark table.ttc-tb-table tbody td {
+            border-bottom-color: #1f2937;
+            color: #e2e8f0;
         }
         table.ttc-tb-table tbody tr:hover td {
             background: #f8fafc;
+        }
+        .dark table.ttc-tb-table tbody tr:hover td {
+            background: rgba(30, 41, 59, 0.4);
         }
         table.ttc-tb-table tfoot td {
             background: #e2e8f0;
@@ -287,6 +325,18 @@
             padding: 14px 14px;
             border-top: 2px solid #94a3b8;
             white-space: nowrap;
+        }
+        .dark table.ttc-tb-table tfoot td {
+            background: #1e293b;
+            color: #f8fafc;
+            border-top-color: #475569;
+        }
+        .ttc-tb-name {
+            font-weight: 700;
+            color: #0f172a;
+        }
+        .dark .ttc-tb-name {
+            color: #f8fafc;
         }
         .ttc-code-pill {
             display: inline-block;
@@ -417,7 +467,7 @@
                                 <td>
                                     <span class="ttc-code-pill">{{ $row['kode_akun'] }}</span>
                                 </td>
-                                <td style="font-weight: 700; color: #0f172a;">
+                                <td class="ttc-tb-name">
                                     {{ $row['nama_akun'] }}
                                 </td>
                                 <td style="text-align: center;">

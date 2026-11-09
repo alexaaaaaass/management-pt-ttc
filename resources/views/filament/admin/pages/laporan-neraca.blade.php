@@ -328,6 +328,75 @@
             justify-content: space-between;
             gap: 12px;
         }
+        .ttc-col-head-aktiva {
+            background: #eff6ff;
+        }
+        .dark .ttc-col-head-aktiva {
+            background: rgba(30, 58, 138, 0.35);
+            border-bottom-color: #1e3a8a;
+        }
+        .ttc-col-head-pasiva {
+            background: #eef2ff;
+        }
+        .dark .ttc-col-head-pasiva {
+            background: rgba(67, 56, 202, 0.35);
+            border-bottom-color: #3730a3;
+        }
+        .ttc-head-title-aktiva {
+            font-size: 14px;
+            font-weight: 800;
+            color: #1e3a8a;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+        }
+        .dark .ttc-head-title-aktiva {
+            color: #93c5fd;
+        }
+        .ttc-head-sub-aktiva {
+            font-size: 12px;
+            color: #3b82f6;
+            margin-top: 2px;
+        }
+        .dark .ttc-head-sub-aktiva {
+            color: #bfdbfe;
+        }
+        .ttc-head-title-pasiva {
+            font-size: 14px;
+            font-weight: 800;
+            color: #312e81;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+        }
+        .dark .ttc-head-title-pasiva {
+            color: #c7d2fe;
+        }
+        .ttc-head-sub-pasiva {
+            font-size: 12px;
+            color: #4f46e5;
+            margin-top: 2px;
+        }
+        .dark .ttc-head-sub-pasiva {
+            color: #e0e7ff;
+        }
+        .ttc-balance-ok {
+            background: #f0fdf4;
+        }
+        .dark .ttc-balance-ok {
+            background: rgba(5, 150, 105, 0.15) !important;
+        }
+        .ttc-balance-error {
+            background: #fff1f2;
+        }
+        .dark .ttc-balance-error {
+            background: rgba(225, 29, 72, 0.15) !important;
+        }
+        .ttc-bs-acc-name {
+            font-weight: 500;
+            color: #0f172a;
+        }
+        .dark .ttc-bs-acc-name {
+            color: #f1f5f9;
+        }
         .ttc-col-body {
             padding: 18px 24px;
         }
@@ -371,6 +440,7 @@
         .dark tr.ttc-bs-sub td {
             background: rgba(30, 58, 138, 0.25);
             border-color: #1e3a8a;
+            color: #93c5fd !important;
         }
         .ttc-col-foot {
             padding: 18px 24px;
@@ -460,7 +530,7 @@
                 </div>
             </div>
 
-            <div class="ttc-kpi-card" style="border-left-color: {{ $data['is_balanced'] ? '#059669' : '#e11d48' }}; background: {{ $data['is_balanced'] ? '#f0fdf4' : '#fff1f2' }};">
+            <div class="ttc-kpi-card {{ $data['is_balanced'] ? 'ttc-balance-ok' : 'ttc-balance-error' }}" style="border-left-color: {{ $data['is_balanced'] ? '#059669' : '#e11d48' }};">
                 <div class="ttc-kpi-top">
                     <span class="ttc-kpi-label" style="color: {{ $data['is_balanced'] ? '#065f46' : '#9f1239' }};">
                         Status Keseimbangan
@@ -487,12 +557,12 @@
             {{-- KOLOM KIRI: AKTIVA --}}
             <div class="ttc-card ttc-bs-col">
                 <div>
-                    <div class="ttc-col-head" style="background: #eff6ff;">
+                    <div class="ttc-col-head ttc-col-head-aktiva">
                         <div>
-                            <div style="font-size: 14px; font-weight: 800; color: #1e3a8a; text-transform: uppercase; letter-spacing: 0.04em;">
+                            <div class="ttc-head-title-aktiva">
                                 AKTIVA (ASET PERUSAHAAN)
                             </div>
-                            <div style="font-size: 12px; color: #3b82f6; margin-top: 2px;">
+                            <div class="ttc-head-sub-aktiva">
                                 Kelompok Akun 1000 — Harta &amp; Kekayaan Pabrik
                             </div>
                         </div>
@@ -577,12 +647,12 @@
             {{-- KOLOM KANAN: PASIVA (KEWAJIBAN & EKUITAS) --}}
             <div class="ttc-card ttc-bs-col">
                 <div>
-                    <div class="ttc-col-head" style="background: #eef2ff;">
+                    <div class="ttc-col-head ttc-col-head-pasiva">
                         <div>
-                            <div style="font-size: 14px; font-weight: 800; color: #312e81; text-transform: uppercase; letter-spacing: 0.04em;">
+                            <div class="ttc-head-title-pasiva">
                                 PASIVA (KEWAJIBAN &amp; EKUITAS)
                             </div>
-                            <div style="font-size: 12px; color: #4f46e5; margin-top: 2px;">
+                            <div class="ttc-head-sub-pasiva">
                                 Kelompok Akun 2000 &amp; 3000 — Utang &amp; Modal
                             </div>
                         </div>
