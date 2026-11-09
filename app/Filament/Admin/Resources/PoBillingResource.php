@@ -332,10 +332,18 @@ class PoBillingResource extends Resource
                 //
             ])
             ->actions([
-                Tables\Actions\EditAction::make(),
-                Tables\Actions\DeleteAction::make()
-                    ->hidden(fn ($record) => !app(\App\Services\Finance\PoBillingService::class)->canDelete($record))
-                    ->using(fn ($record) => app(\App\Services\Finance\PoBillingService::class)->deleteBilling($record)),
+                Tables\Actions\ActionGroup::make([
+                    Tables\Actions\EditAction::make(),
+                    Tables\Actions\DeleteAction::make()
+                        ->hidden(fn ($record) => !app(\App\Services\Finance\PoBillingService::class)->canDelete($record))
+                        ->using(fn ($record) => app(\App\Services\Finance\PoBillingService::class)->deleteBilling($record)),
+                ])
+                    ->label('Aksi')
+                    ->icon('heroicon-m-ellipsis-vertical')
+                    ->size('sm')
+                    ->color('primary')
+                    ->button()
+                    ->dropdownPlacement('bottom-end'),
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([

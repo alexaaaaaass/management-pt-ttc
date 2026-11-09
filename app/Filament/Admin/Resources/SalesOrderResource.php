@@ -696,6 +696,12 @@ class SalesOrderResource extends Resource
                         ->disabled(fn ($record) => ! app(\App\Services\Sales\SalesOrderService::class)->canModify($record))
                         ->tooltip(fn ($record) => ! app(\App\Services\Sales\SalesOrderService::class)->canModify($record) ? 'Tidak dapat dihapus karena sudah memiliki Surat Jalan atau SPK' : null),
                 ])
+                    ->label('Aksi')
+                    ->icon('heroicon-m-ellipsis-vertical')
+                    ->size('sm')
+                    ->color('primary')
+                    ->button()
+                    ->dropdownPlacement('bottom-end'),
             ])
             ->bulkActions([
                 Tables\Actions\DeleteBulkAction::make(),

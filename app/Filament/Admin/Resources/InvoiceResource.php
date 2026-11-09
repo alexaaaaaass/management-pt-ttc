@@ -587,20 +587,20 @@ class InvoiceResource extends Resource
                     ->deselectRecordsAfterCompletion(),
             ])
             ->actions([
-                Tables\Actions\Action::make('preview_pdf')
-                    ->label('Preview PDF')
-                    ->icon('heroicon-o-printer')
-                    ->color('info')
-                    ->url(fn ($record) => route('invoice.preview', $record))
-                    ->openUrlInNewTab(),
-
-                Tables\Actions\Action::make('download_pdf')
-                    ->label('Download')
-                    ->icon('heroicon-o-arrow-down-tray')
-                    ->color('success')
-                    ->url(fn ($record) => route('invoice.download', $record)),
-
                 Tables\Actions\ActionGroup::make([
+                    Tables\Actions\Action::make('preview_pdf')
+                        ->label('Preview PDF')
+                        ->icon('heroicon-o-printer')
+                        ->color('info')
+                        ->url(fn ($record) => route('invoice.preview', $record))
+                        ->openUrlInNewTab(),
+
+                    Tables\Actions\Action::make('download_pdf')
+                        ->label('Download PDF')
+                        ->icon('heroicon-o-arrow-down-tray')
+                        ->color('success')
+                        ->url(fn ($record) => route('invoice.download', $record)),
+
                     Tables\Actions\Action::make('detail')
                         ->label('Detail Invoice')
                         ->icon('heroicon-o-eye')
@@ -642,7 +642,7 @@ class InvoiceResource extends Resource
                     ->label('Aksi')
                     ->icon('heroicon-m-ellipsis-vertical')
                     ->size('sm')
-                    ->color('gray')
+                    ->color('primary')
                     ->button()
                     ->dropdownPlacement('bottom-end'),
             ]);

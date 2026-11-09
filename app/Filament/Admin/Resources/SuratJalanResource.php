@@ -453,6 +453,12 @@ class SuratJalanResource extends Resource
                         ->disabled(fn ($record) => ! app(\App\Services\Dispatch\SuratJalanService::class)->canModify($record))
                         ->tooltip(fn ($record) => ! app(\App\Services\Dispatch\SuratJalanService::class)->canModify($record) ? 'Tidak dapat dihapus karena sudah memiliki Invoice' : null),
                 ])
+                    ->label('Aksi')
+                    ->icon('heroicon-m-ellipsis-vertical')
+                    ->size('sm')
+                    ->color('primary')
+                    ->button()
+                    ->dropdownPlacement('bottom-end'),
             ])
             ->bulkActions([
                 Tables\Actions\DeleteBulkAction::make(),

@@ -233,23 +233,31 @@ class MasterCOAResource extends Resource
                     ->relationship('coaClass', 'name'),
             ])
             ->actions([
-                Tables\Actions\Action::make('ledger')
-                    ->label('Buku Mutasi')
-                    ->icon('heroicon-o-book-open')
-                    ->color('info')
-                    ->url(fn ($record) => CoaLedgerResource::getUrl('index', [
-                        'tableFilters' => [
-                            'coa_id' => ['value' => $record->id],
-                        ],
-                    ])),
+                Tables\Actions\ActionGroup::make([
+                    Tables\Actions\Action::make('ledger')
+                        ->label('Buku Mutasi')
+                        ->icon('heroicon-o-book-open')
+                        ->color('info')
+                        ->url(fn ($record) => CoaLedgerResource::getUrl('index', [
+                            'tableFilters' => [
+                                'coa_id' => ['value' => $record->id],
+                            ],
+                        ])),
 
-                Tables\Actions\EditAction::make(),
+                    Tables\Actions\EditAction::make(),
 
-                Tables\Actions\DeleteAction::make()
-                    ->hidden(
-                        fn ($record) => ! app(TreasuryService::class)
-                            ->canDeleteCoa($record)
-                    ),
+                    Tables\Actions\DeleteAction::make()
+                        ->hidden(
+                            fn ($record) => ! app(TreasuryService::class)
+                                ->canDeleteCoa($record)
+                        ),
+                ])
+                    ->label('Aksi')
+                    ->icon('heroicon-m-ellipsis-vertical')
+                    ->size('sm')
+                    ->color('primary')
+                    ->button()
+                    ->dropdownPlacement('bottom-end'),
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([

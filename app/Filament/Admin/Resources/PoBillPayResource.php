@@ -318,9 +318,17 @@ protected static ?int $navigationSort = 12;
                 })
         ])
         ->actions([
-            Tables\Actions\EditAction::make(),
-            Tables\Actions\DeleteAction::make()
-                ->using(fn ($record) => app(\App\Services\Finance\PoBillPayService::class)->deletePayment($record)),
+            Tables\Actions\ActionGroup::make([
+                Tables\Actions\EditAction::make(),
+                Tables\Actions\DeleteAction::make()
+                    ->using(fn ($record) => app(\App\Services\Finance\PoBillPayService::class)->deletePayment($record)),
+            ])
+                ->label('Aksi')
+                ->icon('heroicon-m-ellipsis-vertical')
+                ->size('sm')
+                ->color('primary')
+                ->button()
+                ->dropdownPlacement('bottom-end'),
         ])
         ->bulkActions([
             Tables\Actions\BulkActionGroup::make([

@@ -377,8 +377,12 @@ public static function getNavigationLabel(): string
                 Tables\Actions\DeleteAction::make()
                     ->using(fn ($record) => app(\App\Services\Production\ProductionService::class)->deleteSpk($record)),
             ])
+            ->label('Aksi')
             ->icon('heroicon-m-ellipsis-vertical')
-            ->tooltip('Aksi SPK'),
+            ->size('sm')
+            ->color('primary')
+            ->button()
+            ->dropdownPlacement('bottom-end'),
         ]);
 }
 

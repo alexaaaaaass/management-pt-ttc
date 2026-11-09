@@ -423,7 +423,10 @@ class ApprovalFormResource extends Resource
                 ])
                 ->label('Aksi')
                 ->icon('heroicon-m-ellipsis-vertical')
-                ->tooltip('Menu Aksi'),
+                ->size('sm')
+                ->color('primary')
+                ->button()
+                ->dropdownPlacement('bottom-end'),
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([

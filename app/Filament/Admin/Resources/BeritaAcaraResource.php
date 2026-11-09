@@ -210,13 +210,21 @@ class BeritaAcaraResource extends Resource
                     ]),
             ])
             ->actions([
-                Tables\Actions\ViewAction::make(),
-                Tables\Actions\Action::make('print')
-                    ->label('Cetak BA')
-                    ->icon('heroicon-o-printer')
-                    ->url(fn (BeritaAcara $record): string => route('berita-acaras.pdf', $record))
-                    ->openUrlInNewTab(),
-                Tables\Actions\EditAction::make(),
+                Tables\Actions\ActionGroup::make([
+                    Tables\Actions\ViewAction::make(),
+                    Tables\Actions\Action::make('print')
+                        ->label('Cetak BA')
+                        ->icon('heroicon-o-printer')
+                        ->url(fn (BeritaAcara $record): string => route('berita-acaras.pdf', $record))
+                        ->openUrlInNewTab(),
+                    Tables\Actions\EditAction::make(),
+                ])
+                    ->label('Aksi')
+                    ->icon('heroicon-m-ellipsis-vertical')
+                    ->size('sm')
+                    ->color('primary')
+                    ->button()
+                    ->dropdownPlacement('bottom-end'),
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([

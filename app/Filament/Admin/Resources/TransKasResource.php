@@ -233,22 +233,29 @@ class TransKasResource extends Resource
                     ->deselectRecordsAfterCompletion(),
             ])
             ->actions([
-                Tables\Actions\Action::make('preview_pdf')
-                    ->label('Voucher PDF')
-                    ->icon('heroicon-o-printer')
-                    ->color('info')
-                    ->url(fn (TransKas $record) => route('finance.voucher.kas.preview', $record))
-                    ->openUrlInNewTab(),
-                Tables\Actions\Action::make('download_pdf')
-                    ->label('Download')
-                    ->icon('heroicon-o-arrow-down-tray')
-                    ->color('success')
-                    ->url(fn (TransKas $record) => route('finance.voucher.kas.download', $record))
-                    ->openUrlInNewTab(),
-                Tables\Actions\ViewAction::make(),
-                Tables\Actions\EditAction::make(),
-                Tables\Actions\DeleteAction::make()
-                    ->using(fn ($record) => app(TreasuryService::class)->deleteKas($record)),
+                Tables\Actions\ActionGroup::make([
+                    Tables\Actions\Action::make('preview_pdf')
+                        ->label('Voucher PDF')
+                        ->icon('heroicon-o-printer')
+                        ->color('info')
+                        ->url(fn (TransKas $record) => route('finance.voucher.kas.preview', $record))
+                        ->openUrlInNewTab(),
+                    Tables\Actions\Action::make('download_pdf')
+                        ->label('Download PDF')
+                        ->icon('heroicon-o-arrow-down-tray')
+                        ->color('success')
+                        ->url(fn (TransKas $record) => route('finance.voucher.kas.download', $record)),
+                    Tables\Actions\ViewAction::make(),
+                    Tables\Actions\EditAction::make(),
+                    Tables\Actions\DeleteAction::make()
+                        ->using(fn ($record) => app(TreasuryService::class)->deleteKas($record)),
+                ])
+                    ->label('Aksi')
+                    ->icon('heroicon-m-ellipsis-vertical')
+                    ->size('sm')
+                    ->color('primary')
+                    ->button()
+                    ->dropdownPlacement('bottom-end'),
             ]);
     }
 

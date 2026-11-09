@@ -213,26 +213,33 @@ class OperasionalPayResource extends Resource
                     ->deselectRecordsAfterCompletion(),
             ])
             ->actions([
-                Tables\Actions\Action::make('preview_pdf')
-                    ->label(fn (OperasionalPay $record) => (str_starts_with((string) $record->kode_transaksi, 'COM-') || str_contains((string) $record->jenis, 'KOMISI')) ? 'Form Komisi PDF' : 'Voucher PDF')
-                    ->icon('heroicon-o-printer')
-                    ->color('info')
-                    ->url(fn (OperasionalPay $record) => (str_starts_with((string) $record->kode_transaksi, 'COM-') || str_contains((string) $record->jenis, 'KOMISI'))
-                        ? route('finance.commission.preview', $record->kode ?: $record->kode_transaksi)
-                        : route('finance.voucher.operasional.preview', $record))
-                    ->openUrlInNewTab(),
-                Tables\Actions\Action::make('download_pdf')
-                    ->label('Download')
-                    ->icon('heroicon-o-arrow-down-tray')
-                    ->color('success')
-                    ->url(fn (OperasionalPay $record) => (str_starts_with((string) $record->kode_transaksi, 'COM-') || str_contains((string) $record->jenis, 'KOMISI'))
-                        ? route('finance.commission.download', $record->kode ?: $record->kode_transaksi)
-                        : route('finance.voucher.operasional.download', $record))
-                    ->openUrlInNewTab(),
-                Tables\Actions\ViewAction::make(),
-                Tables\Actions\EditAction::make(),
-                Tables\Actions\DeleteAction::make()
-                    ->using(fn ($record) => app(TreasuryService::class)->deleteOperasional($record)),
+                Tables\Actions\ActionGroup::make([
+                    Tables\Actions\Action::make('preview_pdf')
+                        ->label(fn (OperasionalPay $record) => (str_starts_with((string) $record->kode_transaksi, 'COM-') || str_contains((string) $record->jenis, 'KOMISI')) ? 'Form Komisi PDF' : 'Voucher PDF')
+                        ->icon('heroicon-o-printer')
+                        ->color('info')
+                        ->url(fn (OperasionalPay $record) => (str_starts_with((string) $record->kode_transaksi, 'COM-') || str_contains((string) $record->jenis, 'KOMISI'))
+                            ? route('finance.commission.preview', $record->kode ?: $record->kode_transaksi)
+                            : route('finance.voucher.operasional.preview', $record))
+                        ->openUrlInNewTab(),
+                    Tables\Actions\Action::make('download_pdf')
+                        ->label('Download PDF')
+                        ->icon('heroicon-o-arrow-down-tray')
+                        ->color('success')
+                        ->url(fn (OperasionalPay $record) => (str_starts_with((string) $record->kode_transaksi, 'COM-') || str_contains((string) $record->jenis, 'KOMISI'))
+                            ? route('finance.commission.download', $record->kode ?: $record->kode_transaksi)
+                            : route('finance.voucher.operasional.download', $record)),
+                    Tables\Actions\ViewAction::make(),
+                    Tables\Actions\EditAction::make(),
+                    Tables\Actions\DeleteAction::make()
+                        ->using(fn ($record) => app(TreasuryService::class)->deleteOperasional($record)),
+                ])
+                    ->label('Aksi')
+                    ->icon('heroicon-m-ellipsis-vertical')
+                    ->size('sm')
+                    ->color('primary')
+                    ->button()
+                    ->dropdownPlacement('bottom-end'),
             ]);
     }
 

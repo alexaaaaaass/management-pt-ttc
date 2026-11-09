@@ -316,17 +316,24 @@ class TransFakturResource extends Resource
                 ->deselectRecordsAfterCompletion(),
         ])
         ->actions([
+            Tables\Actions\ActionGroup::make([
+                Tables\Actions\Action::make('view')
+                    ->label('View')
+                    ->icon('heroicon-o-eye')
+                    ->url(fn ($record) =>
+                        static::getUrl('view', [
+                            'record' => $record
+                        ])
+                    ),
 
-            Tables\Actions\Action::make('view')
-                ->label('View')
-                ->icon('heroicon-o-eye')
-                ->url(fn ($record) =>
-                    static::getUrl('view', [
-                        'record' => $record
-                    ])
-                ),
-
-            Tables\Actions\EditAction::make(),
+                Tables\Actions\EditAction::make(),
+            ])
+                ->label('Aksi')
+                ->icon('heroicon-m-ellipsis-vertical')
+                ->size('sm')
+                ->color('primary')
+                ->button()
+                ->dropdownPlacement('bottom-end'),
         ]);
 }
     public static function getRelations(): array

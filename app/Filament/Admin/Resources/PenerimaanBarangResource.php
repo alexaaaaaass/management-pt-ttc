@@ -257,11 +257,12 @@ class PenerimaanBarangResource extends Resource
             ->tooltip(fn ($record) => ! app(\App\Services\PurchaseOrder\PenerimaanBarangService::class)->canModify($record) ? 'Tidak dapat dihapus karena sudah memiliki Retur Eksternal terkait' : null),
 
     ])
-
-    ->icon('heroicon-o-ellipsis-vertical')
-
-    ->tooltip('Actions')
-
+        ->label('Aksi')
+        ->icon('heroicon-m-ellipsis-vertical')
+        ->size('sm')
+        ->color('primary')
+        ->button()
+        ->dropdownPlacement('bottom-end'),
 ])
             ->bulkActions([
                 Tables\Actions\DeleteBulkAction::make(),

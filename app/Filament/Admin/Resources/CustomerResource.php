@@ -76,8 +76,16 @@ public static function getNavigationLabel(): string
                 ->limit(40),
         ])
         ->actions([
-            Tables\Actions\EditAction::make(),
-            Tables\Actions\DeleteAction::make(),
+            Tables\Actions\ActionGroup::make([
+                Tables\Actions\EditAction::make(),
+                Tables\Actions\DeleteAction::make(),
+            ])
+                ->label('Aksi')
+                ->icon('heroicon-m-ellipsis-vertical')
+                ->size('sm')
+                ->color('primary')
+                ->button()
+                ->dropdownPlacement('bottom-end'),
         ]);
 }
     public static function getRelations(): array

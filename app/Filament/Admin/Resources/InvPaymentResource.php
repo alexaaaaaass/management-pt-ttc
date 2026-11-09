@@ -350,9 +350,17 @@ class InvPaymentResource extends Resource
                 ->deselectRecordsAfterCompletion(),
         ])
         ->actions([
-            Tables\Actions\EditAction::make(),
-            Tables\Actions\DeleteAction::make()
-                ->using(fn ($record) => app(\App\Services\Finance\InvoicePaymentService::class)->deletePayment($record)),
+            Tables\Actions\ActionGroup::make([
+                Tables\Actions\EditAction::make(),
+                Tables\Actions\DeleteAction::make()
+                    ->using(fn ($record) => app(\App\Services\Finance\InvoicePaymentService::class)->deletePayment($record)),
+            ])
+                ->label('Aksi')
+                ->icon('heroicon-m-ellipsis-vertical')
+                ->size('sm')
+                ->color('primary')
+                ->button()
+                ->dropdownPlacement('bottom-end'),
         ]);
 }
 
