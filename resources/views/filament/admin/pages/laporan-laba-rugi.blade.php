@@ -95,6 +95,12 @@
                 size: A4 portrait;
                 margin: 10mm 10mm;
             }
+            *, .dark *, .dark {
+                color: #0f172a !important;
+                background-color: transparent !important;
+                box-shadow: none !important;
+                text-shadow: none !important;
+            }
             html, body, .fi-body, .fi-layout, .fi-main-ctn, .fi-main, .fi-page, .fi-page-content-wrapper, .fi-section, main {
                 height: auto !important;
                 min-height: 0 !important;
