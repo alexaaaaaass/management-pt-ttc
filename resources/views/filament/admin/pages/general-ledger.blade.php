@@ -88,20 +88,94 @@
         .ttc-btn-emerald:hover { background: #34d399; }
 
         @media print {
-            .fi-sidebar, .fi-topbar, .ttc-finance-tabs-nav, .ttc-btn-group, .ttc-filter-bar, .ttc-preset-group, .fi-breadcrumbs {
+            @page {
+                size: A4 landscape;
+                margin: 8mm 8mm;
+            }
+            html, body, .fi-body, .fi-layout, .fi-main-ctn, .fi-main, .fi-page, .fi-page-content-wrapper, .fi-section, main {
+                height: auto !important;
+                min-height: 0 !important;
+                max-height: none !important;
+                overflow: visible !important;
+                position: static !important;
+                display: block !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                background: #ffffff !important;
+                color: #0f172a !important;
+            }
+            .fi-sidebar, 
+            .fi-topbar, 
+            .fi-breadcrumbs, 
+            .fi-header, 
+            .fi-footer,
+            aside, 
+            nav, 
+            header,
+            .ttc-finance-tabs-nav, 
+            .ttc-btn-group, 
+            .ttc-filter-bar, 
+            .ttc-preset-group,
+            .ttc-hide-print {
                 display: none !important;
             }
-            .ttc-hero {
-                background: #1e3a8a !important;
-                -webkit-print-color-adjust: exact;
-                print-color-adjust: exact;
+            .ttc-gl-wrap {
+                display: block !important;
+                overflow: visible !important;
+                width: 100% !important;
             }
             .ttc-card {
                 box-shadow: none !important;
                 border: 1px solid #cbd5e1 !important;
+                overflow: visible !important;
+                display: block !important;
+                page-break-inside: auto !important;
+                break-inside: auto !important;
+                margin-bottom: 12px !important;
             }
-            body {
-                background: #ffffff !important;
+            .ttc-hero {
+                background: #1e3a8a !important;
+                color: #ffffff !important;
+                padding: 12px 16px !important;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+            }
+            .ttc-hero-title {
+                color: #ffffff !important;
+                font-size: 15px !important;
+            }
+            .ttc-hero-sub {
+                color: #dbeafe !important;
+            }
+            .ttc-kpi-grid {
+                display: grid !important;
+                grid-template-columns: repeat(4, 1fr) !important;
+                gap: 8px !important;
+            }
+            .ttc-kpi-card {
+                padding: 8px 10px !important;
+                border: 1px solid #cbd5e1 !important;
+                break-inside: avoid !important;
+            }
+            .ttc-table-wrap {
+                overflow: visible !important;
+                display: block !important;
+                padding: 8px 12px !important;
+            }
+            table.ttc-gl-table {
+                width: 100% !important;
+                border-collapse: collapse !important;
+                font-size: 10px !important;
+            }
+            table.ttc-gl-table th, table.ttc-gl-table td {
+                padding: 5px 6px !important;
+            }
+            thead {
+                display: table-header-group !important;
+            }
+            tr {
+                page-break-inside: avoid !important;
+                break-inside: avoid !important;
             }
         }
 
@@ -462,7 +536,7 @@
                             <th style="text-align: right;">Total Mutasi Debit</th>
                             <th style="text-align: right;">Total Mutasi Kredit</th>
                             <th style="text-align: right;">Saldo Akhir Akun</th>
-                            <th style="text-align: center;">Aksi Filter</th>
+                            <th style="text-align: center;" class="ttc-hide-print">Aksi Filter</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -494,7 +568,7 @@
                                 <td style="text-align: right; font-weight: 800; color: #059669;">
                                     {{ $fmt($acc['saldo_akhir'], 2) }}
                                 </td>
-                                <td style="text-align: center;">
+                                <td style="text-align: center;" class="ttc-hide-print">
                                     <button type="button"
                                             wire:click="filterByAccount({{ $acc['coa_id'] }})"
                                             style="padding: 5px 11px; border-radius: 6px; font-size: 11px; font-weight: 700; cursor: pointer; border: 1px solid {{ $isSelected ? '#1d4ed8' : '#cbd5e1' }}; background-color: {{ $isSelected ? '#1d4ed8' : '#ffffff' }}; color: {{ $isSelected ? '#ffffff' : '#334155' }};">

@@ -84,20 +84,91 @@
         .ttc-btn-emerald { background: #10b981; color: #052e16; }
 
         @media print {
-            .fi-sidebar, .fi-topbar, .ttc-finance-tabs-nav, .ttc-btn-group, .ttc-filter-bar, .ttc-preset-group, .fi-breadcrumbs {
+            @page {
+                size: A4 portrait;
+                margin: 10mm 10mm;
+            }
+            html, body, .fi-body, .fi-layout, .fi-main-ctn, .fi-main, .fi-page, .fi-page-content-wrapper, .fi-section, main {
+                height: auto !important;
+                min-height: 0 !important;
+                max-height: none !important;
+                overflow: visible !important;
+                position: static !important;
+                display: block !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                background: #ffffff !important;
+                color: #0f172a !important;
+            }
+            .fi-sidebar, 
+            .fi-topbar, 
+            .fi-breadcrumbs, 
+            .fi-header, 
+            .fi-footer,
+            aside, 
+            nav, 
+            header,
+            .ttc-finance-tabs-nav, 
+            .ttc-btn-group, 
+            .ttc-filter-bar, 
+            .ttc-preset-group,
+            .ttc-hide-print {
                 display: none !important;
             }
-            .ttc-hero {
-                background: #1e3a8a !important;
-                -webkit-print-color-adjust: exact;
-                print-color-adjust: exact;
+            .ttc-tb-wrap {
+                display: block !important;
+                overflow: visible !important;
+                width: 100% !important;
             }
             .ttc-card {
                 box-shadow: none !important;
                 border: 1px solid #cbd5e1 !important;
+                overflow: visible !important;
+                display: block !important;
+                page-break-inside: auto !important;
+                break-inside: auto !important;
+                margin-bottom: 14px !important;
             }
-            body {
-                background: #ffffff !important;
+            .ttc-hero {
+                background: #1e3a8a !important;
+                color: #ffffff !important;
+                padding: 14px 18px !important;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+            }
+            .ttc-hero-title {
+                color: #ffffff !important;
+                font-size: 16px !important;
+            }
+            .ttc-hero-sub {
+                color: #dbeafe !important;
+            }
+            .ttc-kpi-grid {
+                display: grid !important;
+                grid-template-columns: repeat(4, 1fr) !important;
+                gap: 10px !important;
+            }
+            .ttc-kpi-card {
+                padding: 10px 12px !important;
+                border: 1px solid #cbd5e1 !important;
+                break-inside: avoid !important;
+            }
+            .ttc-table-wrap {
+                overflow: visible !important;
+                display: block !important;
+                padding: 10px 14px !important;
+            }
+            table.ttc-tb-table {
+                width: 100% !important;
+                border-collapse: collapse !important;
+                font-size: 10.5px !important;
+            }
+            thead {
+                display: table-header-group !important;
+            }
+            tr {
+                page-break-inside: avoid !important;
+                break-inside: avoid !important;
             }
         }
 

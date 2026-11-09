@@ -78,6 +78,94 @@
         .ttc-comm-btn-emerald { background: #10b981; color: #052e16; }
         .ttc-comm-btn-emerald:hover { background: #34d399; }
 
+        @media print {
+            @page {
+                size: A4 landscape;
+                margin: 8mm 8mm;
+            }
+            html, body, .fi-body, .fi-layout, .fi-main-ctn, .fi-main, .fi-page, .fi-page-content-wrapper, .fi-section, main {
+                height: auto !important;
+                min-height: 0 !important;
+                max-height: none !important;
+                overflow: visible !important;
+                position: static !important;
+                display: block !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                background: #ffffff !important;
+                color: #0f172a !important;
+            }
+            .fi-sidebar, 
+            .fi-topbar, 
+            .fi-breadcrumbs, 
+            .fi-header, 
+            .fi-footer,
+            aside, 
+            nav, 
+            header,
+            .ttc-finance-tabs-nav, 
+            .ttc-comm-btn-group, 
+            .ttc-comm-filter, 
+            .ttc-hide-print {
+                display: none !important;
+            }
+            .ttc-comm-wrap {
+                display: block !important;
+                overflow: visible !important;
+                width: 100% !important;
+            }
+            .ttc-comm-card {
+                box-shadow: none !important;
+                border: 1px solid #cbd5e1 !important;
+                overflow: visible !important;
+                display: block !important;
+                page-break-inside: auto !important;
+                break-inside: auto !important;
+                margin-bottom: 12px !important;
+            }
+            .ttc-comm-hero {
+                background: #1e3a8a !important;
+                color: #ffffff !important;
+                padding: 12px 16px !important;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+            }
+            .ttc-comm-hero-title {
+                color: #ffffff !important;
+                font-size: 15px !important;
+            }
+            .ttc-comm-kpi-grid {
+                display: grid !important;
+                grid-template-columns: repeat(4, 1fr) !important;
+                gap: 8px !important;
+            }
+            .ttc-comm-kpi {
+                padding: 8px 10px !important;
+                border: 1px solid #cbd5e1 !important;
+                break-inside: avoid !important;
+            }
+            .ttc-comm-table-wrap {
+                overflow: visible !important;
+                display: block !important;
+                padding: 8px 12px !important;
+            }
+            table.ttc-comm-table {
+                width: 100% !important;
+                border-collapse: collapse !important;
+                font-size: 10px !important;
+            }
+            table.ttc-comm-table th, table.ttc-comm-table td {
+                padding: 5px 8px !important;
+            }
+            thead {
+                display: table-header-group !important;
+            }
+            tr {
+                page-break-inside: avoid !important;
+                break-inside: avoid !important;
+            }
+        }
+
         .ttc-comm-kpi-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
