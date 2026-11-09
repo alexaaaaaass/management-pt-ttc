@@ -200,12 +200,23 @@
     $potongan = (float) ($invoice->potongan ?? (($subtotal * (float) ($invoice->diskon ?? 0)) / 100));
     $grandTotal = (float) ($invoice->grand_total ?? ($subtotal - $potongan + $ongkir));
 
-    $dp = (float) (
+    // Uang Muka (DP) resmi saat Order Confirmation
+    $uangMuka = (float) ($invoice->uang_muka ?? 0);
+
+    // Total akumulasi pembayaran yang sudah diterima
+    $totalPaid = (float) (
         $invoice->total_payment > 0
             ? $invoice->total_payment
-            : (($invoice->uang_muka ?? 0) + ($invoice->payments->sum('nominal_bayar') ?? 0))
+            : ($uangMuka + ($invoice->payments ? $invoice->payments->sum('nominal_bayar') : 0))
     );
-    $totalAkhir = max(0, $grandTotal - $dp);
+    $sisaTagihan = (float) ($invoice->sisa_tagihan ?? max(0, $grandTotal - $totalPaid));
+    $isPaid = (strtolower((string) ($invoice->status ?? '')) === 'paid') || ($totalPaid >= $grandTotal && $grandTotal > 0);
+
+    // Nilai DP yang memotong nilai faktur: hanya uang_muka yang tercatat di awal
+    $dp = $uangMuka;
+
+    // Nilai Total faktur: Grand Total dikurangi DP awal jika ada, namun jika tidak ada DP maka Total adalah Grand Total
+    $displayTotal = ($dp > 0 && $grandTotal > $dp) ? ($grandTotal - $dp) : $grandTotal;
 
     $resolvedSoProductName = null;
     if ($so) {
@@ -347,7 +358,7 @@
     $terms = $invoice->terms_conditions
         ?? "1. Pembayaran dilakukan maksimal 15 hari setelah barang diterima.\n2. Barang dianggap diterima dengan baik jika tidak ada komplain dalam 3 hari.\n3. Transfer hanya melalui rekening a/n PT Teknografi Tri Cawanaska\n   dan disertai bukti transfer.";
 
-    $terbilangTarget = $totalAkhir > 0 ? $totalAkhir : ($grandTotal > 0 ? $grandTotal : $subtotal);
+    $terbilangTarget = $displayTotal > 0 ? $displayTotal : ($grandTotal > 0 ? $grandTotal : $subtotal);
     if (!empty($invoice->terbilang_override)) {
         $terbilangText = $invoice->terbilang_override;
     } elseif ($terbilangTarget > 0) {
@@ -444,7 +455,12 @@
     </tr>
 </table>
 
-<div class="invoice-title">INVOICE</div>
+<div class="invoice-title">
+    INVOICE
+    @if($isPaid)
+        <span style="display: inline-block; margin-left: 10px; background-color: #16a34a; color: #ffffff; font-size: 9px; font-weight: bold; padding: 2px 8px; border-radius: 3px; vertical-align: middle; letter-spacing: 1px;">LUNAS (PAID)</span>
+    @endif
+</div>
 
 <table class="items">
     <colgroup>
@@ -534,16 +550,37 @@
                     <td class="total-curr">{{ $potongan > 0 ? 'IDR' : '' }}</td>
                     <td class="total-value">{{ $potongan > 0 ? number_format($potongan, 0, '.', ',') : '' }}</td>
                 </tr>
+                @if($dp > 0)
                 <tr>
                     <td class="total-label">DP</td>
-                    <td class="total-curr">{{ $dp > 0 ? 'IDR' : '' }}</td>
-                    <td class="total-value">{{ $dp > 0 ? number_format($dp, 0, '.', ',') : '' }}</td>
+                    <td class="total-curr">IDR</td>
+                    <td class="total-value">{{ number_format($dp, 0, '.', ',') }}</td>
                 </tr>
+                @else
+                <tr>
+                    <td class="total-label">DP</td>
+                    <td class="total-curr"></td>
+                    <td class="total-value"></td>
+                </tr>
+                @endif
                 <tr class="grand">
                     <td class="total-label">Total</td>
                     <td class="total-curr">IDR</td>
-                    <td class="total-value">{{ number_format($totalAkhir, 0, '.', ',') }}</td>
+                    <td class="total-value">{{ number_format($displayTotal, 0, '.', ',') }}</td>
                 </tr>
+                @if($isPaid)
+                <tr>
+                    <td class="total-label" style="font-size: 8px; color: #16a34a; font-weight: bold; padding-top: 3px;">Status Pembayaran</td>
+                    <td class="total-curr" style="font-size: 8px; color: #16a34a; font-weight: bold; padding-top: 3px;"></td>
+                    <td class="total-value" style="font-size: 8px; color: #16a34a; font-weight: bold; padding-top: 3px;">LUNAS (PAID)</td>
+                </tr>
+                @elseif($totalPaid > 0 && $sisaTagihan > 0)
+                <tr>
+                    <td class="total-label" style="font-size: 8px; color: #ea580c; padding-top: 3px;">Sisa Tagihan</td>
+                    <td class="total-curr" style="font-size: 8px; color: #ea580c; padding-top: 3px;">IDR</td>
+                    <td class="total-value" style="font-size: 8px; color: #ea580c; font-weight: bold; padding-top: 3px;">{{ number_format($sisaTagihan, 0, '.', ',') }}</td>
+                </tr>
+                @endif
             </table>
         </td>
     </tr>

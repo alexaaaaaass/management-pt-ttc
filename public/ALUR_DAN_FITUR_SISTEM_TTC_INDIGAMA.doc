@@ -407,6 +407,7 @@ Content-Type: text/html; charset=utf-8
         <li><strong>1-Click Action Toggle Pajak:</strong> Finance dapat mengubah invoice yang sudah terbit dari Non-PPN ke PPN 11% (atau sebaliknya) hanya dengan 1 klik pada menu aksi. Sistem otomatis merevisi Grand Total, Sisa Tagihan, dan menjurnal ulang pembukuan akuntansi.</li>
         <li><strong>Pemotongan DP Otomatis:</strong> Down payment (uang muka) yang dibayarkan saat Order Confirmation otomatis memotong total tagihan invoice sehingga menampilkan <em>Sisa Tagihan (AR)</em> yang akurat.</li>
         <li><strong>Cetak &amp; Preview Dokumen:</strong> Tombol <em>Preview PDF</em> dan <em>Download PDF</em> siap cetak dengan template profesional berlogo perusahaan, rincian item, terbilang rupiah, dan tanda tangan legal.</li>
+        <li><strong>Struktur Total Faktur &amp; Sinkronisasi Terbilang:</strong> Baris <em>Total IDR</em> pada faktur cetak selalu menampilkan nilai riil transaksi (Grand Total) yang sinkron 100% dengan kalimat <em>Terbilang</em>. Invoice yang telah lunas otomatis menampilkan badge resmi <strong>LUNAS (PAID)</strong> serta status pembayaran transparan tanpa menampilkan angka total Rp 0 yang membingungkan.</li>
     </ul>
 
     <h2>3.4 Pelunasan Pembayaran (Invoice Payment) &amp; Matching Multi-Pesanan</h2>
