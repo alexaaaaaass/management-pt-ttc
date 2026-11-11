@@ -34,10 +34,6 @@ class PenerimaanBarangService
      */
     public function canModify(PenerimaanBarang $pb): bool
     {
-        if ($pb->relationLoaded('externalReturns')) {
-            return $pb->externalReturns->isEmpty();
-        }
-
         return ! $pb->externalReturns()->exists();
     }
 

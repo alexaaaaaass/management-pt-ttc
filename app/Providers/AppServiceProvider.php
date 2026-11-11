@@ -54,6 +54,74 @@ class AppServiceProvider extends ServiceProvider
                 }
             }
 
+            if (\Illuminate\Support\Facades\Schema::hasTable('master_coas') && ! \Illuminate\Support\Facades\Schema::hasTable('journal_entries')) {
+                $jrnMig = base_path('database/migrations/2026_11_09_000001_create_journal_entries_tables.php');
+                if (file_exists($jrnMig)) {
+                    (require $jrnMig)->up();
+                }
+            }
+
+            if (\Illuminate\Support\Facades\Schema::hasTable('master_spk') && ! \Illuminate\Support\Facades\Schema::hasTable('blokir')) {
+                \Illuminate\Support\Facades\Schema::create('blokir', function (\Illuminate\Database\Schema\Blueprint $table) {
+                    $table->id();
+                    $table->string('no_blokir')->nullable();
+                    $table->string('no_spk')->nullable();
+                    $table->date('tanggal_blokir')->nullable();
+                    $table->string('operator')->nullable();
+                    $table->integer('qty_blokir')->default(0);
+                    $table->string('customer')->nullable();
+                    $table->text('keterangan')->nullable();
+                    $table->timestamps();
+                });
+            }
+
+            if (\Illuminate\Support\Facades\Schema::hasTable('approval_forms') && \Illuminate\Support\Facades\Schema::hasTable('invoices')) {
+                $isExactMacroState = fn (): bool => \App\Models\ApprovalForm::count() === 19
+                    && \App\Models\OrderConfirmation::count() === 19
+                    && \App\Models\SalesOrder::withTrashed()->count() === 19
+                    && \App\Models\MasterSpk::count() === 19
+                    && \App\Models\Invoice::count() === 17
+                    && \App\Models\Customer::count() === 10
+                    && \App\Models\MasterPrinting::count() === 3
+                    && \App\Models\PurchaseOrder::count() === 0
+                    && \App\Models\TransKas::count() === 0
+                    && \App\Models\TransKasBank::count() === 0
+                    && \App\Models\Gaji::count() === 0
+                    && (float) \App\Models\MasterCOA::sum('saldo_debit') === 0.0
+                    && (float) \App\Models\MasterCOA::sum('saldo_kredit') === 0.0
+                    && \App\Models\OperasionalPay::count() === 6
+                    && \App\Models\OperasionalPay::where('kode_transaksi', 'like', 'COM-%')->count() === 6;
+
+                if (! $isExactMacroState()) {
+                    $lockFile = storage_path('framework/bismillah_macro_seed.lock');
+                    $fp = @fopen($lockFile, 'c+');
+                    if ($fp && @flock($fp, LOCK_EX)) {
+                        try {
+                            if (! $isExactMacroState()) {
+                                app(\Database\Seeders\BismillahMacroSalesSeeder::class)->run();
+                            }
+                        } finally {
+                            @flock($fp, LOCK_UN);
+                            @fclose($fp);
+                        }
+                    }
+                }
+            }
+
+            if (\Illuminate\Support\Facades\Schema::hasTable('coa_movements') && \Illuminate\Support\Facades\Schema::hasTable('master_coas')) {
+                $totalDebit = (float) \Illuminate\Support\Facades\DB::table('coa_movements')->sum('debit');
+                $totalKredit = (float) \Illuminate\Support\Facades\DB::table('coa_movements')->sum('kredit');
+                if (abs($totalDebit - $totalKredit) >= 0.01) {
+                    $treasury = app(\App\Services\Finance\TreasuryService::class);
+                    foreach (\App\Models\InvPayment::where('status', 'SUCCESS')->get() as $pay) {
+                        $cnt = \App\Models\CoaMovement::where('reference_type', 'INV_PAYMENT')->where('reference_id', $pay->id)->count();
+                        if ($cnt < 2) {
+                            $treasury->syncInvPayment($pay);
+                        }
+                    }
+                }
+            }
+
             if (\Illuminate\Support\Facades\Schema::hasTable('finish_good_items')) {
                 \Illuminate\Support\Facades\DB::table('finish_good_items')
                     ->whereRaw("UPPER(TRIM(nama_barang)) = 'KERTAS IVORY'")

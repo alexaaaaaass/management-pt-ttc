@@ -302,6 +302,30 @@ body {
                     <td align="right">{{ number_format($itemTotal, 0, ',', '.') }}</td>
                 </tr>
             @endforeach
+        @elseif($salesOrder->orderConfirmation && $salesOrder->orderConfirmation->items && $salesOrder->orderConfirmation->items->isNotEmpty())
+            @foreach($salesOrder->orderConfirmation->items as $ocItem)
+                @php
+                    $itemQty = (float) ($ocItem->qty ?? 0);
+                    $itemHarga = (float) ($ocItem->harga ?? 0);
+                    $itemTotal = (float) ($ocItem->total ?: ($itemQty * $itemHarga));
+                    $subtotal += $itemTotal;
+                    $rowCount++;
+                    $isStriped = ($rowCount % 2 == 0);
+                @endphp
+                <tr class="{{ $isStriped ? 'striped' : '' }}">
+                    <td align="center">{{ $rowCount }}</td>
+                    <td>{{ $ocItem->item_name ?: '-' }}</td>
+                    <td align="center">{{ $ocItem->jenis ?: '-' }}</td>
+                    <td align="center">{{ $ocItem->komponen ?: '-' }}</td>
+                    <td align="center">{{ $ocItem->isi ?: '-' }}</td>
+                    <td>{{ $ocItem->kertas ?: '-' }}</td>
+                    <td align="center">{{ $ocItem->warna ?: '-' }}</td>
+                    <td>{{ $ocItem->finishing ?: '-' }}</td>
+                    <td align="center">{{ number_format($itemQty, 0, ',', '.') }}</td>
+                    <td align="right">{{ number_format($itemHarga, 0, ',', '.') }}</td>
+                    <td align="right">{{ number_format($itemTotal, 0, ',', '.') }}</td>
+                </tr>
+            @endforeach
         @else
             @php
                 $itemQty = (float) ($salesOrder->qty ?: ($salesOrder->order_qty ?: 0));

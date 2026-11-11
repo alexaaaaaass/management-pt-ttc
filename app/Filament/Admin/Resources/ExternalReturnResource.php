@@ -11,7 +11,6 @@ use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
-use Illuminate\Database\Eloquent\Builder;
 
 
 class ExternalReturnResource extends Resource
@@ -349,14 +348,6 @@ class ExternalReturnResource extends Resource
 
         ]);
 }
-
-    public static function getEloquentQuery(): Builder
-    {
-        return parent::getEloquentQuery()->with([
-            'penerimaanBarang.purchaseOrder.supplier',
-            'items',
-        ]);
-    }
 
     public static function getRelations(): array
     {

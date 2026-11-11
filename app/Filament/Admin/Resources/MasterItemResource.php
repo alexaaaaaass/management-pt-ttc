@@ -9,7 +9,6 @@ use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
-use Illuminate\Database\Eloquent\Builder;
 
 class MasterItemResource extends Resource
 {
@@ -155,11 +154,6 @@ public static function getNavigationLabel(): string
             Tables\Actions\DeleteBulkAction::make(),
         ]);
 }
-
-    public static function getEloquentQuery(): Builder
-    {
-        return parent::getEloquentQuery()->with(['satuan', 'kategori', 'typeItem']);
-    }
 
     public static function getRelations(): array
     {

@@ -78,10 +78,10 @@ class OrderConfirmation extends Model
             ];
         }
 
-        if ($totalItems > 0 && $totalSo >= $totalItems) {
+        if ($totalItems > 0 && ($totalSo >= $totalItems || $this->sales_order_id !== null)) {
             return [
                 'status' => 'full_so',
-                'label'  => "Semua SO Terbit ({$totalSo}/{$totalItems})",
+                'label'  => "SO Terbit ({$this->order_id})",
                 'color'  => 'success',
             ];
         }
@@ -113,18 +113,24 @@ class OrderConfirmation extends Model
     }
 
     /**
-     * Generate Nomor Dokumen SC/OC Otomatis
+     * Generate Nomor Dokumen SC/OC Otomatis (Sesuai Bismillah MACRO.xlsm: SC-YY-ROMAWI-CustID-UrutanCustomer)
      * Contoh format: SC-26-VII-C006-003
      */
-    public static function generateDocNo(?Customer $customer = null): string
+    public static function generateDocNo(?Customer $customer = null, ?string $orderId = null): string
     {
+        if ($orderId && str_starts_with($orderId, 'OR-')) {
+            return 'SC-' . substr($orderId, 3);
+        }
+
         $year = date('y');
         $monthRoman = ApprovalForm::toRoman((int) date('n'));
         $custCode = $customer ? ($customer->kode_customer ?: 'C' . str_pad($customer->id, 3, '0', STR_PAD_LEFT)) : 'C001';
-        
+
         $prefix = "SC-{$year}-{$monthRoman}-{$custCode}-";
-        $countThisMonth = self::where('doc_no', 'like', "SC-{$year}-{$monthRoman}-%")->count() + 1;
-        $sequence = str_pad($countThisMonth, 3, '0', STR_PAD_LEFT);
+        $countForCustomer = $customer
+            ? (self::where('customer_id', $customer->id)->count() + 1)
+            : (self::where('doc_no', 'like', "SC-{$year}-{$monthRoman}-%")->count() + 1);
+        $sequence = str_pad($countForCustomer, 3, '0', STR_PAD_LEFT);
 
         return $prefix . $sequence;
     }

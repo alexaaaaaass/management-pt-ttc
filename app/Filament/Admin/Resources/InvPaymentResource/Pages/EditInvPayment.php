@@ -20,7 +20,8 @@ class EditInvPayment extends EditRecord
     protected function getHeaderActions(): array
     {
         return [
-            Actions\DeleteAction::make(),
+            Actions\DeleteAction::make()
+                ->using(fn ($record) => app(InvoicePaymentService::class)->deletePayment($record)),
         ];
     }
 }

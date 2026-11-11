@@ -50,13 +50,13 @@ class InvPaymentResource extends Resource
                                 ->schema([
 
                                     Select::make('invoice_id')
-    ->relationship(
-        'invoice',
-        'kode_invoice'
-    )
-    ->default(request('invoice'))
-    ->disabled(fn () => request()->has('invoice'))
-    ->dehydrated()
+                                        ->relationship(
+                                            'invoice',
+                                            'kode_invoice'
+                                        )
+                                        ->default(request('invoice'))
+                                        ->disabled(fn () => request()->has('invoice'))
+                                        ->dehydrated()
                                         ->getOptionLabelFromRecordUsing(
                                             fn ($record) =>
                                                 $record->kode_invoice .
@@ -66,7 +66,28 @@ class InvPaymentResource extends Resource
                                         ->searchable()
                                         ->preload()
                                         ->required()
-                                        ->live(),
+                                        ->live()
+                                        ->afterStateUpdated(function ($state, Set $set, Get $get) {
+                                            if (! $state) {
+                                                return;
+                                            }
+
+                                            $invoice = Invoice::with(['suratJalan.salesOrder.customer'])->find($state);
+                                            if (! $invoice) {
+                                                return;
+                                            }
+
+                                            $custName = $invoice->suratJalan?->salesOrder?->customer?->nama_customer ?? '';
+                                            $autoKet = 'Pembayaran Invoice ' . $invoice->kode_invoice . ($custName ? ' - ' . $custName : '');
+                                            $currentKet = $get('keterangan');
+                                            if (blank($currentKet) || str_starts_with($currentKet, 'Pembayaran Invoice')) {
+                                                $set('keterangan', $autoKet);
+                                            }
+
+                                            if ($get('full_payment')) {
+                                                $set('nominal_bayar', $invoice->sisa_tagihan);
+                                            }
+                                        }),
 
                                     DatePicker::make('tanggal_bayar')
                                         ->default(now())
@@ -201,7 +222,20 @@ class InvPaymentResource extends Resource
                                 ]),
 
                             Textarea::make('keterangan')
-                                ->rows(3)
+                                ->label('Keterangan / Catatan Pembayaran (Opsional)')
+                                ->placeholder('Otomatis: Pembayaran Invoice ... (Boleh dikosongkan jika tidak ada memo/bukti transfer khusus)')
+                                ->helperText('💡 Otomatis terisi saat invoice dipilih. Boleh diedit jika ingin mencatat no. referensi transfer / catatan bank.')
+                                ->default(function () {
+                                    if (request()->has('invoice')) {
+                                        $inv = Invoice::with(['suratJalan.salesOrder.customer'])->find(request('invoice'));
+                                        if ($inv) {
+                                            $custName = $inv->suratJalan?->salesOrder?->customer?->nama_customer ?? '';
+                                            return 'Pembayaran Invoice ' . $inv->kode_invoice . ($custName ? ' - ' . $custName : '');
+                                        }
+                                    }
+                                    return null;
+                                })
+                                ->rows(3),
 
                         ]),
 
@@ -286,51 +320,98 @@ class InvPaymentResource extends Resource
 
     public static function getNavigationLabel(): string
 {
-    return 'Inv Payment';
+    return 'Pembayaran Bon/Cicilan';
 }
+
+    public static function getModelLabel(): string
+    {
+        return 'Pembayaran Bon/Cicilan';
+    }
+
+    public static function getPluralModelLabel(): string
+    {
+        return 'Pembayaran Bon/Cicilan';
+    }
     
 
     public static function table(Table $table): Table
-{
-    return $table
-        ->columns([
+    {
+        return $table
+            ->defaultSort('tanggal_bayar', 'asc')
+            ->columns([
+                Tables\Columns\TextColumn::make('invoice.kode_invoice')
+                    ->label('No. Invoice')
+                    ->badge()
+                    ->color('primary')
+                    ->searchable()
+                    ->sortable(),
 
-            Tables\Columns\TextColumn::make(
-                'invoice.kode_invoice'
-            )
-                ->label('Invoice')
-                ->searchable(),
+                Tables\Columns\TextColumn::make('invoice.order_id')
+                    ->label('Order ID')
+                    ->badge()
+                    ->color('info')
+                    ->searchable(),
 
-            Tables\Columns\TextColumn::make(
-                'invoice.suratJalan.salesOrder.customer.nama_customer'
-            )
-                ->label('Customer'),
+                Tables\Columns\TextColumn::make('customer_name')
+                    ->label('Customer')
+                    ->getStateUsing(fn ($record) => $record->invoice?->customer?->nama_customer ?? $record->invoice?->suratJalan?->salesOrder?->customer?->nama_customer ?? '-')
+                    ->weight('bold')
+                    ->searchable(query: function (Builder $query, string $search): Builder {
+                        return $query->whereHas('invoice.customer', fn ($q) => $q->where('nama_customer', 'like', "%{$search}%"));
+                    }),
 
-          Tables\Columns\TextColumn::make('nominal_bayar')
-    ->label('Nominal Bayar')
-    ->money('IDR')
-    ->badge()
-    ->color('success')
-                ->money('IDR'),
+                Tables\Columns\TextColumn::make('tanggal_bayar')
+                    ->label('Tgl. Bayar')
+                    ->date('d/m/Y')
+                    ->sortable(),
 
-            Tables\Columns\TextColumn::make(
-                'tanggal_bayar'
-            )
-                ->date('d/m/Y'),
+                Tables\Columns\TextColumn::make('coa.nama_akun')
+                    ->label('Rekening Bank')
+                    ->badge()
+                    ->color('gray')
+                    ->searchable(),
 
-            Tables\Columns\TextColumn::make(
-                'metodeBayar.metode_pembayaran'
-            )
-                ->label('Metode'),
-            Tables\Columns\BadgeColumn::make('invoice.status')
-                ->label('Status Invoice')
-                ->color(fn (string $state): string => match ($state) {
-                    'Paid' => 'success',
-                    'Partial' => 'warning',
-                    'Unpaid' => 'danger',
-                    default => 'gray',
+                Tables\Columns\TextColumn::make('nominal_bayar')
+                    ->label('Nominal Diterima')
+                    ->money('IDR')
+                    ->alignRight()
+                    ->weight('bold')
+                    ->color('success')
+                    ->sortable()
+                    ->summarize(
+                        Tables\Columns\Summarizers\Sum::make()
+                            ->label('Total Pembayaran Diterima')
+                            ->money('IDR')
+                    ),
+
+                Tables\Columns\TextColumn::make('keterangan')
+                    ->label('Keterangan (DP / Termin / Pelunasan)')
+                    ->limit(45)
+                    ->tooltip(fn ($record) => $record->keterangan)
+                    ->searchable(),
+
+                Tables\Columns\TextColumn::make('invoice.status')
+                    ->label('Status Invoice')
+                    ->badge()
+                    ->formatStateUsing(fn (?string $state): string => strtoupper((string) $state))
+                    ->color(fn (?string $state): string => match (strtolower((string) $state)) {
+                        'paid' => 'success',
+                        'partial' => 'warning',
+                        'unpaid' => 'danger',
+                        default => 'gray',
+                    }),
+            ])
+        ->bulkActions([
+            Tables\Actions\BulkAction::make('infoDataTerpilih')
+                ->label('Info Data Terpilih')
+                ->icon('heroicon-o-check-circle')
+                ->action(function (\Illuminate\Database\Eloquent\Collection $records): void {
+                    \Filament\Notifications\Notification::make()
+                        ->title($records->count() . ' data dipilih')
+                        ->success()
+                        ->send();
                 })
-
+                ->deselectRecordsAfterCompletion(),
         ])
         ->bulkActions([
             Tables\Actions\BulkAction::make('infoDataTerpilih')
@@ -345,8 +426,17 @@ class InvPaymentResource extends Resource
                 ->deselectRecordsAfterCompletion(),
         ])
         ->actions([
-            Tables\Actions\EditAction::make(),
-            Tables\Actions\DeleteAction::make(),
+            Tables\Actions\ActionGroup::make([
+                Tables\Actions\EditAction::make(),
+                Tables\Actions\DeleteAction::make()
+                    ->using(fn ($record) => app(\App\Services\Finance\InvoicePaymentService::class)->deletePayment($record)),
+            ])
+                ->label('Aksi')
+                ->icon('heroicon-m-ellipsis-vertical')
+                ->size('sm')
+                ->color('primary')
+                ->button()
+                ->dropdownPlacement('bottom-end'),
         ]);
 }
 

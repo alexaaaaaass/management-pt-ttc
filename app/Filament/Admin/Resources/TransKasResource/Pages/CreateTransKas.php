@@ -11,7 +11,14 @@ class CreateTransKas extends CreateRecord
 {
     protected static string $resource = TransKasResource::class;
 
-    public string $jenisTransaksi;
+    public string $jenisTransaksi = 'KAS_MASUK';
+
+    public function getHeading(): string
+    {
+        return ($this->jenisTransaksi ?? request()->query('type', 'KAS_MASUK')) === 'KAS_KELUAR'
+            ? 'Transaksi Kas Keluar'
+            : 'Transaksi Kas Masuk';
+    }
 
     public function mount(): void
     {

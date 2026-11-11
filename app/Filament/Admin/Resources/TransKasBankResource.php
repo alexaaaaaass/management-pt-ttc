@@ -24,10 +24,34 @@ class TransKasBankResource extends Resource
     protected static ?string $navigationGroup = 'Finance';
     protected static ?int $navigationSort = 9;
     protected static ?string $navigationIcon = 'heroicon-o-building-library';
+    protected static ?string $modelLabel = 'Transaksi Bank';
+    protected static ?string $pluralModelLabel = 'Transaksi Bank Masuk & Bank Keluar';
 
     public static function getNavigationLabel(): string
     {
-        return 'Trans Kas Bank';
+        return 'Bank Masuk & Bank Keluar';
+    }
+
+    public static function getNavigationItems(): array
+    {
+        if (! static::canAccess()) {
+            return [];
+        }
+
+        return [
+            \Filament\Navigation\NavigationItem::make('Bank Masuk')
+                ->group(static::getNavigationGroup())
+                ->icon('heroicon-o-arrow-down-circle')
+                ->isActiveWhen(fn (): bool => request()->routeIs(static::getRouteBaseName() . '.*') && (request()->query('activeTab') === 'BANK_MASUK' || request()->query('type') === 'BANK_MASUK'))
+                ->sort(9)
+                ->url(static::getUrl('index', ['activeTab' => 'BANK_MASUK'])),
+            \Filament\Navigation\NavigationItem::make('Bank Keluar')
+                ->group(static::getNavigationGroup())
+                ->icon('heroicon-o-arrow-up-circle')
+                ->isActiveWhen(fn (): bool => request()->routeIs(static::getRouteBaseName() . '.*') && (request()->query('activeTab') === 'BANK_KELUAR' || request()->query('type') === 'BANK_KELUAR'))
+                ->sort(10)
+                ->url(static::getUrl('index', ['activeTab' => 'BANK_KELUAR'])),
+        ];
     }
 
     public static function form(Form $form): Form
@@ -85,7 +109,8 @@ class TransKasBankResource extends Resource
                                     : 'Akun Bank (Debit / Rekening Tujuan Masuk)'
                                 )
                                 ->relationship('accountBank', 'nama_akun')
-                                ->searchable()
+                                ->getOptionLabelFromRecordUsing(fn ($record) => trim($record->kode_akun) . ' - ' . $record->nama_akun)
+                                ->searchable(['kode_akun', 'nama_akun'])
                                 ->preload()
                                 ->required(),
 
@@ -95,7 +120,8 @@ class TransKasBankResource extends Resource
                                     : 'Akun Lawan (Kredit / Sumber Dana/Pendapatan)'
                                 )
                                 ->relationship('accountLawan', 'nama_akun')
-                                ->searchable()
+                                ->getOptionLabelFromRecordUsing(fn ($record) => trim($record->kode_akun) . ' - ' . $record->nama_akun)
+                                ->searchable(['kode_akun', 'nama_akun'])
                                 ->preload()
                                 ->required(),
                         ]),
@@ -215,10 +241,29 @@ class TransKasBankResource extends Resource
                     ->deselectRecordsAfterCompletion(),
             ])
             ->actions([
-                Tables\Actions\ViewAction::make(),
-                Tables\Actions\EditAction::make(),
-                Tables\Actions\DeleteAction::make()
-                    ->using(fn ($record) => app(TreasuryService::class)->deleteBank($record)),
+                Tables\Actions\ActionGroup::make([
+                    Tables\Actions\Action::make('preview_pdf')
+                        ->label('Voucher PDF')
+                        ->icon('heroicon-o-printer')
+                        ->color('info')
+                        ->url(fn (TransKasBank $record) => route('finance.voucher.bank.preview', $record))
+                        ->openUrlInNewTab(),
+                    Tables\Actions\Action::make('download_pdf')
+                        ->label('Download PDF')
+                        ->icon('heroicon-o-arrow-down-tray')
+                        ->color('success')
+                        ->url(fn (TransKasBank $record) => route('finance.voucher.bank.download', $record)),
+                    Tables\Actions\ViewAction::make(),
+                    Tables\Actions\EditAction::make(),
+                    Tables\Actions\DeleteAction::make()
+                        ->using(fn ($record) => app(TreasuryService::class)->deleteBank($record)),
+                ])
+                    ->label('Aksi')
+                    ->icon('heroicon-m-ellipsis-vertical')
+                    ->size('sm')
+                    ->color('primary')
+                    ->button()
+                    ->dropdownPlacement('bottom-end'),
             ]);
     }
 

@@ -84,7 +84,7 @@ class Invoice extends Model
     {
         return $this->hasMany(InvoiceItem::class);
     }
-
+    
     public static function penyebut($nilai)
     {
         $nilai = abs($nilai);
