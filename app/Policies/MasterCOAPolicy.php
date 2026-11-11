@@ -15,7 +15,7 @@ class MasterCOAPolicy
      */
     public function viewAny(User $user): bool
     {
-        return $user->can('view_any_master::c::o::a');
+        return $user->can('view_any_report::finace');
     }
 
     /**
@@ -23,7 +23,7 @@ class MasterCOAPolicy
      */
     public function view(User $user, MasterCOA $masterCOA): bool
     {
-        return $user->can('view_master::c::o::a');
+        return $user->can('view_report::finace');
     }
 
     /**
@@ -31,7 +31,7 @@ class MasterCOAPolicy
      */
     public function create(User $user): bool
     {
-        return $user->can('create_master::c::o::a');
+        return $user->can('create_report::finace');
     }
 
     /**
@@ -39,7 +39,7 @@ class MasterCOAPolicy
      */
     public function update(User $user, MasterCOA $masterCOA): bool
     {
-        return $user->can('update_master::c::o::a');
+        return $user->can('update_report::finace');
     }
 
     /**
@@ -47,7 +47,7 @@ class MasterCOAPolicy
      */
     public function delete(User $user, MasterCOA $masterCOA): bool
     {
-        return $user->can('delete_master::c::o::a');
+        return $user->can('delete_report::finace');
     }
 
     /**
@@ -55,7 +55,7 @@ class MasterCOAPolicy
      */
     public function deleteAny(User $user): bool
     {
-        return $user->can('delete_any_master::c::o::a');
+        return $user->can('delete_any_report::finace');
     }
 
     /**
@@ -63,7 +63,7 @@ class MasterCOAPolicy
      */
     public function forceDelete(User $user, MasterCOA $masterCOA): bool
     {
-        return $user->can('force_delete_master::c::o::a');
+        return $user->can('force_delete_report::finace');
     }
 
     /**
@@ -71,7 +71,7 @@ class MasterCOAPolicy
      */
     public function forceDeleteAny(User $user): bool
     {
-        return $user->can('force_delete_any_master::c::o::a');
+        return $user->can('force_delete_any_report::finace');
     }
 
     /**
@@ -79,7 +79,7 @@ class MasterCOAPolicy
      */
     public function restore(User $user, MasterCOA $masterCOA): bool
     {
-        return $user->can('restore_master::c::o::a');
+        return $user->can('restore_report::finace');
     }
 
     /**
@@ -87,7 +87,7 @@ class MasterCOAPolicy
      */
     public function restoreAny(User $user): bool
     {
-        return $user->can('restore_any_master::c::o::a');
+        return $user->can('restore_any_report::finace');
     }
 
     /**
@@ -95,7 +95,7 @@ class MasterCOAPolicy
      */
     public function replicate(User $user, MasterCOA $masterCOA): bool
     {
-        return $user->can('replicate_master::c::o::a');
+        return $user->can('replicate_report::finace');
     }
 
     /**
@@ -103,6 +103,6 @@ class MasterCOAPolicy
      */
     public function reorder(User $user): bool
     {
-        return $user->can('reorder_master::c::o::a');
+        return $user->can('reorder_report::finace');
     }
 }

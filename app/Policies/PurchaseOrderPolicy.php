@@ -15,7 +15,7 @@ class PurchaseOrderPolicy
      */
     public function viewAny(User $user): bool
     {
-        return $user->can('view_any_purchase::order');
+        return $user->can('view_any_report::po::vs::pb');
     }
 
     /**
@@ -23,7 +23,7 @@ class PurchaseOrderPolicy
      */
     public function view(User $user, PurchaseOrder $purchaseOrder): bool
     {
-        return $user->can('view_purchase::order');
+        return $user->can('view_report::po::vs::pb');
     }
 
     /**
@@ -31,7 +31,7 @@ class PurchaseOrderPolicy
      */
     public function create(User $user): bool
     {
-        return $user->can('create_purchase::order');
+        return $user->can('create_report::po::vs::pb');
     }
 
     /**
@@ -39,7 +39,7 @@ class PurchaseOrderPolicy
      */
     public function update(User $user, PurchaseOrder $purchaseOrder): bool
     {
-        return $user->can('update_purchase::order');
+        return $user->can('update_report::po::vs::pb');
     }
 
     /**
@@ -47,7 +47,7 @@ class PurchaseOrderPolicy
      */
     public function delete(User $user, PurchaseOrder $purchaseOrder): bool
     {
-        return $user->can('delete_purchase::order');
+        return $user->can('delete_report::po::vs::pb');
     }
 
     /**
@@ -55,7 +55,7 @@ class PurchaseOrderPolicy
      */
     public function deleteAny(User $user): bool
     {
-        return $user->can('delete_any_purchase::order');
+        return $user->can('delete_any_report::po::vs::pb');
     }
 
     /**
@@ -63,7 +63,7 @@ class PurchaseOrderPolicy
      */
     public function forceDelete(User $user, PurchaseOrder $purchaseOrder): bool
     {
-        return $user->can('force_delete_purchase::order');
+        return $user->can('force_delete_report::po::vs::pb');
     }
 
     /**
@@ -71,7 +71,7 @@ class PurchaseOrderPolicy
      */
     public function forceDeleteAny(User $user): bool
     {
-        return $user->can('force_delete_any_purchase::order');
+        return $user->can('force_delete_any_report::po::vs::pb');
     }
 
     /**
@@ -79,7 +79,7 @@ class PurchaseOrderPolicy
      */
     public function restore(User $user, PurchaseOrder $purchaseOrder): bool
     {
-        return $user->can('restore_purchase::order');
+        return $user->can('restore_report::po::vs::pb');
     }
 
     /**
@@ -87,7 +87,7 @@ class PurchaseOrderPolicy
      */
     public function restoreAny(User $user): bool
     {
-        return $user->can('restore_any_purchase::order');
+        return $user->can('restore_any_report::po::vs::pb');
     }
 
     /**
@@ -95,7 +95,7 @@ class PurchaseOrderPolicy
      */
     public function replicate(User $user, PurchaseOrder $purchaseOrder): bool
     {
-        return $user->can('replicate_purchase::order');
+        return $user->can('replicate_report::po::vs::pb');
     }
 
     /**
@@ -103,6 +103,6 @@ class PurchaseOrderPolicy
      */
     public function reorder(User $user): bool
     {
-        return $user->can('reorder_purchase::order');
+        return $user->can('reorder_report::po::vs::pb');
     }
 }

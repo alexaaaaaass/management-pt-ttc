@@ -15,7 +15,7 @@ class InvPaymentPolicy
      */
     public function viewAny(User $user): bool
     {
-        return $user->can('view_any_inv::payment');
+        return $user->can('view_any_payment::entry::good');
     }
 
     /**
@@ -23,7 +23,7 @@ class InvPaymentPolicy
      */
     public function view(User $user, InvPayment $invPayment): bool
     {
-        return $user->can('view_inv::payment');
+        return $user->can('view_payment::entry::good');
     }
 
     /**
@@ -31,7 +31,7 @@ class InvPaymentPolicy
      */
     public function create(User $user): bool
     {
-        return $user->can('create_inv::payment');
+        return $user->can('create_payment::entry::good');
     }
 
     /**
@@ -39,7 +39,7 @@ class InvPaymentPolicy
      */
     public function update(User $user, InvPayment $invPayment): bool
     {
-        return $user->can('update_inv::payment');
+        return $user->can('update_payment::entry::good');
     }
 
     /**
@@ -47,7 +47,7 @@ class InvPaymentPolicy
      */
     public function delete(User $user, InvPayment $invPayment): bool
     {
-        return $user->can('delete_inv::payment');
+        return $user->can('delete_payment::entry::good');
     }
 
     /**
@@ -55,7 +55,7 @@ class InvPaymentPolicy
      */
     public function deleteAny(User $user): bool
     {
-        return $user->can('delete_any_inv::payment');
+        return $user->can('delete_any_payment::entry::good');
     }
 
     /**
@@ -63,7 +63,7 @@ class InvPaymentPolicy
      */
     public function forceDelete(User $user, InvPayment $invPayment): bool
     {
-        return $user->can('force_delete_inv::payment');
+        return $user->can('force_delete_payment::entry::good');
     }
 
     /**
@@ -71,7 +71,7 @@ class InvPaymentPolicy
      */
     public function forceDeleteAny(User $user): bool
     {
-        return $user->can('force_delete_any_inv::payment');
+        return $user->can('force_delete_any_payment::entry::good');
     }
 
     /**
@@ -79,7 +79,7 @@ class InvPaymentPolicy
      */
     public function restore(User $user, InvPayment $invPayment): bool
     {
-        return $user->can('restore_inv::payment');
+        return $user->can('restore_payment::entry::good');
     }
 
     /**
@@ -87,7 +87,7 @@ class InvPaymentPolicy
      */
     public function restoreAny(User $user): bool
     {
-        return $user->can('restore_any_inv::payment');
+        return $user->can('restore_any_payment::entry::good');
     }
 
     /**
@@ -95,7 +95,7 @@ class InvPaymentPolicy
      */
     public function replicate(User $user, InvPayment $invPayment): bool
     {
-        return $user->can('replicate_inv::payment');
+        return $user->can('replicate_payment::entry::good');
     }
 
     /**
@@ -103,6 +103,6 @@ class InvPaymentPolicy
      */
     public function reorder(User $user): bool
     {
-        return $user->can('reorder_inv::payment');
+        return $user->can('reorder_payment::entry::good');
     }
 }
