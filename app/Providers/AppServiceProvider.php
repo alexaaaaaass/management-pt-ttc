@@ -75,38 +75,6 @@ class AppServiceProvider extends ServiceProvider
                 });
             }
 
-            if (\Illuminate\Support\Facades\Schema::hasTable('approval_forms') && \Illuminate\Support\Facades\Schema::hasTable('invoices')) {
-                $isExactMacroState = fn (): bool => \App\Models\ApprovalForm::count() === 19
-                    && \App\Models\OrderConfirmation::count() === 19
-                    && \App\Models\SalesOrder::withTrashed()->count() === 19
-                    && \App\Models\MasterSpk::count() === 19
-                    && \App\Models\Invoice::count() === 17
-                    && \App\Models\Customer::count() === 10
-                    && \App\Models\MasterPrinting::count() === 3
-                    && \App\Models\PurchaseOrder::count() === 0
-                    && \App\Models\TransKas::count() === 0
-                    && \App\Models\TransKasBank::count() === 0
-                    && \App\Models\Gaji::count() === 0
-                    && (float) \App\Models\MasterCOA::sum('saldo_debit') === 0.0
-                    && (float) \App\Models\MasterCOA::sum('saldo_kredit') === 0.0
-                    && \App\Models\OperasionalPay::count() === 6
-                    && \App\Models\OperasionalPay::where('kode_transaksi', 'like', 'COM-%')->count() === 6;
-
-                if (! $isExactMacroState()) {
-                    $lockFile = storage_path('framework/bismillah_macro_seed.lock');
-                    $fp = @fopen($lockFile, 'c+');
-                    if ($fp && @flock($fp, LOCK_EX)) {
-                        try {
-                            if (! $isExactMacroState()) {
-                                app(\Database\Seeders\BismillahMacroSalesSeeder::class)->run();
-                            }
-                        } finally {
-                            @flock($fp, LOCK_UN);
-                            @fclose($fp);
-                        }
-                    }
-                }
-            }
 
             if (\Illuminate\Support\Facades\Schema::hasTable('coa_movements') && \Illuminate\Support\Facades\Schema::hasTable('master_coas')) {
                 $totalDebit = (float) \Illuminate\Support\Facades\DB::table('coa_movements')->sum('debit');
