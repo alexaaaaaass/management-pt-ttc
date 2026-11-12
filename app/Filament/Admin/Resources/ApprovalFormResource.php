@@ -165,7 +165,7 @@ class ApprovalFormResource extends Resource
 
                                         Forms\Components\TextInput::make('qty')
                                             ->label('Qty (Pcs)')
-                                            ->numeric()
+                                            ->quantityMask(0)
                                             ->default(0)
                                             ->required(),
                                     ]),

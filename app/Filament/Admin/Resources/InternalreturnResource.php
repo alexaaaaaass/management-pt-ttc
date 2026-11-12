@@ -149,7 +149,7 @@ class InternalreturnResource extends Resource
 
                                 Forms\Components\TextInput::make('qty_return')
                                     ->label('Qty Return')
-                                    ->numeric()
+                                    ->quantityMask(2)
                                     ->required()
                                     ->default(0)
                                     ->live()

@@ -134,7 +134,7 @@ class SubcountOutResource extends Resource
                                 }),
 
                             Forms\Components\TextInput::make('qty')
-                                ->numeric()
+                                ->quantityMask(0)
                                 ->required(),
 
                             Forms\Components\Select::make('satuan_id')

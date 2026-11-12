@@ -137,7 +137,7 @@ class SubcountInResource extends Resource
                                 ->dehydrated(),
 
                             TextInput::make('qty_dikirim')
-                                ->numeric()
+                                ->quantityMask(0)
                                 ->disabled()
                                 ->dehydrated(),
 
@@ -181,7 +181,7 @@ class SubcountInResource extends Resource
                                 ->helperText('Otomatis menambah stok di Finish Good Stocks'),
 
                             TextInput::make('qty_diterima')
-                                ->numeric()
+                                ->quantityMask(0)
                                 ->required(),
 
                             TextInput::make('keterangan'),

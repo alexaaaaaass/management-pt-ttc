@@ -312,7 +312,7 @@ public static function form(Form $form): Form
 
                                     TextInput::make('qty')
                                         ->label('Qty Per Satuan (Opsional)')
-                                        ->numeric()
+                                        ->quantityMask(2)
                                         ->nullable()
                                         ->default(0)
                                         ->placeholder('0 (atau kosong)')

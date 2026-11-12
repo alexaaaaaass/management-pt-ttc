@@ -143,14 +143,14 @@ class PurchaseOrderResource extends Resource
 
                         Forms\Components\TextInput::make('ongkir')
                             ->label('Ongkos Kirim')
-                            ->numeric()
                             ->prefix('Rp')
+                            ->currencyMask(2)
                             ->default(0),
 
                         Forms\Components\TextInput::make('dp')
                             ->label('Uang Muka (DP)')
-                            ->numeric()
                             ->prefix('Rp')
+                            ->currencyMask(2)
                             ->default(0),
                     ]),
                 ]),
@@ -222,28 +222,27 @@ class PurchaseOrderResource extends Resource
 
                                     Forms\Components\TextInput::make('qty_pr')
                                         ->label('Qty PR')
-                                        ->numeric()
+                                        ->quantityMask(2)
                                         ->disabled()
                                         ->dehydrated(),
 
                                     Forms\Components\TextInput::make('qty_po')
                                         ->label('Qty PO')
-                                        ->numeric()
+                                        ->quantityMask(2)
                                         ->required()
-                                        ->minValue(0)
                                         ->reactive()
                                         ->afterStateUpdated(function ($state, callable $get, callable $set) {
-                                            $qtyPR = (int) ($get('qty_pr') ?? 0);
-                                            $qtyPO = (int) ($state ?? 0);
+                                            $qtyPR = (float) (\App\Support\MoneyHelper::clean($get('qty_pr')) ?? 0);
+                                            $qtyPO = (float) (\App\Support\MoneyHelper::clean($state) ?? 0);
 
-                                            if ($qtyPO > $qtyPR) {
+                                            if ($qtyPR > 0 && $qtyPO > $qtyPR) {
                                                 $qtyPO = $qtyPR;
                                                 $set('qty_po', $qtyPR);
                                             }
 
                                             $set('qty_konversi', $qtyPO);
 
-                                            $price = (float) ($get('price') ?? 0);
+                                            $price = (float) (\App\Support\MoneyHelper::clean($get('price')) ?? 0);
                                             $discount = (float) ($get('discount') ?? 0);
                                             $total = ($qtyPO * $price) * (1 - ($discount / 100));
 
@@ -252,19 +251,20 @@ class PurchaseOrderResource extends Resource
 
                                     Forms\Components\TextInput::make('qty_konversi')
                                         ->label('Qty After Conversion')
-                                        ->numeric()
+                                        ->quantityMask(2)
                                         ->disabled()
                                         ->dehydrated(),
 
                                     Forms\Components\TextInput::make('price')
                                         ->label('Price / Unit')
-                                        ->numeric()
                                         ->prefix('Rp')
+                                        ->currencyMask(2)
+                                        ->placeholder('0.00')
                                         ->dehydrated()
                                         ->reactive()
                                         ->afterStateUpdated(function ($state, callable $get, callable $set) {
-                                            $qty = (int) ($get('qty_konversi') ?? 0);
-                                            $price = (float) ($state ?? 0);
+                                            $qty = (float) ($get('qty_konversi') ?? 0);
+                                            $price = \App\Support\MoneyHelper::clean($state) ?? 0;
                                             $discount = (float) ($get('discount') ?? 0);
                                             $total = ($qty * $price) * (1 - ($discount / 100));
 
@@ -289,8 +289,8 @@ class PurchaseOrderResource extends Resource
 
                                     Forms\Components\TextInput::make('total')
                                         ->label('Total')
-                                        ->numeric()
                                         ->prefix('Rp')
+                                        ->currencyMask(2)
                                         ->disabled()
                                         ->dehydrated()
                                         ->afterStateHydrated(function ($state, callable $set) {

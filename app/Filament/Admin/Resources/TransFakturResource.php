@@ -155,7 +155,7 @@ class TransFakturResource extends Resource
                             ->required(),
 
                         TextInput::make('qty')
-                            ->numeric()
+                            ->quantityMask(2)
                             ->readOnly()
                             ->required(),
 
@@ -163,13 +163,13 @@ class TransFakturResource extends Resource
                             ->readOnly(),
 
                         TextInput::make('harga_satuan')
-                            ->numeric()
+                            ->currencyMask(2)
                             ->prefix('Rp')
                             ->readOnly()
                             ->required(),
 
                         TextInput::make('diskon')
-                            ->numeric()
+                            ->currencyMask(2)
                             ->default(0)
                             ->live()
                             ->afterStateUpdated(function (
@@ -178,24 +178,16 @@ class TransFakturResource extends Resource
                                 $set
                             ) {
 
-                                $qty =
-                                    (float) $get('qty');
-
-                                $harga =
-                                    (float) $get('harga_satuan');
-
-                                $diskon =
-                                    (float) $state;
-
-                                $total =
-                                    ($qty * $harga)
-                                    - $diskon;
+                                $qty = (float) (\App\Support\MoneyHelper::clean($get('qty')) ?? 0);
+                                $harga = (float) (\App\Support\MoneyHelper::clean($get('harga_satuan')) ?? 0);
+                                $diskon = (float) (\App\Support\MoneyHelper::clean($state) ?? 0);
+                                $total = ($qty * $harga) - $diskon;
 
                                 $set('total', $total);
                             }),
 
                         TextInput::make('total')
-                            ->numeric()
+                            ->currencyMask(2)
                             ->prefix('Rp')
                             ->readOnly(),
                     ]),
@@ -238,26 +230,19 @@ class TransFakturResource extends Resource
             ->label('Subtotal')
             ->readOnly()
             ->prefix('Rp')
-            ->formatStateUsing(fn ($state) =>
-                number_format($state, 0, ',', '.')
-            ),
+            ->currencyMask(2),
 
         TextInput::make('ppn')
             ->label('PPN')
             ->readOnly()
             ->prefix('Rp')
-            ->formatStateUsing(fn ($state) =>
-                number_format($state, 0, ',', '.')
-            ),
+            ->currencyMask(2),
 
         TextInput::make('grand_total')
-        
             ->label('Grand Total')
             ->readOnly()
             ->prefix('Rp')
-            ->formatStateUsing(fn ($state) =>
-                number_format($state, 0, ',', '.')
-            ),
+            ->currencyMask(2),
     ]),
         ]);
 }

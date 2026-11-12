@@ -32,8 +32,13 @@ class FinancePdfController extends Controller
         if ($nominal <= 0) {
             return 'Nol Rupiah';
         }
-        $hasil = trim(Invoice::penyebut($nominal));
-        return preg_replace('/\s+/', ' ', $hasil) . ' Rupiah';
+        $intPart = floor($nominal);
+        $fraction = (int) round(($nominal - $intPart) * 100);
+        $hasil = trim(Invoice::penyebut($intPart)) . ' Rupiah';
+        if ($fraction > 0) {
+            $hasil .= ' ' . trim(Invoice::penyebut($fraction)) . ' Sen';
+        }
+        return preg_replace('/\s+/', ' ', $hasil);
     }
 
     /*

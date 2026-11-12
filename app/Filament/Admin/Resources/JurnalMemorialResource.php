@@ -153,13 +153,12 @@ class JurnalMemorialResource extends Resource
 
                                         TextInput::make('debit')
                                             ->label('Debit (Rp)')
-                                            ->numeric()
-                                            ->default(0)
-                                            ->minValue(0)
                                             ->prefix('Rp')
+                                            ->currencyMask(2)
+                                            ->default(0)
                                             ->live(onBlur: true)
                                             ->afterStateUpdated(function ($state, Set $set) {
-                                                if ((float) $state > 0) {
+                                                if (\App\Support\MoneyHelper::clean($state) > 0) {
                                                     $set('kredit', 0);
                                                 }
                                             })
@@ -167,13 +166,12 @@ class JurnalMemorialResource extends Resource
 
                                         TextInput::make('kredit')
                                             ->label('Kredit (Rp)')
-                                            ->numeric()
-                                            ->default(0)
-                                            ->minValue(0)
                                             ->prefix('Rp')
+                                            ->currencyMask(2)
+                                            ->default(0)
                                             ->live(onBlur: true)
                                             ->afterStateUpdated(function ($state, Set $set) {
-                                                if ((float) $state > 0) {
+                                                if (\App\Support\MoneyHelper::clean($state) > 0) {
                                                     $set('debit', 0);
                                                 }
                                             })
@@ -187,24 +185,24 @@ class JurnalMemorialResource extends Resource
                                     ->label('Total Debit')
                                     ->content(function (Get $get) {
                                         $lines = $get('lines') ?? [];
-                                        $sum = collect($lines)->sum(fn ($r) => (float) ($r['debit'] ?? 0));
-                                        return 'Rp ' . number_format($sum, 0, ',', '.');
+                                        $sum = collect($lines)->sum(fn ($r) => \App\Support\MoneyHelper::clean($r['debit'] ?? 0));
+                                        return 'Rp ' . (fmod(round($sum, 2), 1.0) != 0.0 ? number_format($sum, 2, ',', '.') : number_format($sum, 0, ',', '.'));
                                     }),
 
                                 Placeholder::make('summary_kredit')
                                     ->label('Total Kredit')
                                     ->content(function (Get $get) {
                                         $lines = $get('lines') ?? [];
-                                        $sum = collect($lines)->sum(fn ($r) => (float) ($r['kredit'] ?? 0));
-                                        return 'Rp ' . number_format($sum, 0, ',', '.');
+                                        $sum = collect($lines)->sum(fn ($r) => \App\Support\MoneyHelper::clean($r['kredit'] ?? 0));
+                                        return 'Rp ' . (fmod(round($sum, 2), 1.0) != 0.0 ? number_format($sum, 2, ',', '.') : number_format($sum, 0, ',', '.'));
                                     }),
 
                                 Placeholder::make('summary_status')
                                     ->label('Status Keseimbangan (Balance Check)')
                                     ->content(function (Get $get) {
                                         $lines = $get('lines') ?? [];
-                                        $debit = round(collect($lines)->sum(fn ($r) => (float) ($r['debit'] ?? 0)), 2);
-                                        $kredit = round(collect($lines)->sum(fn ($r) => (float) ($r['kredit'] ?? 0)), 2);
+                                        $debit = round(collect($lines)->sum(fn ($r) => \App\Support\MoneyHelper::clean($r['debit'] ?? 0)), 2);
+                                        $kredit = round(collect($lines)->sum(fn ($r) => \App\Support\MoneyHelper::clean($r['kredit'] ?? 0)), 2);
                                         $diff = abs($debit - $kredit);
 
                                         if ($debit <= 0 && $kredit <= 0) {
@@ -212,10 +210,12 @@ class JurnalMemorialResource extends Resource
                                         }
 
                                         if ($diff < 0.01) {
-                                            return '🟢 SEIMBANG (BALANCE) — Rp ' . number_format($debit, 0, ',', '.');
+                                            $formattedDebit = fmod(round($debit, 2), 1.0) != 0.0 ? number_format($debit, 2, ',', '.') : number_format($debit, 0, ',', '.');
+                                            return '🟢 SEIMBANG (BALANCE) — Rp ' . $formattedDebit;
                                         }
 
-                                        return '🔴 TIDAK SEIMBANG (Selisih: Rp ' . number_format($diff, 0, ',', '.') . ')';
+                                        $formattedDiff = fmod(round($diff, 2), 1.0) != 0.0 ? number_format($diff, 2, ',', '.') : number_format($diff, 0, ',', '.');
+                                        return '🔴 TIDAK SEIMBANG (Selisih: Rp ' . $formattedDiff . ')';
                                     }),
                             ]),
                     ]),
@@ -258,7 +258,10 @@ class JurnalMemorialResource extends Resource
 
                 Tables\Columns\TextColumn::make('total_debit')
                     ->label('Total Debit')
-                    ->money('IDR')
+                    ->formatStateUsing(function ($state) {
+                        $val = (float) $state;
+                        return 'Rp ' . (fmod(round($val, 2), 1.0) != 0.0 ? number_format($val, 2, ',', '.') : number_format($val, 0, ',', '.'));
+                    })
                     ->alignRight()
                     ->weight('bold')
                     ->sortable()

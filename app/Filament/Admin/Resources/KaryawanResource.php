@@ -119,8 +119,8 @@ class KaryawanResource extends Resource
                 ->schema([
                     TextInput::make('gaji_pokok')
                         ->label('Gaji Pokok')
-                        ->numeric()
-                        ->prefix('Rp'),
+                        ->prefix('Rp')
+                        ->currencyMask(0),
 
                     Select::make('tipe_gaji')
                         ->label('Tipe / Skema Gaji')
@@ -132,20 +132,20 @@ class KaryawanResource extends Resource
 
                     TextInput::make('tunjangan_kompetensi')
                         ->label('Tunjangan Kompetensi')
-                        ->numeric()
                         ->prefix('Rp')
+                        ->currencyMask(0)
                         ->default(0),
 
                     TextInput::make('tunjangan_jabatan')
                         ->label('Tunjangan Jabatan')
-                        ->numeric()
                         ->prefix('Rp')
+                        ->currencyMask(0)
                         ->default(0),
 
                     TextInput::make('tunjangan_intensif')
                         ->label('Tunjangan Intensif')
-                        ->numeric()
                         ->prefix('Rp')
+                        ->currencyMask(0)
                         ->default(0),
                 ])
                 ->columns(2),

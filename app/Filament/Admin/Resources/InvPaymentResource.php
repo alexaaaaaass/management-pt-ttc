@@ -148,10 +148,13 @@ class InvPaymentResource extends Resource
 
     }),
                                     TextInput::make('nominal_bayar')
-                                        ->numeric()
+                                        ->label('Nominal Bayar')
+                                        ->prefix('Rp')
+                                        ->currencyMask(2)
+                                        ->placeholder('0.00')
                                         ->required()
                                         ->extraInputAttributes(['onwheel' => 'this.blur()'])
-                                        ->helperText('Otomatis dibulatkan ke sisa tagihan jika selisih ≤ Rp 1.000')
+                                        ->helperText('Otomatis diberi pemisah ribuan. Dibulatkan ke sisa tagihan jika selisih ≤ Rp 1.000')
                                         ->live(onBlur: true)
                                         ->afterStateUpdated(function ($state, Get $get, Set $set, ?InvPayment $record) {
                                             $invoice = Invoice::find($get('invoice_id'));
@@ -164,7 +167,7 @@ class InvPaymentResource extends Resource
                                                 $maxAllowed += (float) $record->nominal_bayar;
                                             }
 
-                                            $val = (float) $state;
+                                            $val = \App\Support\MoneyHelper::clean($state) ?? 0;
                                             if (
                                                 $maxAllowed > 0 &&
                                                 $val > 0 &&
@@ -197,7 +200,8 @@ class InvPaymentResource extends Resource
                                                     $maxAllowed += (float) $record->nominal_bayar;
                                                 }
 
-                                                if ((float) $value > ($maxAllowed + \App\Services\Finance\InvoicePaymentService::PAYMENT_TOLERANCE)) {
+                                                $val = \App\Support\MoneyHelper::clean($value) ?? 0;
+                                                if ($val > ($maxAllowed + \App\Services\Finance\InvoicePaymentService::PAYMENT_TOLERANCE)) {
                                                     $fail('Nominal pembayaran melebihi sisa tagihan (Maks: Rp ' . number_format($maxAllowed, 0, ',', '.') . ').');
                                                 }
                                             };
@@ -373,7 +377,10 @@ class InvPaymentResource extends Resource
 
                 Tables\Columns\TextColumn::make('nominal_bayar')
                     ->label('Nominal Diterima')
-                    ->money('IDR')
+                    ->formatStateUsing(function ($state) {
+                        $val = (float) $state;
+                        return 'Rp ' . (fmod(round($val, 2), 1.0) != 0.0 ? number_format($val, 2, ',', '.') : number_format($val, 0, ',', '.'));
+                    })
                     ->alignRight()
                     ->weight('bold')
                     ->color('success')

@@ -115,15 +115,15 @@ class BeritaAcaraResource extends Resource
                                     ->maxLength(255),
                                 Forms\Components\TextInput::make('qty_kedatangan')
                                     ->label('Kedatangan')
-                                    ->numeric()
+                                    ->quantityMask(2)
                                     ->minValue(0),
                                 Forms\Components\TextInput::make('qty_penerimaan')
                                     ->label('Penerimaan')
-                                    ->numeric()
+                                    ->quantityMask(2)
                                     ->minValue(0),
                                 Forms\Components\TextInput::make('qty_penolakan')
                                     ->label('Penolakan')
-                                    ->numeric()
+                                    ->quantityMask(2)
                                     ->minValue(0),
                                 Forms\Components\Textarea::make('catatan_penerimaan')
                                     ->label('Catatan Penerimaan / Rejection')

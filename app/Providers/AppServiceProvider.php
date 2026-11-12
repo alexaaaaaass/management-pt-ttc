@@ -21,6 +21,16 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        \Filament\Forms\Components\TextInput::macro('currencyMask', function (int $precision = 2) {
+            /** @var \Filament\Forms\Components\TextInput $this */
+            return \App\Support\MoneyHelper::applyMask($this, $precision);
+        });
+
+        \Filament\Forms\Components\TextInput::macro('quantityMask', function (int $precision = 0) {
+            /** @var \Filament\Forms\Components\TextInput $this */
+            return \App\Support\MoneyHelper::applyQuantityMask($this, $precision);
+        });
+
         Invoice::observe(
             InvoiceObserver::class
         );
@@ -73,6 +83,13 @@ class AppServiceProvider extends ServiceProvider
                     $table->text('keterangan')->nullable();
                     $table->timestamps();
                 });
+            }
+
+            if (\Illuminate\Support\Facades\Schema::hasTable('finish_good_items') && ! \Illuminate\Support\Facades\Schema::hasTable('finish_good_stocks')) {
+                $fgMig = base_path('database/migrations/2026_11_06_204500_create_finish_good_stocks_and_movements_tables.php');
+                if (file_exists($fgMig)) {
+                    (require $fgMig)->up();
+                }
             }
 
 

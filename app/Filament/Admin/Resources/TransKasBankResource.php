@@ -130,10 +130,11 @@ class TransKasBankResource extends Resource
                         ->schema([
                             TextInput::make('nominal')
                                 ->label('Nominal Transaksi')
-                                ->numeric()
                                 ->prefix('Rp')
-                                ->minValue(1)
-                                ->required(),
+                                ->currencyMask(2)
+                                ->placeholder('0.00')
+                                ->required()
+                                ->helperText('💡 Otomatis diberi pemisah ribuan saat diketik. Mendukung pecahan sen (contoh: 503,219,386.91).'),
 
                             Select::make('status')
                                 ->options([
@@ -198,7 +199,10 @@ class TransKasBankResource extends Resource
 
                 Tables\Columns\TextColumn::make('nominal')
                     ->label('Nominal')
-                    ->money('IDR')
+                    ->formatStateUsing(function ($state) {
+                        $val = (float) $state;
+                        return 'Rp ' . (fmod(round($val, 2), 1.0) != 0.0 ? number_format($val, 2, ',', '.') : number_format($val, 0, ',', '.'));
+                    })
                     ->sortable(),
 
                 Tables\Columns\TextColumn::make('accountBank.nama_akun')

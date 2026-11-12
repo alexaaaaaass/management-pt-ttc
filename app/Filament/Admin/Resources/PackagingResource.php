@@ -92,12 +92,12 @@ public static function form(Form $form): Form
                 ->schema([
 
                     Forms\Components\TextInput::make('jumlah_satuan_penuh')
-                        ->numeric()
+                        ->quantityMask(0)
                         ->default(0)
                         ->live(),
 
                     Forms\Components\TextInput::make('qty_per_satuan_penuh')
-                        ->numeric()
+                        ->quantityMask(0)
                         ->default(0)
                         ->live(),
 
@@ -114,12 +114,12 @@ public static function form(Form $form): Form
                 ->schema([
 
                     Forms\Components\TextInput::make('jumlah_satuan_sisa')
-                        ->numeric()
+                        ->quantityMask(0)
                         ->default(0)
                         ->live(),
 
                     Forms\Components\TextInput::make('qty_per_satuan_sisa')
-                        ->numeric()
+                        ->quantityMask(0)
                         ->default(0)
                         ->live(),
 
@@ -138,38 +138,27 @@ public static function form(Form $form): Form
                     Forms\Components\Placeholder::make('total_satuan_penuh')
                         ->label('Total Satuan Penuh')
                         ->content(function ($get) {
-
-                            return
-                                ((int) $get('jumlah_satuan_penuh'))
-                                *
-                                ((int) $get('qty_per_satuan_penuh'));
+                            $jml = (int) (\App\Support\MoneyHelper::clean($get('jumlah_satuan_penuh')) ?? 0);
+                            $qty = (int) (\App\Support\MoneyHelper::clean($get('qty_per_satuan_penuh')) ?? 0);
+                            return number_format($jml * $qty, 0, '.', ',');
                         }),
 
                     Forms\Components\Placeholder::make('total_satuan_sisa')
                         ->label('Total Satuan Sisa')
                         ->content(function ($get) {
-
-                            return
-                                ((int) $get('jumlah_satuan_sisa'))
-                                *
-                                ((int) $get('qty_per_satuan_sisa'));
+                            $jml = (int) (\App\Support\MoneyHelper::clean($get('jumlah_satuan_sisa')) ?? 0);
+                            $qty = (int) (\App\Support\MoneyHelper::clean($get('qty_per_satuan_sisa')) ?? 0);
+                            return number_format($jml * $qty, 0, '.', ',');
                         }),
 
                     Forms\Components\Placeholder::make('grand_total')
                         ->label('Grand Total')
                         ->content(function ($get) {
-
-                            $penuh =
-                                ((int) $get('jumlah_satuan_penuh'))
-                                *
-                                ((int) $get('qty_per_satuan_penuh'));
-
-                            $sisa =
-                                ((int) $get('jumlah_satuan_sisa'))
-                                *
-                                ((int) $get('qty_per_satuan_sisa'));
-
-                            return $penuh + $sisa;
+                            $penuh = ((int) (\App\Support\MoneyHelper::clean($get('jumlah_satuan_penuh')) ?? 0))
+                                * ((int) (\App\Support\MoneyHelper::clean($get('qty_per_satuan_penuh')) ?? 0));
+                            $sisa = ((int) (\App\Support\MoneyHelper::clean($get('jumlah_satuan_sisa')) ?? 0))
+                                * ((int) (\App\Support\MoneyHelper::clean($get('qty_per_satuan_sisa')) ?? 0));
+                            return number_format($penuh + $sisa, 0, '.', ',');
                         }),
 
                 ])

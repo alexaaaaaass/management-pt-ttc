@@ -55,9 +55,8 @@ class BonusKaryawanResource extends Resource
 
                 TextInput::make('nilai_bonus')
                     ->label('Nilai Bonus')
-                    ->numeric()
                     ->prefix('Rp')
-                    ->minValue(1)
+                    ->currencyMask(0)
                     ->required(),
 
                 Textarea::make('keterangan')

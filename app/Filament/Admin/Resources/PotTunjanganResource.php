@@ -44,8 +44,8 @@ class PotTunjanganResource extends Resource
 
                 TextInput::make('potongan_jabatan')
                     ->label('Potongan Tunjangan Jabatan')
-                    ->numeric()
                     ->prefix('Rp')
+                    ->currencyMask(0)
                     ->default(0)
                     ->live(onBlur: true)
                     ->afterStateUpdated(fn ($state, callable $get, callable $set) => self::hitungTotal($get, $set))
@@ -53,8 +53,8 @@ class PotTunjanganResource extends Resource
 
                 TextInput::make('potongan_kompetensi')
                     ->label('Potongan Kompetensi')
-                    ->numeric()
                     ->prefix('Rp')
+                    ->currencyMask(0)
                     ->default(0)
                     ->live(onBlur: true)
                     ->afterStateUpdated(fn ($state, callable $get, callable $set) => self::hitungTotal($get, $set))
@@ -62,8 +62,8 @@ class PotTunjanganResource extends Resource
 
                 TextInput::make('potongan_intensif')
                     ->label('Potongan Intensif')
-                    ->numeric()
                     ->prefix('Rp')
+                    ->currencyMask(0)
                     ->default(0)
                     ->live(onBlur: true)
                     ->afterStateUpdated(fn ($state, callable $get, callable $set) => self::hitungTotal($get, $set))
@@ -71,8 +71,8 @@ class PotTunjanganResource extends Resource
 
                 TextInput::make('total_potongan')
                     ->label('Total Potongan')
-                    ->numeric()
                     ->prefix('Rp')
+                    ->currencyMask(0)
                     ->disabled()
                     ->dehydrated()
                     ->default(0),
@@ -87,9 +87,9 @@ class PotTunjanganResource extends Resource
 
     public static function hitungTotal($get, $set): void
     {
-        $jabatan = (float) ($get('potongan_jabatan') ?? 0);
-        $kompetensi = (float) ($get('potongan_kompetensi') ?? 0);
-        $intensif = (float) ($get('potongan_intensif') ?? 0);
+        $jabatan = \App\Support\MoneyHelper::clean($get('potongan_jabatan')) ?? 0;
+        $kompetensi = \App\Support\MoneyHelper::clean($get('potongan_kompetensi')) ?? 0;
+        $intensif = \App\Support\MoneyHelper::clean($get('potongan_intensif')) ?? 0;
 
         $set('total_potongan', round($jabatan + $kompetensi + $intensif, 2));
     }

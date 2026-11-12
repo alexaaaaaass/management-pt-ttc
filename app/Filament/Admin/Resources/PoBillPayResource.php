@@ -146,18 +146,18 @@ protected static ?int $navigationSort = 12;
 
                                     ->searchable(),
 
-                                TextInput::make(
-                                    'nominal_pembayaran'
-                                )
-                                    ->numeric()
+                                TextInput::make('nominal_pembayaran')
+                                    ->label('Nominal Pembayaran')
                                     ->prefix('Rp')
+                                    ->currencyMask(2)
+                                    ->placeholder('0.00')
                                     ->required()
                                     ->extraInputAttributes(['onwheel' => 'this.blur()'])
-                                    ->helperText('Otomatis dibulatkan ke sisa tagihan jika selisih ≤ Rp 1.000')
+                                    ->helperText('Otomatis diberi pemisah ribuan. Dibulatkan ke sisa tagihan jika selisih ≤ Rp 1.000')
                                     ->live(onBlur: true)
                                     ->afterStateUpdated(function ($state, Get $get, Set $set) {
                                         $items = $get('../../items') ?? [];
-                                        $total = collect($items)->sum(fn ($item) => (float) ($item['nominal_pembayaran'] ?? 0));
+                                        $total = collect($items)->sum(fn ($item) => \App\Support\MoneyHelper::clean($item['nominal_pembayaran'] ?? 0));
                                         $sisaTagihan = (float) ($get('../../total_tagihan') ?? 0);
 
                                         if (
@@ -167,7 +167,8 @@ protected static ?int $navigationSort = 12;
                                             abs($sisaTagihan - $total) <= \App\Services\Finance\PoBillPayService::PAYMENT_TOLERANCE
                                         ) {
                                             $diff = round($sisaTagihan - $total, 2);
-                                            $adjusted = round((float) $state + $diff, 2);
+                                            $currVal = \App\Support\MoneyHelper::clean($state) ?? 0;
+                                            $adjusted = round($currVal + $diff, 2);
                                             $set('nominal_pembayaran', $adjusted);
                                             $total = $sisaTagihan;
 
@@ -339,7 +340,10 @@ protected static ?int $navigationSort = 12;
             // Total Pembayaran yang diinput / dijumlahkan dari repeater
             Tables\Columns\TextColumn::make('total_pembayaran')
                 ->label('Total Bayar')
-                ->money('IDR', locale: 'id')
+                ->formatStateUsing(function ($state) {
+                    $val = (float) $state;
+                    return 'Rp ' . (fmod(round($val, 2), 1.0) != 0.0 ? number_format($val, 2, ',', '.') : number_format($val, 0, ',', '.'));
+                })
                 ->sortable()
                 ->badge()
                 ->color(fn (string $state): string => 'success'),
