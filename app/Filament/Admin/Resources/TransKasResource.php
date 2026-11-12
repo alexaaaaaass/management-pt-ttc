@@ -143,10 +143,53 @@ class TransKasResource extends Resource
 
                                 TextInput::make('nominal')
                                     ->label('Nominal Transaksi')
-                                    ->numeric()
                                     ->prefix('Rp')
-                                    ->minValue(1)
-                                    ->required(),
+                                    ->required()
+                                    ->placeholder('Contoh: 503219386.91 atau 503,219,386.91')
+                                    ->helperText('💡 Masukkan nominal transaksi. Mendukung pecahan desimal sen (titik atau koma, misal: 503219386.91 atau copy-paste 503,219,386.91).')
+                                    ->extraInputAttributes(['inputmode' => 'decimal'])
+                                    ->formatStateUsing(fn ($state) => $state !== null ? (string) $state : null)
+                                    ->dehydrateStateUsing(function ($state) {
+                                        if (is_numeric($state)) {
+                                            return (float) $state;
+                                        }
+                                        if (is_string($state)) {
+                                            $cleaned = trim($state);
+                                            if (preg_match('/^\d{1,3}(,\d{3})+(\.\d+)?$/', $cleaned)) {
+                                                $cleaned = str_replace(',', '', $cleaned);
+                                            } elseif (preg_match('/^\d{1,3}(\.\d{3})+(,\d+)?$/', $cleaned)) {
+                                                $cleaned = str_replace('.', '', $cleaned);
+                                                $cleaned = str_replace(',', '.', $cleaned);
+                                            } elseif (strpos($cleaned, ',') !== false && strpos($cleaned, '.') === false) {
+                                                $cleaned = str_replace(',', '.', $cleaned);
+                                            } else {
+                                                $cleaned = preg_replace('/[^\d.]/', '', $cleaned);
+                                            }
+                                            return (float) $cleaned;
+                                        }
+                                        return (float) $state;
+                                    })
+                                    ->rules([
+                                        'required',
+                                        function ($attribute, $value, $fail) {
+                                            $clean = is_string($value) ? trim($value) : $value;
+                                            if (is_string($clean)) {
+                                                if (preg_match('/^\d{1,3}(,\d{3})+(\.\d+)?$/', $clean)) {
+                                                    $clean = str_replace(',', '', $clean);
+                                                } elseif (preg_match('/^\d{1,3}(\.\d{3})+(,\d+)?$/', $clean)) {
+                                                    $clean = str_replace('.', '', $clean);
+                                                    $clean = str_replace(',', '.', $clean);
+                                                } elseif (strpos($clean, ',') !== false && strpos($clean, '.') === false) {
+                                                    $clean = str_replace(',', '.', $clean);
+                                                } else {
+                                                    $clean = preg_replace('/[^\d.]/', '', $clean);
+                                                }
+                                            }
+                                            if (!is_numeric($clean) || (float) $clean <= 0) {
+                                                $fail('Nominal transaksi harus berupa angka lebih dari 0.');
+                                            }
+                                        },
+                                    ]),
                             ]),
 
                         Grid::make(2)
@@ -190,7 +233,10 @@ class TransKasResource extends Resource
 
                 Tables\Columns\TextColumn::make('nominal')
                     ->label('Nominal')
-                    ->money('IDR')
+                    ->formatStateUsing(function ($state) {
+                        $val = (float) $state;
+                        return 'Rp ' . (fmod(round($val, 2), 1.0) != 0.0 ? number_format($val, 2, ',', '.') : number_format($val, 0, ',', '.'));
+                    })
                     ->sortable(),
 
                 Tables\Columns\TextColumn::make('accountKas.nama_akun')
