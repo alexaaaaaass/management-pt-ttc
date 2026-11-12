@@ -198,3 +198,4 @@ class FinishGoodItemController extends Controller
         ]);
     }
 }
+

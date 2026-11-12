@@ -3,6 +3,9 @@
 use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\Costing\HppCalculatorController;
 use App\Http\Controllers\Api\V1\DashboardController;
+use App\Http\Controllers\Api\V1\Marketing\ApprovalFormController;
+use App\Http\Controllers\Api\V1\Marketing\OrderConfirmationController;
+use App\Http\Controllers\Api\V1\Marketing\SalesOrderController;
 use App\Http\Controllers\Api\V1\Master\CategoryItemController;
 use App\Http\Controllers\Api\V1\Master\CustomerController;
 use App\Http\Controllers\Api\V1\Master\FinishGoodItemController;
@@ -84,6 +87,19 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
             Route::apiResource('/users', UserController::class)->except(['show']);
             Route::get('/permissions', [RoleController::class, 'permissions'])->name('permissions.index');
             Route::apiResource('/roles', RoleController::class)->except(['show']);
+        });
+
+        // Marketing End-to-End Workflow (Fase 3)
+        Route::prefix('marketing')->name('marketing.')->group(function () {
+            Route::get('/approval-forms/options', [ApprovalFormController::class, 'options'])->name('approval-forms.options');
+            Route::post('/approval-forms/{approvalForm}/convert-to-oc', [ApprovalFormController::class, 'convertToOc'])->name('approval-forms.convert-to-oc');
+            Route::apiResource('/approval-forms', ApprovalFormController::class)->except(['show']);
+
+            Route::post('/order-confirmations/{orderConfirmation}/convert-to-so', [OrderConfirmationController::class, 'convertToSo'])->name('order-confirmations.convert-to-so');
+            Route::apiResource('/order-confirmations', OrderConfirmationController::class)->except(['store']);
+
+            Route::get('/sales-orders/options', [SalesOrderController::class, 'options'])->name('sales-orders.options');
+            Route::apiResource('/sales-orders', SalesOrderController::class)->except(['show']);
         });
     });
 });
