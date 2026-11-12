@@ -6,11 +6,16 @@ use App\Http\Controllers\Controller;
 use App\Models\Customer;
 use App\Models\FinishGoodItem;
 use App\Models\SalesOrder;
+use App\Services\Sales\SalesOrderService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class SalesOrderController extends Controller
 {
+    public function __construct(
+        protected SalesOrderService $salesOrderService
+    ) {}
+
     public function index(Request $request): JsonResponse
     {
         $query = SalesOrder::with(['customer', 'itemable', 'orderConfirmation']);
@@ -49,14 +54,26 @@ class SalesOrderController extends Controller
 
     public function options(): JsonResponse
     {
+        $finishGoods = FinishGoodItem::with('stock')
+            ->select(
+                'id', 'customer_id', 'kode_material_produk', 'nama_barang',
+                'jenis', 'komponen', 'isi', 'spesifikasi_kertas', 'warna', 'finishing'
+            )
+            ->orderBy('nama_barang')
+            ->get()
+            ->map(function (FinishGoodItem $fg) {
+                return array_merge($fg->toArray(), [
+                    'on_hand_stock'     => (float) ($fg->stock?->on_hand ?? 0),
+                    'reserved_stock'    => (float) ($fg->stock?->reserved ?? 0),
+                    'free_buffer_stock' => (float) ($fg->stock?->available ?? 0),
+                ]);
+            });
+
         return response()->json([
             'customers' => Customer::select('id', 'kode_customer', 'nama_customer')
                 ->orderBy('nama_customer')
                 ->get(),
-            'finish_goods' => FinishGoodItem::select(
-                'id', 'customer_id', 'kode_material_produk', 'nama_barang',
-                'jenis', 'komponen', 'isi', 'spesifikasi_kertas', 'warna', 'finishing'
-            )->orderBy('nama_barang')->get(),
+            'finish_goods' => $finishGoods,
         ]);
     }
 
@@ -70,6 +87,8 @@ class SalesOrderController extends Controller
             'tanggal_po'           => ['required', 'date'],
             'lead_time'            => ['nullable', 'string', 'max:100'],
             'qty'                  => ['required', 'numeric', 'min:1'],
+            'fulfillment_type'     => ['nullable', 'in:PRODUCTION,FROM_STOCK,PARTIAL_STOCK'],
+            'qty_from_stock'       => ['nullable', 'numeric', 'min:0'],
             'harga_pcs'            => ['required', 'numeric', 'min:0'],
             'diskon'               => ['nullable', 'numeric', 'min:0'],
             'syarat_pembayaran'    => ['nullable', 'string', 'max:255'],
@@ -80,7 +99,7 @@ class SalesOrderController extends Controller
         $fg = FinishGoodItem::findOrFail($validated['itemable_id']);
         $noSo = $validated['no_sales_order'] ?: ('SO-' . date('ym') . '-' . str_pad((SalesOrder::withTrashed()->count() + 1), 4, '0', STR_PAD_LEFT));
 
-        $so = SalesOrder::create([
+        $so = $this->salesOrderService->createSalesOrder([
             'customer_id'          => $validated['customer_id'],
             'itemable_type'        => FinishGoodItem::class,
             'itemable_id'          => $fg->id,
@@ -92,6 +111,8 @@ class SalesOrderController extends Controller
             'lead_time'            => $validated['lead_time'] ?? '21 Hari Kerja',
             'order_type'           => 'SPK',
             'qty'                  => (float) $validated['qty'],
+            'fulfillment_type'     => $validated['fulfillment_type'] ?? 'PRODUCTION',
+            'qty_from_stock'       => (float) ($validated['qty_from_stock'] ?? 0),
             'harga_pcs'            => (float) $validated['harga_pcs'],
             'harga_kirim'          => 0,
             'diskon'               => (float) ($validated['diskon'] ?? 0),
@@ -123,6 +144,8 @@ class SalesOrderController extends Controller
             'tanggal_po'           => ['required', 'date'],
             'lead_time'            => ['nullable', 'string', 'max:100'],
             'qty'                  => ['required', 'numeric', 'min:1'],
+            'fulfillment_type'     => ['nullable', 'in:PRODUCTION,FROM_STOCK,PARTIAL_STOCK'],
+            'qty_from_stock'       => ['nullable', 'numeric', 'min:0'],
             'harga_pcs'            => ['required', 'numeric', 'min:0'],
             'diskon'               => ['nullable', 'numeric', 'min:0'],
             'syarat_pembayaran'    => ['nullable', 'string', 'max:255'],
@@ -132,7 +155,8 @@ class SalesOrderController extends Controller
 
         $fg = FinishGoodItem::findOrFail($validated['itemable_id']);
 
-        $salesOrder->update([
+        $updated = $this->salesOrderService->updateSalesOrder($salesOrder, [
+            'order_type'           => $salesOrder->order_type ?? 'SPK',
             'customer_id'          => $validated['customer_id'],
             'itemable_id'          => $fg->id,
             'kode_material'        => $fg->kode_material_produk,
@@ -141,6 +165,8 @@ class SalesOrderController extends Controller
             'tanggal_po'           => $validated['tanggal_po'],
             'lead_time'            => $validated['lead_time'] ?? '21 Hari Kerja',
             'qty'                  => (float) $validated['qty'],
+            'fulfillment_type'     => $validated['fulfillment_type'] ?? ($salesOrder->fulfillment_type ?? 'PRODUCTION'),
+            'qty_from_stock'       => array_key_exists('qty_from_stock', $validated) ? (float) $validated['qty_from_stock'] : (float) ($salesOrder->qty_from_stock ?? 0),
             'harga_pcs'            => (float) $validated['harga_pcs'],
             'diskon'               => (float) ($validated['diskon'] ?? 0),
             'syarat_pembayaran'    => $validated['syarat_pembayaran'] ?? '30 Hari setelah invoice',
@@ -149,8 +175,8 @@ class SalesOrderController extends Controller
         ]);
 
         return response()->json([
-            'message' => "Sales Order {$salesOrder->no_sales_order} berhasil diperbarui.",
-            'data'    => $salesOrder->fresh(['customer', 'itemable']),
+            'message' => "Sales Order {$updated->no_sales_order} berhasil diperbarui.",
+            'data'    => $updated->fresh(['customer', 'itemable']),
         ]);
     }
 

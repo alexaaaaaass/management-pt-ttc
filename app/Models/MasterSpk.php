@@ -100,7 +100,15 @@ class MasterSpk extends Model
 
     public function getOrderQtyAttribute(): int
     {
-        return (int) ($this->salesOrder?->qty ?? 0);
+        if (! $this->salesOrder) {
+            return 0;
+        }
+
+        if ($this->salesOrder->fulfillment_type === 'PARTIAL_STOCK' && (float) ($this->salesOrder->qty_to_produce ?? 0) > 0) {
+            return (int) $this->salesOrder->qty_to_produce;
+        }
+
+        return (int) ($this->salesOrder->qty ?? 0);
     }
 
     public function getTotalGoodPackedAttribute(): int

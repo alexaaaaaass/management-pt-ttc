@@ -231,10 +231,8 @@ class SalesOrderResource extends Resource
                                         $set('warna', $item?->warna);
                                         $set('finishing', $item?->finishing);
 
-                                        // Otomatis tarik Bill of Material (BOM)
-                                        $qtyPesanan = (float) ($get('qty') ?? 0);
-                                        $bom = app(\App\Services\Sales\SalesOrderService::class)->getBomPreview((int) $state, $qtyPesanan);
-                                        $set('bom_items', $bom);
+                                        // Otomatis tarik Bill of Material (BOM) sesuai porsi produksi
+                                        static::syncFulfillmentAndBom($set, $get);
                                     } else {
                                         $item = \App\Models\MasterItem::find($state);
 
@@ -307,27 +305,39 @@ class SalesOrderResource extends Resource
                                 ->label('Jumlah Pesanan')
                                 ->quantityMask(0)
                                 ->live(debounce: 500)
-                                ->afterStateUpdated(function ($state, callable $set, callable $get) {
-                                    $fgId = $get('item_source');
-                                    if ($fgId && $get('order_type') === 'SPK') {
-                                        $bom = app(\App\Services\Sales\SalesOrderService::class)->getBomPreview((int) $fgId, (float) ($state ?? 0));
-                                        $set('bom_items', $bom);
+                                ->afterStateUpdated(function ($state, callable $set, callable $get, $record) {
+                                    if ($get('order_type') === 'SPK') {
+                                        static::syncFulfillmentAndBom($set, $get, $record);
                                     }
                                 })
-                                ->rule(function ($get) {
+                                ->rule(function ($get, $record) {
                                     if ($get('order_type') === 'MATERIAL') {
                                         return null;
                                     }
                                     
-                                    return function (string $attribute, $value, \Closure $fail) use ($get) {
+                                    return function (string $attribute, $value, \Closure $fail) use ($get, $record) {
                                         $itemableType = $get('itemable_type');
                                         $itemableId = $get('itemable_id');
 
                                         if ($itemableType !== \App\Models\FinishGoodItem::class || !$itemableId) return;
 
+                                        $fulfillment = $get('fulfillment_type') ?? 'PRODUCTION';
+                                        $qtyVal = (float) $value;
+                                        $qtyFromStock = (float) ($get('qty_from_stock') ?? 0);
+
+                                        $qtyToProduce = match ($fulfillment) {
+                                            'FROM_STOCK'    => 0.0,
+                                            'PARTIAL_STOCK' => max(0.0, $qtyVal - $qtyFromStock),
+                                            default         => $qtyVal,
+                                        };
+
+                                        if ($qtyToProduce <= 0) {
+                                            return;
+                                        }
+
                                         $shortages = app(\App\Services\Inventory\StockService::class)->checkBomShortages(
                                             (int) $itemableId,
-                                            (float) $value
+                                            $qtyToProduce
                                         );
 
                                         if (!empty($shortages)) {
@@ -336,6 +346,126 @@ class SalesOrderResource extends Resource
                                         }
                                     };
                                 }),
+
+                            Forms\Components\Placeholder::make('buffer_stock_info')
+                                ->label('Status Buffer Stock Warehouse')
+                                ->visible(fn (Get $get) => $get('order_type') === 'SPK' && ! empty($get('itemable_id')))
+                                ->columnSpanFull()
+                                ->content(function (Get $get, $record) {
+                                    $fgId = (int) ($get('itemable_id') ?: $get('item_source') ?: 0);
+                                    if (! $fgId) {
+                                        return '-';
+                                    }
+
+                                    $stock = \App\Models\FinishGoodStock::where('finish_good_item_id', $fgId)->first();
+                                    $onHand = (float) ($stock?->on_hand ?? 0);
+                                    $reserved = (float) ($stock?->reserved ?? 0);
+                                    $free = max(0.0, $onHand - $reserved);
+
+                                    if ($record && (int) $record->itemable_id === $fgId) {
+                                        $alreadyShipped = (float) $record->suratJalans()->sum('qty_pengiriman');
+                                        $ownReserved = max(0.0, (float) ($record->qty_from_stock ?? 0) - $alreadyShipped);
+                                        $free += $ownReserved;
+                                        $reservedOther = max(0.0, $reserved - $ownReserved);
+                                    } else {
+                                        $reservedOther = $reserved;
+                                    }
+
+                                    $badgeColor = $free > 0
+                                        ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-300'
+                                        : 'border-gray-600/40 bg-gray-800/40 text-gray-300';
+
+                                    $statusText = $free > 0
+                                        ? 'Tersedia Buffer Stock bebas siap pakai untuk langsung dipotong tanpa/kurangi SPK.'
+                                        : 'Belum ada Buffer Stock bebas di gudang — pesanan perlu diproduksi via SPK.';
+
+                                    return new \Illuminate\Support\HtmlString(
+                                        '<div class="rounded-lg border p-3 text-sm ' . $badgeColor . '">'
+                                        . '<div class="font-semibold mb-1">' . $statusText . '</div>'
+                                        . '<div class="flex flex-wrap gap-4 text-xs">'
+                                        . '<span>Total Fisik (On Hand): <strong>' . number_format($onHand, 0, ',', '.') . ' pcs</strong></span>'
+                                        . '<span>Reserved SO Lain: <strong>' . number_format($reservedOther, 0, ',', '.') . ' pcs</strong></span>'
+                                        . '<span>Buffer Stock Bebas: <strong>' . number_format($free, 0, ',', '.') . ' pcs</strong></span>'
+                                        . '</div></div>'
+                                    );
+                                }),
+
+                            Forms\Components\Select::make('fulfillment_type')
+                                ->label('Metode Pemenuhan Order')
+                                ->visible(fn (Get $get) => $get('order_type') === 'SPK')
+                                ->required(fn (Get $get) => $get('order_type') === 'SPK')
+                                ->default('PRODUCTION')
+                                ->native(false)
+                                ->live()
+                                ->options([
+                                    'PRODUCTION'    => 'Produksi Baru (Buat SPK Penuh)',
+                                    'FROM_STOCK'    => 'Ambil Full dari Buffer Stock Warehouse (Tanpa SPK)',
+                                    'PARTIAL_STOCK' => 'Kombinasi: Sebagian Buffer Stock + Sebagian Produksi SPK',
+                                ])
+                                ->afterStateUpdated(function ($state, callable $set, callable $get, $record) {
+                                    static::syncFulfillmentAndBom($set, $get, $record);
+                                })
+                                ->rule(function (Get $get, $record) {
+                                    return function (string $attribute, $value, \Closure $fail) use ($get, $record) {
+                                        if ($value !== 'FROM_STOCK') {
+                                            return;
+                                        }
+
+                                        $fgId = (int) ($get('itemable_id') ?: $get('item_source') ?: 0);
+                                        $qty = (float) ($get('qty') ?? 0);
+                                        if (! $fgId || $qty <= 0) {
+                                            return;
+                                        }
+
+                                        $free = static::getEffectiveFreeBufferForForm($fgId, $record);
+                                        if ($free < $qty) {
+                                            $fail("Buffer stock bebas hanya tersedia " . number_format($free, 0, ',', '.') . " pcs (kurang dari {$qty} pcs). Pilih Kombinasi atau Produksi Baru.");
+                                        }
+                                    };
+                                }),
+
+                            Forms\Components\TextInput::make('qty_from_stock')
+                                ->label('Qty Diambil dari Buffer Stock (pcs)')
+                                ->visible(fn (Get $get) => $get('order_type') === 'SPK' && $get('fulfillment_type') !== 'PRODUCTION')
+                                ->numeric()
+                                ->default(0)
+                                ->dehydrated()
+                                ->readOnly(fn (Get $get) => $get('fulfillment_type') === 'FROM_STOCK')
+                                ->live(debounce: 400)
+                                ->afterStateUpdated(function ($state, callable $set, callable $get, $record) {
+                                    static::syncFulfillmentAndBom($set, $get, $record, true);
+                                })
+                                ->rule(function (Get $get, $record) {
+                                    return function (string $attribute, $value, \Closure $fail) use ($get, $record) {
+                                        if (($get('fulfillment_type') ?? 'PRODUCTION') !== 'PARTIAL_STOCK') {
+                                            return;
+                                        }
+
+                                        $fgId = (int) ($get('itemable_id') ?: $get('item_source') ?: 0);
+                                        $qty = (float) ($get('qty') ?? 0);
+                                        $val = (float) $value;
+
+                                        if ($val > $qty) {
+                                            $fail("Qty dari stock tidak boleh melebihi Jumlah Pesanan ({$qty}).");
+                                            return;
+                                        }
+
+                                        if ($fgId) {
+                                            $free = static::getEffectiveFreeBufferForForm($fgId, $record);
+                                            if ($val > $free) {
+                                                $fail("Qty melebihi Buffer Stock bebas tersedia (" . number_format($free, 0, ',', '.') . " pcs).");
+                                            }
+                                        }
+                                    };
+                                }),
+
+                            Forms\Components\TextInput::make('qty_to_produce')
+                                ->label('Qty Sisa Wajib Diproduksi via SPK (pcs)')
+                                ->visible(fn (Get $get) => $get('order_type') === 'SPK' && $get('fulfillment_type') !== 'PRODUCTION')
+                                ->numeric()
+                                ->default(0)
+                                ->readOnly()
+                                ->dehydrated(),
 
                             Forms\Components\TextInput::make('harga_pcs')
                                 ->label('Harga pcs')
@@ -619,6 +749,22 @@ class SalesOrderResource extends Resource
                     ->badge()
                     ->color(fn ($state) => $state === 'SPK' ? 'info' : 'warning'),
 
+                Tables\Columns\TextColumn::make('fulfillment_type')
+                    ->label('Sumber Pemenuhan')
+                    ->badge()
+                    ->formatStateUsing(fn (?string $state, $record) => match (true) {
+                        $record->order_type !== 'SPK' => '-',
+                        $state === 'FROM_STOCK'       => 'Buffer Stock',
+                        $state === 'PARTIAL_STOCK'    => 'Buffer (' . number_format((float) $record->qty_from_stock, 0, ',', '.') . ') + SPK (' . number_format((float) $record->qty_to_produce, 0, ',', '.') . ')',
+                        default                       => 'Produksi SPK',
+                    })
+                    ->color(fn (?string $state, $record) => match (true) {
+                        $record->order_type !== 'SPK' => 'gray',
+                        $state === 'FROM_STOCK'       => 'success',
+                        $state === 'PARTIAL_STOCK'    => 'warning',
+                        default                       => 'info',
+                    }),
+
                 Tables\Columns\TextColumn::make('customer.nama_customer')
                     ->label('Customer')
                     ->searchable(),
@@ -728,5 +874,61 @@ class SalesOrderResource extends Resource
             'create' => Pages\CreateSalesOrder::route('/create'),
             'edit'   => Pages\EditSalesOrder::route('/{record}/edit'),
         ];
+    }
+
+    /**
+     * Sinkronisasi qty_from_stock, qty_to_produce, dan pratinjau BOM sesuai metode pemenuhan order.
+     */
+    protected static function syncFulfillmentAndBom(
+        callable $set,
+        callable $get,
+        ?\App\Models\SalesOrder $record = null,
+        bool $preferExistingQtyFromStock = false
+    ): void {
+        $fgId = (int) ($get('itemable_id') ?: $get('item_source') ?: 0);
+        $qty = max(0.0, (float) ($get('qty') ?? 0));
+        $mode = $get('fulfillment_type') ?: 'PRODUCTION';
+
+        $effectiveFree = $fgId ? static::getEffectiveFreeBufferForForm($fgId, $record) : 0.0;
+
+        if ($mode === 'FROM_STOCK') {
+            $qtyFromStock = $qty;
+            $qtyToProduce = 0.0;
+        } elseif ($mode === 'PARTIAL_STOCK') {
+            $rawFromStock = $preferExistingQtyFromStock
+                ? (float) ($get('qty_from_stock') ?? 0)
+                : min($qty, $effectiveFree);
+            $qtyFromStock = min($qty, max(0.0, $rawFromStock));
+            $qtyToProduce = max(0.0, $qty - $qtyFromStock);
+        } else {
+            $qtyFromStock = 0.0;
+            $qtyToProduce = $qty;
+        }
+
+        $set('qty_from_stock', $qtyFromStock);
+        $set('qty_to_produce', $qtyToProduce);
+
+        if ($fgId && $qtyToProduce > 0) {
+            $bom = app(\App\Services\Sales\SalesOrderService::class)->getBomPreview($fgId, $qtyToProduce);
+            $set('bom_items', $bom);
+        } else {
+            $set('bom_items', []);
+        }
+    }
+
+    /**
+     * Hitung Buffer Stock bebas termasuk sisa alokasi milik SO yang sedang diedit.
+     */
+    protected static function getEffectiveFreeBufferForForm(int $fgId, ?\App\Models\SalesOrder $record = null): float
+    {
+        $free = app(\App\Services\Inventory\FinishGoodStockService::class)->getFreeBufferStock($fgId);
+
+        if ($record && (int) $record->itemable_id === $fgId) {
+            $alreadyShipped = (float) $record->suratJalans()->sum('qty_pengiriman');
+            $ownReserved = max(0.0, (float) ($record->qty_from_stock ?? 0) - $alreadyShipped);
+            $free += $ownReserved;
+        }
+
+        return $free;
     }
 }

@@ -42,7 +42,9 @@ public static function form(Form $form): Form
                             ->relationship(
                                 name: 'salesOrder',
                                 titleAttribute: 'no_sales_order',
-                                modifyQueryUsing: fn (Builder $query) => $query->where('order_type', 'SPK')
+                                modifyQueryUsing: fn (Builder $query) => $query
+                                    ->where('order_type', 'SPK')
+                                    ->where(fn (Builder $q) => $q->whereNull('fulfillment_type')->orWhere('fulfillment_type', '!=', 'FROM_STOCK'))
                             )
                             ->searchable()
                             ->preload()
@@ -55,9 +57,13 @@ public static function form(Form $form): Form
 
                                 if (!$so) return;
 
+                                $qtyToProduce = ($so->fulfillment_type === 'PARTIAL_STOCK' && (float) $so->qty_to_produce > 0)
+                                    ? (float) $so->qty_to_produce
+                                    : (float) $so->qty;
+
                                 // 🔹 data SO
                                 $set('tanggal_po', $so->tanggal_po);
-                                $set('qty', $so->qty);
+                                $set('qty', $qtyToProduce);
                                 $set('customer_name', $so->customer->nama_customer ?? '-');
                                 $set('no_po_customer', $so->no_po_customer);
                                 $set('tipe_pesanan', $so->tipe_pesanan);
@@ -131,10 +137,20 @@ public static function form(Form $form): Form
                                     // 🔹 KANAN
                                     Forms\Components\Grid::make(1)->schema([
                                         Forms\Components\Placeholder::make('qty_display')
-                                            ->label('Jumlah Pesanan')
-                                            ->content(fn (Get $get) =>
-                                                optional(SalesOrder::find($get('sales_order_id')))->qty ?? '-'
-                                            ),
+                                            ->label('Jumlah Wajib Produksi SPK')
+                                            ->content(function (Get $get) {
+                                                $so = SalesOrder::find($get('sales_order_id'));
+                                                if (! $so) {
+                                                    return '-';
+                                                }
+                                                if ($so->fulfillment_type === 'PARTIAL_STOCK') {
+                                                    return number_format((float) $so->qty_to_produce, 0, ',', '.')
+                                                        . ' pcs (Total SO: ' . number_format((float) $so->qty, 0, ',', '.')
+                                                        . ' | Buffer Stock: ' . number_format((float) $so->qty_from_stock, 0, ',', '.') . ' pcs)';
+                                                }
+
+                                                return $so->qty ?? '-';
+                                            }),
 
                                         Forms\Components\Placeholder::make('toleransi')
                                             ->label('Toleransi')
