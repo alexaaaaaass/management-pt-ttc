@@ -7,6 +7,7 @@ use Filament\Forms\Components\Checkbox;
 use Filament\Forms\Components\Grid;
 use Filament\Forms\Components\Hidden;
 use Filament\Forms\Components\Placeholder;
+use Filament\Forms\Components\Radio;
 use Filament\Forms\Components\Section;
 use Filament\Forms\Components\Tabs;
 use Filament\Forms\Components\TextInput;
@@ -72,9 +73,9 @@ class FlexoHppModalSchema
         $set('biaya_proses_cetak_total', $result['biaya_proses_cetak_total']);
         $set('biaya_proses_per_etiket', $result['biaya_proses_per_etiket']);
 
-        $set('total_biaya_order', $result['total_biaya_order']);
-        $set('hpp_per_etiket', $result['hpp_per_etiket']);
-        $set('harga_jual_indikatif', $result['harga_jual_indikatif']);
+        $set('total_biaya_order', \App\Support\MoneyHelper::format($result['total_biaya_order'], 2));
+        $set('hpp_per_etiket', \App\Support\MoneyHelper::format($result['hpp_per_etiket'], 2));
+        $set('harga_jual_indikatif', \App\Support\MoneyHelper::format($result['harga_jual_indikatif'], 2));
     }
 
     /**
@@ -466,28 +467,46 @@ class FlexoHppModalSchema
                                             ->label('Total Biaya Order (Rp)')
                                             ->prefix('Rp')
                                             ->readOnly()
-                                            ->formatStateUsing(fn ($state) => number_format((float)$state, 2, '.', ','))
+                                            ->formatStateUsing(fn ($state) => \App\Support\MoneyHelper::format($state, 2))
                                             ->extraInputAttributes(['style' => 'background-color: rgba(59, 130, 246, 0.15); font-weight: 700; color: #3b82f6; font-size: 14px;']),
 
                                         TextInput::make('hpp_per_etiket')
                                             ->label('HPP Pokok per Etiket (Rp/pcs)')
                                             ->prefix('Rp')
                                             ->readOnly()
-                                            ->formatStateUsing(fn ($state) => number_format((float)$state, 2, '.', ','))
+                                            ->formatStateUsing(fn ($state) => \App\Support\MoneyHelper::format($state, 2))
                                             ->extraInputAttributes(['style' => 'background-color: rgba(245, 158, 11, 0.2); font-weight: 800; color: #f59e0b; font-size: 16px;']),
 
                                         TextInput::make('harga_jual_indikatif')
                                             ->label('Harga Jual Indikatif (+Margin) (Rp/pcs)')
                                             ->prefix('Rp')
                                             ->readOnly()
-                                            ->formatStateUsing(fn ($state) => number_format((float)$state, 2, '.', ','))
+                                            ->formatStateUsing(fn ($state) => \App\Support\MoneyHelper::format($state, 2))
                                             ->extraInputAttributes(['style' => 'background-color: rgba(16, 185, 129, 0.25); font-weight: 800; color: #10b981; font-size: 16px;']),
                                     ]),
 
+                                    Radio::make('harga_mode')
+                                        ->label('Pengaturan Harga Satuan & Fix HPP')
+                                        ->options([
+                                            'indikatif' => 'Gunakan Harga Jual Indikatif (+Margin) ke Harga (Rp/pcs)',
+                                            'hpp'       => 'Samakan Harga (Rp/pcs) dengan HPP Pokok (Margin 0%)',
+                                            'custom'    => 'Setting Fix HPP / Harga Satuan Manual (Samakan HPP & Harga per Pcs)',
+                                        ])
+                                        ->default('indikatif')
+                                        ->live(),
+
+                                    TextInput::make('fix_hpp_manual')
+                                        ->label('Nilai Fix HPP / Harga Satuan (Rp/pcs)')
+                                        ->prefix('Rp')
+                                        ->currencyMask(2)
+                                        ->visible(fn (Get $get) => $get('harga_mode') === 'custom')
+                                        ->required(fn (Get $get) => $get('harga_mode') === 'custom')
+                                        ->helperText('Nilai ini akan diterapkan sekaligus ke HPP Pokok dan Harga (Rp/pcs) agar sama persis sehingga tidak membingungkan.'),
+
                                     Checkbox::make('apply_harga_to_item')
-                                        ->label('Terapkan Harga Jual Indikatif ini langsung ke field "Harga (Rp/pcs)" penawaran item')
+                                        ->label('Terapkan nilai harga yang dipilih langsung ke field "Harga (Rp/pcs)" penawaran item')
                                         ->default(true)
-                                        ->helperText('Jika dicentang, saat Anda klik "Simpan & Terapkan", harga satuan item penawaran akan otomatis terisi nilai harga jual indikatif di atas.'),
+                                        ->helperText('Jika dicentang, saat Anda klik "Simpan & Terapkan", harga satuan item penawaran akan otomatis terisi dan diformat rapi.'),
                                 ]),
                         ]),
                 ])

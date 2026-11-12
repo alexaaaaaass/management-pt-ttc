@@ -34,19 +34,13 @@ class OrderConfirmationResource extends Resource
 
     public static function cleanNumeric(mixed $value): float
     {
-        if ($value === null || $value === '') {
-            return 0.0;
-        }
-        if (is_numeric($value)) {
-            return (float) $value;
-        }
-        return (float) str_replace([',', ' '], '', (string) $value);
+        return \App\Support\MoneyHelper::clean($value) ?? 0.0;
     }
 
-    public static function formatCurrency(mixed $value): string
+    public static function formatCurrency(mixed $value, int $precision = 2): string
     {
         $num = static::cleanNumeric($value);
-        return number_format($num, 0, '.', ',');
+        return \App\Support\MoneyHelper::format($num, $precision) ?? '0';
     }
 
     public static function updateTotals(Get $get, Set $set, bool $isInsideRow = false): void
@@ -60,8 +54,8 @@ class OrderConfirmationResource extends Resource
             $subtotal += ($qty * $harga);
         }
         $diskon = static::cleanNumeric($get($prefix . 'diskon'));
-        $set($prefix . 'subtotal', $subtotal);
-        $set($prefix . 'grand_total', max(0, $subtotal - $diskon));
+        $set($prefix . 'subtotal', \App\Support\MoneyHelper::format($subtotal, 2) ?? '0');
+        $set($prefix . 'grand_total', \App\Support\MoneyHelper::format(max(0, $subtotal - $diskon), 2) ?? '0');
     }
 
     public static function form(Form $form): Form
@@ -141,8 +135,8 @@ class OrderConfirmationResource extends Resource
                                                         'warna'                 => $item->warna,
                                                         'finishing'             => $item->finishing,
                                                         'qty'                   => $itemQty,
-                                                        'harga'                 => $calcPrice,
-                                                        'total'                 => $rowTotal,
+                                                        'harga'                 => \App\Support\MoneyHelper::format($calcPrice, 2) ?? '0',
+                                                        'total'                 => \App\Support\MoneyHelper::format($rowTotal, 2) ?? '0',
                                                         'satuan'                => $item->satuan ?: 'Pcs',
                                                         'hpp_per_pcs'           => $calc['hpp_per_etiket'],
                                                         'harga_jual_indikatif'  => $calc['harga_jual_indikatif'],
@@ -280,9 +274,16 @@ class OrderConfirmationResource extends Resource
                                     if (empty($state['item_name'])) {
                                         return 'Item Penawaran';
                                     }
-                                    $label = "{$state['item_name']} — " . number_format((float)($state['qty'] ?? 0), 0, '.', ',') . " Pcs";
-                                    if (!empty($state['hpp_per_pcs']) && (float)$state['hpp_per_pcs'] > 0) {
-                                        $label .= " (HPP: Rp " . number_format((float)$state['hpp_per_pcs'], 2) . " | Kertas: " . number_format((float)($state['kebutuhan_kertas_kg'] ?? 0), 1) . " kg)";
+                                    $qtyVal = static::cleanNumeric($state['qty'] ?? 0);
+                                    $hargaVal = static::cleanNumeric($state['harga'] ?? 0);
+                                    $hppVal = static::cleanNumeric($state['hpp_per_pcs'] ?? 0);
+
+                                    $label = "{$state['item_name']} — " . number_format($qtyVal, 0, '.', ',') . " Pcs";
+                                    if ($hargaVal > 0) {
+                                        $label .= " | Harga: Rp " . (\App\Support\MoneyHelper::format($hargaVal, 2) ?? '0') . "/pcs";
+                                    }
+                                    if ($hppVal > 0) {
+                                        $label .= " (HPP: Rp " . (\App\Support\MoneyHelper::format($hppVal, 2) ?? '0') . " | Kertas: " . number_format((float)($state['kebutuhan_kertas_kg'] ?? 0), 1) . " kg)";
                                     }
                                     return $label;
                                 })
@@ -381,11 +382,11 @@ class OrderConfirmationResource extends Resource
 
                                                     $currentHarga = static::cleanNumeric($get('harga'));
                                                     $priceToApply = ($currentHarga > 0) ? $currentHarga : (float) $calc['harga_jual_indikatif'];
-                                                    $set('harga', $priceToApply);
+                                                    $set('harga', \App\Support\MoneyHelper::format($priceToApply, 2) ?? '0');
 
                                                     $qty = static::cleanNumeric($get('qty'));
                                                     $rowTotal = $qty * $priceToApply;
-                                                    $set('total', $rowTotal);
+                                                    $set('total', \App\Support\MoneyHelper::format($rowTotal, 2) ?? '0');
 
                                                     static::updateTotals($get, $set, isInsideRow: true);
                                                 }
@@ -412,7 +413,7 @@ class OrderConfirmationResource extends Resource
                                                         }
                                                         $harga = static::cleanNumeric($get('harga'));
                                                         $rowTotal = (float) $afItem->qty * $harga;
-                                                        $set('total', $rowTotal);
+                                                        $set('total', \App\Support\MoneyHelper::format($rowTotal, 2) ?? '0');
                                                         static::updateTotals($get, $set, isInsideRow: true);
                                                     }
                                                 }
@@ -487,6 +488,23 @@ class OrderConfirmationResource extends Resource
 
                                                 $calculator = app(FlexoHppCalculatorService::class);
                                                 $calc = $calculator->calculate($data, $targetOrder);
+
+                                                $hargaMode = $data['harga_mode'] ?? 'indikatif';
+                                                $fixManual = static::cleanNumeric($data['fix_hpp_manual'] ?? 0);
+
+                                                if ($hargaMode === 'custom' && $fixManual > 0) {
+                                                    $calc['hpp_per_etiket'] = $fixManual;
+                                                    $calc['harga_jual_indikatif'] = $fixManual;
+                                                    $priceToApply = $fixManual;
+                                                } elseif ($hargaMode === 'hpp') {
+                                                    $calc['harga_jual_indikatif'] = $calc['hpp_per_etiket'];
+                                                    $priceToApply = (float) $calc['hpp_per_etiket'];
+                                                } else {
+                                                    $priceToApply = ($calc['harga_jual_indikatif'] > 0)
+                                                        ? (float) $calc['harga_jual_indikatif']
+                                                        : (float) $calc['hpp_per_etiket'];
+                                                }
+
                                                 $fullData = array_merge($data, $calc);
 
                                                 $set('kalkulasi_hpp_data', $fullData);
@@ -498,24 +516,69 @@ class OrderConfirmationResource extends Resource
                                                 $set('kebutuhan_kertas_kg', $calc['berat_bahan_teoritis']);
                                                 $set('kebutuhan_kertas_meter', $calc['total_panjang_bahan']);
 
-                                                $priceToApply = ($calc['harga_jual_indikatif'] > 0)
-                                                    ? (float) $calc['harga_jual_indikatif']
-                                                    : (float) $calc['hpp_per_etiket'];
-
-                                                if ($priceToApply > 0) {
-                                                    $set('harga', $priceToApply);
+                                                $shouldApply = $data['apply_harga_to_item'] ?? true;
+                                                if ($shouldApply && $priceToApply > 0) {
+                                                    $set('harga', \App\Support\MoneyHelper::format($priceToApply, 2) ?? '0');
                                                     $qty = static::cleanNumeric($get('qty'));
                                                     $rowTotal = $qty * $priceToApply;
-                                                    $set('total', $rowTotal);
+                                                    $set('total', \App\Support\MoneyHelper::format($rowTotal, 2) ?? '0');
 
                                                     static::updateTotals($get, $set, isInsideRow: true);
                                                 }
 
                                                 Notification::make()
                                                     ->title('Kalkulasi HPP & Kertas Berhasil Disimpan')
-                                                    ->body("HPP: Rp " . number_format($calc['hpp_per_etiket'], 2) . " / pcs | Total: Rp " . number_format($rowTotal ?? 0, 0, '.', ',') . " | Kertas: " . number_format($calc['berat_bahan_teoritis'], 2) . " kg")
+                                                    ->body("HPP: Rp " . (\App\Support\MoneyHelper::format($calc['hpp_per_etiket'], 2) ?? '0') . " / pcs | Harga: Rp " . (\App\Support\MoneyHelper::format($priceToApply, 2) ?? '0') . " | Kertas: " . number_format($calc['berat_bahan_teoritis'], 2) . " kg")
                                                     ->success()
                                                     ->send();
+                                            }),
+
+                                        Forms\Components\Actions\Action::make('sync_harga_to_hpp')
+                                            ->label(fn (Get $get) => 'Samakan Harga = HPP (Rp ' . (\App\Support\MoneyHelper::format($get('hpp_per_pcs'), 2) ?? '0') . ')')
+                                            ->button()
+                                            ->outlined()
+                                            ->color('success')
+                                            ->visible(function (Get $get): bool {
+                                                $hpp = static::cleanNumeric($get('hpp_per_pcs'));
+                                                $harga = static::cleanNumeric($get('harga'));
+                                                return $hpp > 0 && abs($hpp - $harga) > 0.01;
+                                            })
+                                            ->action(function (Get $get, Set $set) {
+                                                $hpp = static::cleanNumeric($get('hpp_per_pcs'));
+                                                if ($hpp <= 0) return;
+
+                                                $set('harga', \App\Support\MoneyHelper::format($hpp, 2) ?? '0');
+                                                $set('harga_jual_indikatif', $hpp);
+                                                $qty = static::cleanNumeric($get('qty'));
+                                                $rowTotal = $qty * $hpp;
+                                                $set('total', \App\Support\MoneyHelper::format($rowTotal, 2) ?? '0');
+                                                static::updateTotals($get, $set, isInsideRow: true);
+                                            }),
+
+                                        Forms\Components\Actions\Action::make('fix_hpp_to_harga')
+                                            ->label(fn (Get $get) => 'Jadikan Fix HPP = Harga (Rp ' . (\App\Support\MoneyHelper::format($get('harga'), 2) ?? '0') . ')')
+                                            ->button()
+                                            ->outlined()
+                                            ->color('info')
+                                            ->visible(function (Get $get): bool {
+                                                $hpp = static::cleanNumeric($get('hpp_per_pcs'));
+                                                $harga = static::cleanNumeric($get('harga'));
+                                                return $harga > 0 && abs($hpp - $harga) > 0.01;
+                                            })
+                                            ->action(function (Get $get, Set $set) {
+                                                $harga = static::cleanNumeric($get('harga'));
+                                                if ($harga <= 0) return;
+
+                                                $set('hpp_per_pcs', $harga);
+                                                $set('harga_jual_indikatif', $harga);
+                                                $hppData = $get('kalkulasi_hpp_data');
+                                                if (is_array($hppData)) {
+                                                    $hppData['harga_mode'] = 'custom';
+                                                    $hppData['fix_hpp_manual'] = $harga;
+                                                    $hppData['hpp_per_etiket'] = $harga;
+                                                    $hppData['harga_jual_indikatif'] = $harga;
+                                                    $set('kalkulasi_hpp_data', $hppData);
+                                                }
                                             }),
                                     ]),
 
@@ -594,23 +657,25 @@ class OrderConfirmationResource extends Resource
                                                 $qty = static::cleanNumeric($get('qty'));
                                                 $harga = static::cleanNumeric($get('harga'));
                                                 $rowTotal = $qty * $harga;
-                                                $set('total', $rowTotal);
+                                                $set('total', \App\Support\MoneyHelper::format($rowTotal, 2) ?? '0');
 
-                                                // Update HPP jika sudah pernah dikalkulasi
+                                                // Update HPP jika sudah pernah dikalkulasi dan bukan mode custom fix
                                                 $hppData = $get('kalkulasi_hpp_data');
                                                 if (!empty($hppData) && is_array($hppData) && $qty > 0) {
-                                                    $calculator = app(FlexoHppCalculatorService::class);
-                                                    $recalc = $calculator->calculate($hppData, $qty);
-                                                    $full = array_merge($hppData, $recalc);
-                                                    $full['target_order'] = $qty;
-                                                    $set('kalkulasi_hpp_data', $full);
-                                                    $set('hpp_per_pcs', $recalc['hpp_per_etiket']);
-                                                    $set('harga_jual_indikatif', $recalc['harga_jual_indikatif']);
-                                                    $set('total_biaya_order', $recalc['total_biaya_order']);
-                                                    $set('biaya_bahan', $recalc['biaya_bahan']);
-                                                    $set('biaya_proses', $recalc['biaya_proses_cetak_total']);
-                                                    $set('kebutuhan_kertas_kg', $recalc['berat_bahan_teoritis']);
-                                                    $set('kebutuhan_kertas_meter', $recalc['total_panjang_bahan']);
+                                                    if (($hppData['harga_mode'] ?? 'indikatif') !== 'custom') {
+                                                        $calculator = app(FlexoHppCalculatorService::class);
+                                                        $recalc = $calculator->calculate($hppData, $qty);
+                                                        $full = array_merge($hppData, $recalc);
+                                                        $full['target_order'] = $qty;
+                                                        $set('kalkulasi_hpp_data', $full);
+                                                        $set('hpp_per_pcs', $recalc['hpp_per_etiket']);
+                                                        $set('harga_jual_indikatif', $recalc['harga_jual_indikatif']);
+                                                        $set('total_biaya_order', $recalc['total_biaya_order']);
+                                                        $set('biaya_bahan', $recalc['biaya_bahan']);
+                                                        $set('biaya_proses', $recalc['biaya_proses_cetak_total']);
+                                                        $set('kebutuhan_kertas_kg', $recalc['berat_bahan_teoritis']);
+                                                        $set('kebutuhan_kertas_meter', $recalc['total_panjang_bahan']);
+                                                    }
                                                 }
 
                                                 static::updateTotals($get, $set, isInsideRow: true);
@@ -627,7 +692,7 @@ class OrderConfirmationResource extends Resource
                                                 $qty = static::cleanNumeric($get('qty'));
                                                 $harga = static::cleanNumeric($get('harga'));
                                                 $rowTotal = $qty * $harga;
-                                                $set('total', $rowTotal);
+                                                $set('total', \App\Support\MoneyHelper::format($rowTotal, 2) ?? '0');
 
                                                 static::updateTotals($get, $set, isInsideRow: true);
                                             })
@@ -654,7 +719,7 @@ class OrderConfirmationResource extends Resource
                                         Forms\Components\TextInput::make('subtotal')
                                             ->label('Subtotal (Rp)')
                                             ->prefix('Rp')
-                                            ->numeric()
+                                            ->currencyMask(2)
                                             ->readOnly()
                                             ->dehydrated()
                                             ->default(0),
@@ -662,7 +727,7 @@ class OrderConfirmationResource extends Resource
                                         Forms\Components\TextInput::make('diskon')
                                             ->label('Diskon (Rp)')
                                             ->prefix('Rp')
-                                            ->numeric()
+                                            ->currencyMask(2)
                                             ->default(0)
                                             ->live(debounce: 500)
                                             ->afterStateUpdated(function (Get $get, Set $set) {

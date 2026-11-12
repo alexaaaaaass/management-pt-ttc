@@ -15,7 +15,7 @@ class MoneyHelper
         if ($value === null || $value === '') {
             return null;
         }
-        $val = (float) $value;
+        $val = static::clean($value) ?? 0.0;
         $hasCents = $precision > 0 && fmod(round($val, $precision), 1.0) != 0.0;
         return number_format($val, $hasCents ? $precision : 0, '.', ',');
     }
