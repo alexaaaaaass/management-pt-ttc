@@ -29,10 +29,10 @@ class MasterItemResource extends Resource
                 ->required(),
 
             Forms\Components\TextInput::make('min_stock')
-                ->numeric(),
+                ->quantityMask(2),
 
             Forms\Components\TextInput::make('min_order')
-                ->numeric(),
+                ->quantityMask(2),
 
           Forms\Components\Select::make('satuan_id')
     ->label('Satuan')
@@ -71,7 +71,7 @@ Forms\Components\Select::make('type_item_id')
     ->schema([
 
         Forms\Components\TextInput::make('qty')
-            ->numeric()
+            ->quantityMask(2)
             ->label('Qty'),
 
         Forms\Components\TextInput::make('panjang')

@@ -587,7 +587,7 @@ class OrderConfirmationResource extends Resource
 
                                         Forms\Components\TextInput::make('qty')
                                             ->label('Qty (Pcs)')
-                                            ->numeric()
+                                            ->quantityMask(0)
                                             ->default(0)
                                             ->live(debounce: 500)
                                             ->afterStateUpdated(function (Get $get, Set $set) {
@@ -620,7 +620,7 @@ class OrderConfirmationResource extends Resource
                                         Forms\Components\TextInput::make('harga')
                                             ->label('Harga (Rp/pcs)')
                                             ->prefix('Rp')
-                                            ->numeric()
+                                            ->currencyMask(2)
                                             ->default(0)
                                             ->live(debounce: 500)
                                             ->afterStateUpdated(function (Get $get, Set $set) {
@@ -638,7 +638,7 @@ class OrderConfirmationResource extends Resource
                                         Forms\Components\TextInput::make('total')
                                             ->label('Total Harga (Rp)')
                                             ->prefix('Rp')
-                                            ->numeric()
+                                            ->currencyMask(2)
                                             ->default(0)
                                             ->readOnly()
                                             ->dehydrated(),
@@ -672,7 +672,7 @@ class OrderConfirmationResource extends Resource
                                         Forms\Components\TextInput::make('grand_total')
                                             ->label('Total Akhir (Rp)')
                                             ->prefix('Rp')
-                                            ->numeric()
+                                            ->currencyMask(2)
                                             ->readOnly()
                                             ->dehydrated()
                                             ->default(0),

@@ -305,7 +305,7 @@ class SalesOrderResource extends Resource
                                 ->visible(fn(Get $get) => $get('order_type') == 'SPK')
                                 ->required(fn(Get $get) => $get('order_type') == 'SPK')
                                 ->label('Jumlah Pesanan')
-                                ->numeric()
+                                ->quantityMask(0)
                                 ->live(debounce: 500)
                                 ->afterStateUpdated(function ($state, callable $set, callable $get) {
                                     $fgId = $get('item_source');
@@ -555,12 +555,12 @@ class SalesOrderResource extends Resource
                                             ->live(),
 
                                         TextInput::make('qty')
-                                            ->numeric()
+                                            ->quantityMask(0)
                                             ->required()
                                             ->live(),
 
                                         TextInput::make('harga')
-                                            ->numeric()
+                                            ->currencyMask(2)
                                             ->prefix('Rp')
                                             ->required()
                                             ->live(),

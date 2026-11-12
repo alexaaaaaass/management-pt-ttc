@@ -108,17 +108,20 @@ class MasterCOAResource extends Resource
                 ->schema([
                     Forms\Components\TextInput::make('saldo_debit')
                         ->label('Saldo Awal Debit')
-                        ->numeric()
+                        ->prefix('Rp')
+                        ->currencyMask(2)
                         ->default(0),
 
                     Forms\Components\TextInput::make('saldo_kredit')
                         ->label('Saldo Awal Kredit')
-                        ->numeric()
+                        ->prefix('Rp')
+                        ->currencyMask(2)
                         ->default(0),
 
                     Forms\Components\TextInput::make('nominal_default')
                         ->label('Nominal Default')
-                        ->numeric()
+                        ->prefix('Rp')
+                        ->currencyMask(2)
                         ->default(0),
 
                     Forms\Components\Select::make('status')

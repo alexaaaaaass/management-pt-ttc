@@ -21,6 +21,16 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        \Filament\Forms\Components\TextInput::macro('currencyMask', function (int $precision = 2) {
+            /** @var \Filament\Forms\Components\TextInput $this */
+            return \App\Support\MoneyHelper::applyMask($this, $precision);
+        });
+
+        \Filament\Forms\Components\TextInput::macro('quantityMask', function (int $precision = 0) {
+            /** @var \Filament\Forms\Components\TextInput $this */
+            return \App\Support\MoneyHelper::applyQuantityMask($this, $precision);
+        });
+
         Invoice::observe(
             InvoiceObserver::class
         );

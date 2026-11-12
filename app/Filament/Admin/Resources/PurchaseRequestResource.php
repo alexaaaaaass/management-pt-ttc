@@ -90,7 +90,7 @@ class PurchaseRequestResource extends Resource
     ->reactive(),
 
                                 Forms\Components\TextInput::make('qty')
-                                    ->numeric()
+                                    ->quantityMask(2)
                                     ->required(),
 
                                 Forms\Components\DatePicker::make('eta')

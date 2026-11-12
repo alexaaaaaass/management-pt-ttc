@@ -147,7 +147,7 @@ class PenerimaanBarangResource extends Resource
 
       Forms\Components\TextInput::make('qty_terima')
     ->label('Qty Penerimaan')
-    ->numeric()
+    ->quantityMask(2)
     ->required()
     ->live()
     ->afterStateUpdated(function ($state, $get, $set) {
@@ -158,7 +158,9 @@ class PenerimaanBarangResource extends Resource
 
         $remaining = $qtyPO - $received;
 
-        if ($state > $remaining) {
+        $cleanState = \App\Support\MoneyHelper::clean($state) ?? 0;
+
+        if ($cleanState > $remaining) {
 
             $set('qty_terima', $remaining);
 

@@ -150,6 +150,7 @@ class ExternalReturnResource extends Resource
 
                             Forms\Components\TextInput::make('qty_terima')
                                 ->label('Qty Terima')
+                                ->quantityMask(2)
                                 ->disabled()
                                 ->suffix(fn ($get) => $get('satuan'))
                                 ->dehydrated(false),
@@ -159,17 +160,19 @@ class ExternalReturnResource extends Resource
 
                             Forms\Components\TextInput::make('qty_return')
                                 ->label('Qty Return')
-                                ->numeric()
+                                ->quantityMask(2)
                                 ->required()
                                 ->default(0)
                                 ->live()
                                 ->afterStateUpdated(function ($state, $get, $set) {
 
-                                    if ($state > $get('qty_terima')) {
+                                    $cleanState = (float) (\App\Support\MoneyHelper::clean($state) ?? 0);
+                                    $cleanTerima = (float) (\App\Support\MoneyHelper::clean($get('qty_terima')) ?? 0);
+                                    if ($cleanState > $cleanTerima) {
 
                                         $set(
                                             'qty_return',
-                                            $get('qty_terima')
+                                            $cleanTerima
                                         );
 
                                     }

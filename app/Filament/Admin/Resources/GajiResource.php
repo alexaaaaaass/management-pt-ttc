@@ -142,8 +142,8 @@ class GajiResource extends Resource
                             ->schema([
                                 TextInput::make('gaji_pokok')
                                     ->label('Gaji Pokok')
-                                    ->numeric()
                                     ->prefix('Rp')
+                                    ->currencyMask(0)
                                     ->default(0)
                                     ->live(onBlur: true)
                                     ->afterStateUpdated(fn ($state, callable $get, callable $set) => self::recalculateTotals($get, $set))
@@ -151,40 +151,40 @@ class GajiResource extends Resource
 
                                 TextInput::make('tunjangan_jabatan')
                                     ->label('Tunjangan Jabatan')
-                                    ->numeric()
                                     ->prefix('Rp')
+                                    ->currencyMask(0)
                                     ->default(0)
                                     ->live(onBlur: true)
                                     ->afterStateUpdated(fn ($state, callable $get, callable $set) => self::recalculateTotals($get, $set)),
 
                                 TextInput::make('tunjangan_kompetensi')
                                     ->label('Tunjangan Kompetensi')
-                                    ->numeric()
                                     ->prefix('Rp')
+                                    ->currencyMask(0)
                                     ->default(0)
                                     ->live(onBlur: true)
                                     ->afterStateUpdated(fn ($state, callable $get, callable $set) => self::recalculateTotals($get, $set)),
 
                                 TextInput::make('tunjangan_intensif')
                                     ->label('Tunjangan Intensif')
-                                    ->numeric()
                                     ->prefix('Rp')
+                                    ->currencyMask(0)
                                     ->default(0)
                                     ->live(onBlur: true)
                                     ->afterStateUpdated(fn ($state, callable $get, callable $set) => self::recalculateTotals($get, $set)),
 
                                 TextInput::make('total_lembur')
                                     ->label('Uang Lembur')
-                                    ->numeric()
                                     ->prefix('Rp')
+                                    ->currencyMask(0)
                                     ->default(0)
                                     ->live(onBlur: true)
                                     ->afterStateUpdated(fn ($state, callable $get, callable $set) => self::recalculateTotals($get, $set)),
 
                                 TextInput::make('total_bonus')
                                     ->label('Bonus / Insentif')
-                                    ->numeric()
                                     ->prefix('Rp')
+                                    ->currencyMask(0)
                                     ->default(0)
                                     ->live(onBlur: true)
                                     ->afterStateUpdated(fn ($state, callable $get, callable $set) => self::recalculateTotals($get, $set)),
@@ -192,8 +192,8 @@ class GajiResource extends Resource
 
                         TextInput::make('total_pendapatan')
                             ->label('Total Pendapatan Kotor')
-                            ->numeric()
                             ->prefix('Rp')
+                            ->currencyMask(0)
                             ->disabled()
                             ->dehydrated()
                             ->extraAttributes(['class' => 'font-bold text-success-600'])
@@ -206,32 +206,32 @@ class GajiResource extends Resource
                             ->schema([
                                 TextInput::make('potongan_tunjangan')
                                     ->label('Potongan Tunjangan (Ketidakhadiran/Sanksi)')
-                                    ->numeric()
                                     ->prefix('Rp')
+                                    ->currencyMask(0)
                                     ->default(0)
                                     ->live(onBlur: true)
                                     ->afterStateUpdated(fn ($state, callable $get, callable $set) => self::recalculateTotals($get, $set)),
 
                                 TextInput::make('potongan_kehadiran')
                                     ->label('Potongan Keterlambatan / Alpha')
-                                    ->numeric()
                                     ->prefix('Rp')
+                                    ->currencyMask(0)
                                     ->default(0)
                                     ->live(onBlur: true)
                                     ->afterStateUpdated(fn ($state, callable $get, callable $set) => self::recalculateTotals($get, $set)),
 
                                 TextInput::make('potongan_pinjaman')
                                     ->label('Cicilan Pinjaman Karyawan')
-                                    ->numeric()
                                     ->prefix('Rp')
+                                    ->currencyMask(0)
                                     ->default(0)
                                     ->live(onBlur: true)
                                     ->afterStateUpdated(fn ($state, callable $get, callable $set) => self::recalculateTotals($get, $set)),
 
                                 TextInput::make('potongan_bpjs')
                                     ->label('Potongan BPJS / Asuransi')
-                                    ->numeric()
                                     ->prefix('Rp')
+                                    ->currencyMask(0)
                                     ->default(0)
                                     ->live(onBlur: true)
                                     ->afterStateUpdated(fn ($state, callable $get, callable $set) => self::recalculateTotals($get, $set)),
@@ -239,8 +239,8 @@ class GajiResource extends Resource
 
                         TextInput::make('total_potongan')
                             ->label('Total Seluruh Potongan')
-                            ->numeric()
                             ->prefix('Rp')
+                            ->currencyMask(0)
                             ->disabled()
                             ->dehydrated()
                             ->extraAttributes(['class' => 'font-bold text-danger-600'])
@@ -251,8 +251,8 @@ class GajiResource extends Resource
                     ->schema([
                         TextInput::make('gaji_bersih')
                             ->label('Gaji Bersih / Take Home Pay (THP)')
-                            ->numeric()
                             ->prefix('Rp')
+                            ->currencyMask(0)
                             ->disabled()
                             ->dehydrated()
                             ->extraAttributes(['class' => 'text-xl font-extrabold text-primary-600'])
@@ -267,19 +267,19 @@ class GajiResource extends Resource
 
     public static function recalculateTotals(callable $get, callable $set): void
     {
-        $gajiPokok = (float) ($get('gaji_pokok') ?? 0);
-        $jabatan = (float) ($get('tunjangan_jabatan') ?? 0);
-        $kompetensi = (float) ($get('tunjangan_kompetensi') ?? 0);
-        $intensif = (float) ($get('tunjangan_intensif') ?? 0);
-        $lembur = (float) ($get('total_lembur') ?? 0);
-        $bonus = (float) ($get('total_bonus') ?? 0);
+        $gajiPokok = \App\Support\MoneyHelper::clean($get('gaji_pokok')) ?? 0;
+        $jabatan = \App\Support\MoneyHelper::clean($get('tunjangan_jabatan')) ?? 0;
+        $kompetensi = \App\Support\MoneyHelper::clean($get('tunjangan_kompetensi')) ?? 0;
+        $intensif = \App\Support\MoneyHelper::clean($get('tunjangan_intensif')) ?? 0;
+        $lembur = \App\Support\MoneyHelper::clean($get('total_lembur')) ?? 0;
+        $bonus = \App\Support\MoneyHelper::clean($get('total_bonus')) ?? 0;
 
         $totPendapatan = round($gajiPokok + $jabatan + $kompetensi + $intensif + $lembur + $bonus, 2);
 
-        $potTunjangan = (float) ($get('potongan_tunjangan') ?? 0);
-        $potKehadiran = (float) ($get('potongan_kehadiran') ?? 0);
-        $potPinjaman = (float) ($get('potongan_pinjaman') ?? 0);
-        $potBpjs = (float) ($get('potongan_bpjs') ?? 0);
+        $potTunjangan = \App\Support\MoneyHelper::clean($get('potongan_tunjangan')) ?? 0;
+        $potKehadiran = \App\Support\MoneyHelper::clean($get('potongan_kehadiran')) ?? 0;
+        $potPinjaman = \App\Support\MoneyHelper::clean($get('potongan_pinjaman')) ?? 0;
+        $potBpjs = \App\Support\MoneyHelper::clean($get('potongan_bpjs')) ?? 0;
 
         $totPotongan = round($potTunjangan + $potKehadiran + $potPinjaman + $potBpjs, 2);
         $gajiBersih = max(0.0, round($totPendapatan - $totPotongan, 2));

@@ -226,13 +226,15 @@ class SuratJalanResource extends Resource
                             Forms\Components\TextInput::make('qty_pengiriman')
                                 ->label('Qty Pengiriman Kali Ini')
                                 ->visible(fn (Get $get) => in_array($get('order_type'), ['SPK', 'SINGLE_MATERIAL']))
-                                ->numeric()
+                                ->quantityMask(0)
                                 ->required()
                                 ->live()
                                 ->rule(function (Get $get) {
                                     return function (string $attribute, $value, \Closure $fail) use ($get) {
                                         $so = self::getSalesOrder($get('sales_order_id'));
                                         if (!$so) return;
+
+                                        $valClean = \App\Support\MoneyHelper::clean($value) ?? 0;
 
                                         // Validasi Sisa Order (memperhitungkan form edit)
                                         $qtySudahKirim = $so->suratJalans()
@@ -241,14 +243,14 @@ class SuratJalanResource extends Resource
 
                                         $sisaOrder = $so->order_qty - $qtySudahKirim;
 
-                                        if ($value > $sisaOrder) {
+                                        if ($valClean > $sisaOrder) {
                                             $fail("Qty pengiriman melebihi outstanding order ({$sisaOrder}).");
                                             return;
-                                        }
+                                         }
 
                                         // Validasi Stock Tersedia
                                         $stockTersedia = $so->current_stock;
-                                        if ($value > $stockTersedia) {
+                                        if ($valClean > $stockTersedia) {
                                             $fail("Qty melebihi stock produk/material yang tersedia ({$stockTersedia}).");
                                         }
                                     };
@@ -284,7 +286,7 @@ class SuratJalanResource extends Resource
 
                                             Forms\Components\TextInput::make('qty_kirim')
                                                 ->label('Qty Kirim')
-                                                ->numeric()
+                                                ->quantityMask(0)
                                                 ->required()
                                                 ->live(),
                                         ]),

@@ -46,9 +46,9 @@ class PengPinjamanResource extends Resource
 
                 Forms\Components\TextInput::make('nilai_pinjaman')
                     ->label('Nilai Pinjaman')
-                    ->numeric()
                     ->prefix('Rp')
-                    ->minValue(1)
+                    ->currencyMask(2)
+                    ->placeholder('0.00')
                     ->required()
                     ->live(onBlur: true)
                     ->afterStateUpdated(fn ($state, callable $get, callable $set) => self::hitungCicilan($get, $set)),
@@ -64,8 +64,9 @@ class PengPinjamanResource extends Resource
 
                 Forms\Components\TextInput::make('cicilan_per_bulan')
                     ->label('Cicilan Per Bulan')
-                    ->numeric()
                     ->prefix('Rp')
+                    ->currencyMask(2)
+                    ->placeholder('0.00')
                     ->required(),
 
                 Forms\Components\Textarea::make('keperluan_pinjaman')
@@ -78,7 +79,7 @@ class PengPinjamanResource extends Resource
 
     public static function hitungCicilan(callable $get, callable $set): void
     {
-        $nilai = (float) ($get('nilai_pinjaman') ?? 0);
+        $nilai = \App\Support\MoneyHelper::clean($get('nilai_pinjaman')) ?? 0;
         $waktu = (int) ($get('jangka_waktu') ?? 0);
 
         if ($nilai > 0 && $waktu > 0) {
@@ -106,7 +107,10 @@ class PengPinjamanResource extends Resource
 
                 Tables\Columns\TextColumn::make('nilai_pinjaman')
                     ->label('Nilai Pinjaman')
-                    ->money('IDR')
+                    ->formatStateUsing(function ($state) {
+                        $val = (float) $state;
+                        return 'Rp ' . (fmod(round($val, 2), 1.0) != 0.0 ? number_format($val, 2, ',', '.') : number_format($val, 0, ',', '.'));
+                    })
                     ->sortable(),
 
                 Tables\Columns\TextColumn::make('jangka_waktu')
@@ -115,7 +119,10 @@ class PengPinjamanResource extends Resource
 
                 Tables\Columns\TextColumn::make('cicilan_per_bulan')
                     ->label('Cicilan / Bulan')
-                    ->money('IDR'),
+                    ->formatStateUsing(function ($state) {
+                        $val = (float) $state;
+                        return 'Rp ' . (fmod(round($val, 2), 1.0) != 0.0 ? number_format($val, 2, ',', '.') : number_format($val, 0, ',', '.'));
+                    }),
 
             ])
             ->defaultSort('id', 'desc')

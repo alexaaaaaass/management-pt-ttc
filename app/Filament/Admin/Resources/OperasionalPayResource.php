@@ -91,10 +91,11 @@ class OperasionalPayResource extends Resource
 
                                 TextInput::make('nominal')
                                     ->label('Nominal Biaya')
-                                    ->numeric()
                                     ->prefix('Rp')
-                                    ->minValue(1)
-                                    ->required(),
+                                    ->currencyMask(2)
+                                    ->placeholder('0.00')
+                                    ->required()
+                                    ->helperText('💡 Otomatis diberi pemisah ribuan saat diketik.'),
                             ]),
 
                         Section::make('Detail Kendaraan / Mesin (Opsional)')
@@ -219,7 +220,10 @@ class OperasionalPayResource extends Resource
 
                 Tables\Columns\TextColumn::make('nominal')
                     ->label('Nominal')
-                    ->money('IDR')
+                    ->formatStateUsing(function ($state) {
+                        $val = (float) $state;
+                        return 'Rp ' . (fmod(round($val, 2), 1.0) != 0.0 ? number_format($val, 2, ',', '.') : number_format($val, 0, ',', '.'));
+                    })
                     ->alignRight()
                     ->weight('bold')
                     ->sortable()

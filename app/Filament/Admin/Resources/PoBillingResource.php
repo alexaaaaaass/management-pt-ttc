@@ -175,13 +175,14 @@ class PoBillingResource extends Resource
 
                                                 TextInput::make('qty')
                                                     ->label('Qty Terima')
-                                                    ->numeric()
+                                                    ->quantityMask(2)
                                                     ->live(),
 
                                                 TextInput::make('harga')
                                                     ->label('Harga Satuan')
-                                                    ->numeric()
                                                     ->prefix('Rp')
+                                                    ->currencyMask(2)
+                                                    ->placeholder('0.00')
                                                     ->live(),
 
                                                 TextInput::make('diskon')
@@ -195,15 +196,16 @@ class PoBillingResource extends Resource
                                                     ->label('Subtotal')
                                                     ->disabled()
                                                     ->dehydrated()
+                                                    ->currencyMask(2)
                                                     ->prefix('Rp'),
                                             ]),
                                     ])
-                                    ->afterStateUpdated(function ($state, Set $set) {
+                                    ->afterStateUpdated(function ($state, Set $set, Get $get) {
                                         $totalBarang = 0;
 
                                         foreach ($state as $key => $item) {
                                             $qty = (float) ($item['qty'] ?? 0);
-                                            $harga = (float) ($item['harga'] ?? 0);
+                                            $harga = \App\Support\MoneyHelper::clean($item['harga'] ?? 0) ?? 0;
                                             $diskon = (float) ($item['diskon'] ?? 0);
                                             $subtotal = ($qty * $harga) - (($qty * $harga) * $diskon / 100);
 
@@ -212,8 +214,8 @@ class PoBillingResource extends Resource
                                         }
 
                                         $ppn = $totalBarang * 0.11;
-                                        $ongkir = (float) 0;
-                                        $dp = (float) 0;
+                                        $ongkir = \App\Support\MoneyHelper::clean($get('ongkir')) ?? 0;
+                                        $dp = \App\Support\MoneyHelper::clean($get('dp')) ?? 0;
                                         $grandTotal = $totalBarang + $ppn + $ongkir - $dp;
 
                                         $set('items', $state);
@@ -231,29 +233,51 @@ class PoBillingResource extends Resource
                                         TextInput::make('total_barang')
                                             ->label('Total Barang (DPP)')
                                             ->prefix('Rp')
-                                            ->numeric(),
+                                            ->currencyMask(2)
+                                            ->disabled()
+                                            ->dehydrated(),
 
                                         TextInput::make('ppn')
                                             ->label('PPN (11%)')
                                             ->prefix('Rp')
-                                            ->numeric(),
+                                            ->currencyMask(2)
+                                            ->disabled()
+                                            ->dehydrated(),
 
                                         TextInput::make('ongkir')
                                             ->label('Ongkos Kirim')
                                             ->prefix('Rp')
-                                            ->numeric()
-                                            ->live(),
+                                            ->currencyMask(2)
+                                            ->default(0)
+                                            ->live()
+                                            ->afterStateUpdated(function ($state, Get $get, Set $set) {
+                                                $totalBarang = (float) ($get('total_barang') ?? 0);
+                                                $ppn = (float) ($get('ppn') ?? 0);
+                                                $ongkir = \App\Support\MoneyHelper::clean($state) ?? 0;
+                                                $dp = \App\Support\MoneyHelper::clean($get('dp')) ?? 0;
+                                                $set('grand_total', $totalBarang + $ppn + $ongkir - $dp);
+                                            }),
 
                                         TextInput::make('dp')
                                             ->label('Uang Muka / DP')
                                             ->prefix('Rp')
-                                            ->numeric()
-                                            ->live(),
+                                            ->currencyMask(2)
+                                            ->default(0)
+                                            ->live()
+                                            ->afterStateUpdated(function ($state, Get $get, Set $set) {
+                                                $totalBarang = (float) ($get('total_barang') ?? 0);
+                                                $ppn = (float) ($get('ppn') ?? 0);
+                                                $ongkir = \App\Support\MoneyHelper::clean($get('ongkir')) ?? 0;
+                                                $dp = \App\Support\MoneyHelper::clean($state) ?? 0;
+                                                $set('grand_total', $totalBarang + $ppn + $ongkir - $dp);
+                                            }),
 
                                         TextInput::make('grand_total')
                                             ->label('Grand Total Tagihan')
                                             ->prefix('Rp')
-                                            ->numeric()
+                                            ->currencyMask(2)
+                                            ->disabled()
+                                            ->dehydrated()
                                             ->extraAttributes(['class' => 'font-bold text-primary-600']),
                                     ]),
                             ]),

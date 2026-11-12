@@ -66,17 +66,18 @@ class PembPinjamanResource extends Resource
 
                 Forms\Components\TextInput::make('nominal_pembayaran')
                     ->label('Nominal Pembayaran')
-                    ->numeric()
                     ->prefix('Rp')
+                    ->currencyMask(2)
+                    ->placeholder('0.00')
                     ->extraInputAttributes(['onwheel' => 'this.blur()'])
-                    ->helperText('Otomatis dibulatkan ke cicilan/sisa pinjaman jika selisih ≤ Rp 1.000')
+                    ->helperText('Otomatis diberi pemisah ribuan. Dibulatkan ke cicilan jika selisih ≤ Rp 1.000')
                     ->live(onBlur: true)
                     ->afterStateUpdated(function ($state, Forms\Get $get, Forms\Set $set) {
                         $pinjaman = PengPinjaman::find($get('peng_pinjaman_id'));
                         if (!$pinjaman) {
                             return;
                         }
-                        $val = (float) $state;
+                        $val = \App\Support\MoneyHelper::clean($state) ?? 0;
                         $cicilan = (float) $pinjaman->cicilan_per_bulan;
                         if ($cicilan > 0 && $val > 0 && abs($cicilan - $val) > 0 && abs($cicilan - $val) <= 1000) {
                             $set('nominal_pembayaran', $cicilan);
@@ -109,7 +110,10 @@ class PembPinjamanResource extends Resource
 
                 Tables\Columns\TextColumn::make('nominal_pembayaran')
                     ->label('Nominal')
-                    ->money('IDR'),
+                    ->formatStateUsing(function ($state) {
+                        $val = (float) $state;
+                        return 'Rp ' . (fmod(round($val, 2), 1.0) != 0.0 ? number_format($val, 2, ',', '.') : number_format($val, 0, ',', '.'));
+                    }),
 
                 Tables\Columns\TextColumn::make('tahap_cicilan')
                     ->label('Tahap Cicilan')
