@@ -54,4 +54,29 @@ class MaterialStockController extends Controller
             'movements' => $movements,
         ]);
     }
+
+    /**
+     * Daftar Riwayat Mutasi Material Global (Material History).
+     */
+    public function movements(Request $request): JsonResponse
+    {
+        $query = MaterialMovement::with(['item.satuan', 'user']);
+
+        if ($search = trim((string) $request->input('search'))) {
+            $query->where(function ($q) use ($search) {
+                $q->where('remarks', 'like', "%{$search}%")
+                  ->orWhereHas('item', fn ($iq) => $iq->where('nama_master_item', 'like', "%{$search}%")->orWhere('kode_master_item', 'like', "%{$search}%"));
+            });
+        }
+
+        if ($type = $request->input('movement_type')) {
+            if ($type !== 'all') {
+                $query->where('movement_type', $type);
+            }
+        }
+
+        $perPage = min(100, max(5, $request->integer('per_page', 15)));
+
+        return response()->json($query->latest('id')->paginate($perPage));
+    }
 }

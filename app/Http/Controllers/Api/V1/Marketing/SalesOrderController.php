@@ -169,3 +169,4 @@ class SalesOrderController extends Controller
         ]);
     }
 }
+

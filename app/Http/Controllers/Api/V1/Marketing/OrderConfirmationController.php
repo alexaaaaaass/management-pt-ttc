@@ -168,3 +168,4 @@ class OrderConfirmationController extends Controller
         ]);
     }
 }
+
