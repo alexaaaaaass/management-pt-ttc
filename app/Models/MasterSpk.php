@@ -63,9 +63,33 @@ class MasterSpk extends Model
         return $this->hasMany(SuratJalan::class, 'spk_id');
     }
 
+    public function subcountOutItems()
+    {
+        return $this->hasMany(SubcountOutItem::class, 'spk_id');
+    }
+
     public function subcountInItems()
     {
         return $this->hasMany(SubcountInItem::class, 'spk_id');
+    }
+
+    public function getIsSubcountAttribute(): bool
+    {
+        if ($this->relationLoaded('subcountOutItems') ? $this->subcountOutItems->isNotEmpty() : $this->subcountOutItems()->exists()) {
+            return true;
+        }
+
+        $plan = strtoupper((string) ($this->production_plan ?? ''));
+        return str_contains($plan, 'SUBCOUNT') || str_contains($plan, 'MAKLON');
+    }
+
+    public function getExecutionModeAttribute(): string
+    {
+        if ($this->is_subcount) {
+            return 'SUBCOUNT / MAKLON';
+        }
+
+        return 'PRODUKSI INTERNAL';
     }
 
     /*

@@ -75,6 +75,7 @@ class SubcountOutResource extends Resource
                                     $set('item_id', null);
                                     $set('nama_produk', null);
                                     $set('satuan_id', null);
+                                    $set('qty', '0');
                                 })
                                 ->required(),
 
@@ -89,6 +90,7 @@ class SubcountOutResource extends Resource
                                     if (! $state) {
                                         $set('nama_produk', null);
                                         $set('satuan_id', null);
+                                        $set('qty', '0');
                                         return;
                                     }
 
@@ -99,12 +101,16 @@ class SubcountOutResource extends Resource
                                     $set(
                                         'nama_produk',
                                         $spk?->salesOrder?->itemable?->nama_barang
+                                            ?? $spk?->salesOrder?->product_name
                                     );
 
                                     $set(
                                         'satuan_id',
                                         $spk?->salesOrder?->itemable?->satuan_id
                                     );
+
+                                    $orderQty = (float) ($spk?->salesOrder?->qty ?? 0);
+                                    $set('qty', $orderQty > 0 ? (\App\Support\MoneyHelper::format($orderQty, 0) ?? '0') : '0');
                                 }),
 
                             Forms\Components\Select::make('item_id')
@@ -134,6 +140,8 @@ class SubcountOutResource extends Resource
                                 }),
 
                             Forms\Components\TextInput::make('qty')
+                                ->default('0')
+                                ->placeholder('0')
                                 ->quantityMask(0)
                                 ->required(),
 

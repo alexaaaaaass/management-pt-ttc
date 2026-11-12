@@ -186,7 +186,8 @@ public static function form(Form $form): Form
 
                             Forms\Components\TextInput::make('production_plan')
                                 ->label('Rencana Produksi (Plan)')
-                                ->placeholder('Target kuantiti produksi atau batch'),
+                                ->placeholder('Target kuantiti produksi atau tulis SUBCOUNT / MAKLON')
+                                ->helperText('Jika dikerjakan vendor luar, tulis "SUBCOUNT" atau otomatis terdeteksi setelah dibuatkan Subcount Out.'),
 
                             Forms\Components\DatePicker::make('tanggal_estimasi_selesai')
                                 ->label('Estimasi Tanggal Selesai'),
@@ -261,6 +262,23 @@ public static function getNavigationLabel(): string
                 ->copyable()
                 ->weight('bold'),
 
+            Tables\Columns\TextColumn::make('execution_mode')
+                ->label('Tipe Pengerjaan')
+                ->badge()
+                ->icon(fn ($record) => $record->is_subcount ? 'heroicon-o-truck' : 'heroicon-o-cog-6-tooth')
+                ->color(fn ($record) => $record->is_subcount ? 'info' : 'success')
+                ->tooltip(function ($record): ?string {
+                    if (!$record->is_subcount) {
+                        return 'Dikerjakan di mesin produksi internal TTC';
+                    }
+                    $suppliers = $record->subcountOutItems
+                        ->map(fn ($it) => $it->subcountOut?->supplier?->nama_supplier)
+                        ->filter()
+                        ->unique()
+                        ->implode(', ');
+                    return $suppliers ? "Maklon / Subcount ke: {$suppliers}" : 'Ditandai Subcount / Maklon';
+                }),
+
             Tables\Columns\TextColumn::make('salesOrder.no_sales_order')
                 ->label('No Sales Order')
                 ->searchable()
@@ -325,6 +343,33 @@ public static function getNavigationLabel(): string
                     'ON PROCESS' => 'ON PROCESS',
                     'FINISH'     => 'FINISH',
                 ]),
+            Tables\Filters\SelectFilter::make('execution_mode')
+                ->label('Tipe Pengerjaan')
+                ->options([
+                    'subcount' => 'Subcount / Maklon',
+                    'in_house' => 'Produksi Internal',
+                ])
+                ->query(function (Builder $query, array $data): Builder {
+                    $val = $data['value'] ?? null;
+                    if ($val === 'subcount') {
+                        return $query->where(function ($q) {
+                            $q->whereHas('subcountOutItems')
+                              ->orWhere('production_plan', 'like', '%SUBCOUNT%')
+                              ->orWhere('production_plan', 'like', '%MAKLON%');
+                        });
+                    }
+                    if ($val === 'in_house') {
+                        return $query->whereDoesntHave('subcountOutItems')
+                            ->where(function ($q) {
+                                $q->whereNull('production_plan')
+                                  ->orWhere(function ($pq) {
+                                      $pq->where('production_plan', 'not like', '%SUBCOUNT%')
+                                         ->where('production_plan', 'not like', '%MAKLON%');
+                                  });
+                            });
+                    }
+                    return $query;
+                }),
         ])
         ->actions([
             ActionGroup::make([
@@ -414,6 +459,8 @@ public static function getNavigationLabel(): string
                 'pracetaks',
                 'printings',
                 'finishings',
+                'subcountOutItems.subcountOut.supplier',
+                'subcountInItems',
             ]);
     }
 }
