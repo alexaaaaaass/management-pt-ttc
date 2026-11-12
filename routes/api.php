@@ -3,6 +3,15 @@
 use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\Costing\HppCalculatorController;
 use App\Http\Controllers\Api\V1\DashboardController;
+use App\Http\Controllers\Api\V1\Master\CategoryItemController;
+use App\Http\Controllers\Api\V1\Master\CustomerController;
+use App\Http\Controllers\Api\V1\Master\FinishGoodItemController;
+use App\Http\Controllers\Api\V1\Master\MasterItemController;
+use App\Http\Controllers\Api\V1\Master\SatuanController;
+use App\Http\Controllers\Api\V1\Master\SupplierController;
+use App\Http\Controllers\Api\V1\Master\TypeItemController;
+use App\Http\Controllers\Api\V1\System\RoleController;
+use App\Http\Controllers\Api\V1\System\UserController;
 use App\Http\Controllers\Api\V1\Warehouse\FinishGoodStockController;
 use App\Http\Controllers\Api\V1\Warehouse\MaterialStockController;
 use Illuminate\Http\Request;
@@ -50,6 +59,31 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
             Route::get('/finish-good-stocks/{finishGoodStock}/track', [FinishGoodStockController::class, 'track'])->name('finish-good-stocks.track');
             Route::post('/finish-good-stocks/{finishGoodStock}/adjust', [FinishGoodStockController::class, 'adjust'])->name('finish-good-stocks.adjust');
             Route::get('/finish-good-ledgers', [FinishGoodStockController::class, 'ledgers'])->name('finish-good-ledgers.index');
+        });
+
+        // Master Data (Fase 2)
+        Route::prefix('master')->name('master.')->group(function () {
+            Route::apiResource('/customers', CustomerController::class)->except(['show']);
+            Route::apiResource('/suppliers', SupplierController::class)->except(['show']);
+            Route::apiResource('/satuans', SatuanController::class)->except(['show']);
+            Route::apiResource('/categories', CategoryItemController::class)->except(['show']);
+            Route::apiResource('/types', TypeItemController::class)->except(['show']);
+
+            Route::get('/items/options', [MasterItemController::class, 'options'])->name('items.options');
+            Route::apiResource('/items', MasterItemController::class)
+                ->parameters(['items' => 'masterItem'])
+                ->except(['show']);
+
+            Route::get('/finish-good-items/options', [FinishGoodItemController::class, 'options'])->name('finish-good-items.options');
+            Route::post('/finish-good-items/{id}/restore', [FinishGoodItemController::class, 'restore'])->name('finish-good-items.restore');
+            Route::apiResource('/finish-good-items', FinishGoodItemController::class);
+        });
+
+        // System & RBAC Management (Fase 2)
+        Route::prefix('system')->name('system.')->group(function () {
+            Route::apiResource('/users', UserController::class)->except(['show']);
+            Route::get('/permissions', [RoleController::class, 'permissions'])->name('permissions.index');
+            Route::apiResource('/roles', RoleController::class)->except(['show']);
         });
     });
 });
