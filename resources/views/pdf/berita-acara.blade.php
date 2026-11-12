@@ -125,8 +125,25 @@
         <tr>
             <td>
                 <div class="notes">
-                    <div class="notes-title">Catatan:</div>
-                    {{ $beritaAcara->catatan ?: ($beritaAcara->tindakan_solusi ?: '-') }}
+                    <div class="notes-title">Keputusan & Tindak Lanjut:</div>
+                    @if ($beritaAcara->jenis_penyelesaian)
+                        <div><strong>Bentuk Solusi:</strong> {{ match($beritaAcara->jenis_penyelesaian) {
+                            'sortir_ulang'   => 'Sortir Ulang / Perbaikan di Pabrik',
+                            'ganti_barang'   => 'Cetak Ulang / Ganti Barang Baru',
+                            'potong_tagihan' => 'Potong Tagihan / Credit Note (Bayar Sesuai Penerimaan Saja)',
+                            'retur_total'    => 'Retur Total (Batal Pengiriman / Kembali Semua)',
+                            default          => ucfirst(str_replace('_', ' ', $beritaAcara->jenis_penyelesaian))
+                        } }}</div>
+                    @endif
+                    @if ($beritaAcara->tindakan_solusi)
+                        <div><strong>Rincian Tindakan:</strong> {{ $beritaAcara->tindakan_solusi }}</div>
+                    @endif
+                    @if ($beritaAcara->catatan)
+                        <div><strong>Catatan:</strong> {{ $beritaAcara->catatan }}</div>
+                    @endif
+                    @if (! $beritaAcara->jenis_penyelesaian && ! $beritaAcara->tindakan_solusi && ! $beritaAcara->catatan)
+                        -
+                    @endif
                 </div>
             </td>
             <td class="issuer">

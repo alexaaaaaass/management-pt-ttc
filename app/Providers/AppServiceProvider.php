@@ -92,6 +92,12 @@ class AppServiceProvider extends ServiceProvider
                 }
             }
 
+            if (\Illuminate\Support\Facades\Schema::hasTable('berita_acaras') && ! \Illuminate\Support\Facades\Schema::hasColumn('berita_acaras', 'jenis_penyelesaian')) {
+                \Illuminate\Support\Facades\Schema::table('berita_acaras', function (\Illuminate\Database\Schema\Blueprint $table) {
+                    $table->string('jenis_penyelesaian', 50)->nullable()->after('analisa_produksi');
+                });
+            }
+
 
             if (\Illuminate\Support\Facades\Schema::hasTable('coa_movements') && \Illuminate\Support\Facades\Schema::hasTable('master_coas')) {
                 $totalDebit = (float) \Illuminate\Support\Facades\DB::table('coa_movements')->sum('debit');

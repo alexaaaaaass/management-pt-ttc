@@ -145,13 +145,37 @@ class BeritaAcaraResource extends Resource
                                     ->openable(),
                             ]),
                     ]),
-                Forms\Components\Section::make('Kronologi dan Penanganan')
+                Forms\Components\Section::make('Kronologi dan Penanganan Solusi')
                     ->columns(2)
                     ->schema([
-                        Forms\Components\Textarea::make('kronologi')->rows(4),
-                        Forms\Components\Textarea::make('analisa_produksi')->label('Analisa Produksi')->rows(4),
-                        Forms\Components\Textarea::make('tindakan_solusi')->label('Tindakan / Solusi')->rows(4),
-                        Forms\Components\Textarea::make('catatan')->rows(4),
+                        Forms\Components\Textarea::make('kronologi')
+                            ->label('Kronologi Komplain')
+                            ->rows(3)
+                            ->placeholder('Jelaskan kronologi komplain dari pengiriman hingga diterima...'),
+                        Forms\Components\Textarea::make('analisa_produksi')
+                            ->label('Analisa Produksi / Akar Masalah')
+                            ->rows(3)
+                            ->placeholder('Analisa tim QC/teknis mengenai penyebab masalah...'),
+                        Forms\Components\Select::make('jenis_penyelesaian')
+                            ->label('Pilihan Solusi / Tindakan')
+                            ->options([
+                                'sortir_ulang'   => '🔍 Sortir Ulang / Perbaikan di Pabrik (Sorting & Touch Up)',
+                                'ganti_barang'   => '🔄 Cetak Ulang / Ganti Barang Baru (Reprint / Rework)',
+                                'potong_tagihan' => '💰 Potong Tagihan / Credit Note (Bayar Sesuai Penerimaan Saja)',
+                                'retur_total'    => '📦 Retur Total (Batal Pengiriman / Kembali Semua)',
+                                'lainnya'        => '📝 Lainnya / Kesepakatan Khusus',
+                            ])
+                            ->placeholder('-- Pilih Bentuk Penyelesaian --')
+                            ->required()
+                            ->columnSpanFull(),
+                        Forms\Components\Textarea::make('tindakan_solusi')
+                            ->label('Rincian Tindakan / Solusi')
+                            ->rows(3)
+                            ->placeholder('Penjelasan rincian solusi (jadwal kirim ulang, komitmen diskon invoice, dll)...'),
+                        Forms\Components\Textarea::make('catatan')
+                            ->label('Catatan Tambahan')
+                            ->rows(3)
+                            ->placeholder('Catatan penting lainnya bila ada...'),
                     ]),
                 Forms\Components\Section::make('Rapat dan Persetujuan')
                     ->columns(2)
@@ -192,6 +216,26 @@ class BeritaAcaraResource extends Resource
                     ->label('Item / Produk')
                     ->searchable()
                     ->toggleable(),
+                Tables\Columns\TextColumn::make('jenis_penyelesaian')
+                    ->label('Solusi')
+                    ->badge()
+                    ->formatStateUsing(fn (?string $state): string => match ($state) {
+                        'sortir_ulang'   => 'Sortir Ulang',
+                        'ganti_barang'   => 'Ganti Barang',
+                        'potong_tagihan' => 'Potong Tagihan',
+                        'retur_total'    => 'Retur Total',
+                        'lainnya'        => 'Lainnya',
+                        default          => $state ? ucfirst(str_replace('_', ' ', $state)) : '-',
+                    })
+                    ->color(fn (?string $state): string => match ($state) {
+                        'sortir_ulang'   => 'info',
+                        'ganti_barang'   => 'warning',
+                        'potong_tagihan' => 'danger',
+                        'retur_total'    => 'gray',
+                        default          => 'secondary',
+                    })
+                    ->searchable()
+                    ->toggleable(),
                 Tables\Columns\TextColumn::make('status')
                     ->badge()
                     ->color(fn (string $state): string => match ($state) {
@@ -202,6 +246,15 @@ class BeritaAcaraResource extends Resource
                     ->formatStateUsing(fn (string $state): string => ucfirst($state)),
             ])
             ->filters([
+                Tables\Filters\SelectFilter::make('jenis_penyelesaian')
+                    ->label('Pilihan Solusi')
+                    ->options([
+                        'sortir_ulang'   => 'Sortir Ulang / Perbaikan',
+                        'ganti_barang'   => 'Cetak Ulang / Ganti Barang',
+                        'potong_tagihan' => 'Potong Tagihan (Credit Note)',
+                        'retur_total'    => 'Retur Total',
+                        'lainnya'        => 'Lainnya',
+                    ]),
                 Tables\Filters\SelectFilter::make('status')
                     ->options([
                         'draft' => 'Draft',

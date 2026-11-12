@@ -21,6 +21,7 @@ class BeritaAcara extends Model
         'foto_bukti',
         'kronologi',
         'analisa_produksi',
+        'jenis_penyelesaian',
         'tindakan_solusi',
         'peserta',
         'agenda',
