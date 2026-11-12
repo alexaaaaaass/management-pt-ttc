@@ -85,6 +85,13 @@ class AppServiceProvider extends ServiceProvider
                 });
             }
 
+            if (\Illuminate\Support\Facades\Schema::hasTable('finish_good_items') && ! \Illuminate\Support\Facades\Schema::hasTable('finish_good_stocks')) {
+                $fgMig = base_path('database/migrations/2026_11_06_204500_create_finish_good_stocks_and_movements_tables.php');
+                if (file_exists($fgMig)) {
+                    (require $fgMig)->up();
+                }
+            }
+
 
             if (\Illuminate\Support\Facades\Schema::hasTable('coa_movements') && \Illuminate\Support\Facades\Schema::hasTable('master_coas')) {
                 $totalDebit = (float) \Illuminate\Support\Facades\DB::table('coa_movements')->sum('debit');

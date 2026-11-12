@@ -258,7 +258,7 @@ public function getCurrentStockAttribute()
 {
     if ($this->mode == 'SPK') {
 
-        if ($this->itemable_id) {
+        if ($this->itemable_id && \Illuminate\Support\Facades\Schema::hasTable('finish_good_stocks')) {
             $fgStock = FinishGoodStock::where('finish_good_item_id', $this->itemable_id)->first();
             if ($fgStock) {
                 return (float) $fgStock->on_hand;

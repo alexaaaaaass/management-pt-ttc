@@ -77,7 +77,10 @@ class SuratJalanResource extends Resource
                                     modifyQueryUsing: function (Builder $query, ?SuratJalan $record) {
                                         $spkDelivered = "(SELECT COALESCE(SUM(sj.qty_pengiriman), 0) FROM surat_jalans sj WHERE sj.sales_order_id = sales_orders.id)";
                                         $spkPackedGood = "(SELECT COALESCE(SUM(pkg.grand_total), 0) FROM packagings pkg JOIN master_spk spk ON pkg.spk_id = spk.id WHERE spk.sales_order_id = sales_orders.id AND pkg.jenis_transfer != 'blokir')";
-                                        $fgStockReady = "EXISTS (SELECT 1 FROM finish_good_stocks fgs WHERE fgs.finish_good_item_id = sales_orders.itemable_id AND fgs.on_hand > 0)";
+                                        $hasFgStocks = \Illuminate\Support\Facades\Schema::hasTable('finish_good_stocks');
+                                        $fgStockReady = $hasFgStocks
+                                            ? "EXISTS (SELECT 1 FROM finish_good_stocks fgs WHERE fgs.finish_good_item_id = sales_orders.itemable_id AND fgs.on_hand > 0)"
+                                            : "1 = 0";
                                         $materialOrder = "(SELECT COALESCE(SUM(soi.qty), 0) FROM sales_order_items soi WHERE soi.sales_order_id = sales_orders.id)";
                                         $materialDelivered = "(SELECT COALESCE(SUM(sji.qty_kirim), 0) FROM surat_jalan_items sji JOIN sales_order_items soi ON sji.sales_order_item_id = soi.id WHERE soi.sales_order_id = sales_orders.id)";
                                         $materialStockReady = "EXISTS (SELECT 1 FROM sales_order_items soi JOIN material_stocks ms ON ms.item_id = soi.master_item_id WHERE soi.sales_order_id = sales_orders.id AND ms.on_hand > 0)";
