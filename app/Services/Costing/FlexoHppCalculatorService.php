@@ -2,16 +2,18 @@
 
 namespace App\Services\Costing;
 
+use App\Support\MoneyHelper;
+
 class FlexoHppCalculatorService
 {
     /**
-     * Default constants untuk Mesin Flexo Zonten TTC
+     * Default constants untuk Mesin Flexo Zonten TTC (Satuan Dimensi: CM)
      */
     public const DEFAULT_MESIN = 'Flexo Zonten';
-    public const DEFAULT_REPEAT_CYLINDER = 412.75; // mm
-    public const DEFAULT_ALLOWANCE_PANJANG = 3.0;   // mm
-    public const DEFAULT_ALLOWANCE_LEBAR = 3.0;     // mm
-    public const DEFAULT_ALLOWANCE_WEB = 20.0;      // mm
+    public const DEFAULT_REPEAT_CYLINDER = 41.28;  // cm (standar zonten 412.75 mm = 41.28 cm)
+    public const DEFAULT_ALLOWANCE_PANJANG = 0.3;   // cm (3 mm)
+    public const DEFAULT_ALLOWANCE_LEBAR = 0.3;     // cm (3 mm)
+    public const DEFAULT_ALLOWANCE_WEB = 2.0;       // cm (20 mm)
     public const DEFAULT_WASTE_SETTING = 40.0;      // meter
     public const DEFAULT_WASTE_PERSEN = 10.0;       // %
     public const DEFAULT_KECEPATAN_CETAK = 100.0;   // meter/menit
@@ -19,9 +21,11 @@ class FlexoHppCalculatorService
     public const DEFAULT_JUMLAH_WARNA = 8;
     public const DEFAULT_GRAMATUR = 230.0;          // gsm
     public const DEFAULT_HARGA_BAHAN = 10000.0;     // Rp/kg
+    public const DEFAULT_HARGA_BAHAN_PER_METER = 0.0; // Rp/m
 
     /**
      * Hitung kalkulasi layout, kebutuhan bahan kertas, biaya proses flexo, dan HPP lengkap.
+     * Satuan dimensi menggunakan centimeter (cm).
      *
      * @param array $data Input parameter kalkulasi
      * @param float $targetOrder Target jumlah pesanan (pcs)
@@ -32,26 +36,47 @@ class FlexoHppCalculatorService
         $targetOrder = max(1, (float) $targetOrder);
 
         // =====================================================================
-        // A. SPESIFIKASI ORDER & LAYOUT
+        // A. SPESIFIKASI ORDER & LAYOUT (Satuan: CM)
         // =====================================================================
         $panjangEtiket = max(0, (float) ($data['panjang_etiket_jadi'] ?? 0));
         $lebarEtiket = max(0, (float) ($data['lebar_etiket_jadi'] ?? 0));
         $allowancePanjang = isset($data['lebihan_cetak_panjang']) ? (float) $data['lebihan_cetak_panjang'] : self::DEFAULT_ALLOWANCE_PANJANG;
         $allowanceLebar = isset($data['lebihan_cetak_lebar']) ? (float) $data['lebihan_cetak_lebar'] : self::DEFAULT_ALLOWANCE_LEBAR;
         $allowanceWeb = isset($data['lebihan_lebar_bahan']) ? (float) $data['lebihan_lebar_bahan'] : self::DEFAULT_ALLOWANCE_WEB;
-
-        $etiketSepanjangRepeat = max(1, (int) ($data['jumlah_etiket_sepanjang_repeat'] ?? 2));
-        $jalurMelintang = max(1, (int) ($data['jumlah_etiket_sepanjang_lebar'] ?? 2));
         $repeatCylinder = (float) ($data['repeat_cylinder'] ?? self::DEFAULT_REPEAT_CYLINDER);
+
+        // Auto-normalize jika nilai input masih berupa mm (data lama)
+        if ($panjangEtiket > 50) {
+            $panjangEtiket /= 10.0;
+        }
+        if ($lebarEtiket > 50) {
+            $lebarEtiket /= 10.0;
+        }
+        if ($repeatCylinder > 100) {
+            $repeatCylinder /= 10.0;
+        }
+        if ($allowancePanjang > 1.5) {
+            $allowancePanjang /= 10.0;
+        }
+        if ($allowanceLebar > 1.5) {
+            $allowanceLebar /= 10.0;
+        }
+        if ($allowanceWeb > 10) {
+            $allowanceWeb /= 10.0;
+        }
+
         if ($repeatCylinder <= 0) {
             $repeatCylinder = self::DEFAULT_REPEAT_CYLINDER;
         }
 
-        // Rumus Layout
-        $lebarBahan = ($lebarEtiket + $allowanceLebar) * $jalurMelintang + $allowanceWeb;
-        $panjangCetakPitch = $panjangEtiket + $allowancePanjang;
-        $panjangKebutuhanRepeat = $etiketSepanjangRepeat * $panjangCetakPitch;
-        $sisaRepeat = $repeatCylinder - $panjangKebutuhanRepeat;
+        $etiketSepanjangRepeat = max(1, (int) ($data['jumlah_etiket_sepanjang_repeat'] ?? 2));
+        $jalurMelintang = max(1, (int) ($data['jumlah_etiket_sepanjang_lebar'] ?? 2));
+
+        // Rumus Layout (semua dalam cm)
+        $lebarBahan = ($lebarEtiket + $allowanceLebar) * $jalurMelintang + $allowanceWeb; // cm
+        $panjangCetakPitch = $panjangEtiket + $allowancePanjang; // cm
+        $panjangKebutuhanRepeat = $etiketSepanjangRepeat * $panjangCetakPitch; // cm
+        $sisaRepeat = $repeatCylinder - $panjangKebutuhanRepeat; // cm
         $statusPanjangRepeat = ($sisaRepeat >= 0) ? 'MUAT SECARA MATEMATIS' : 'TIDAK MUAT (OVERSIZE)';
 
         // =====================================================================
@@ -59,7 +84,8 @@ class FlexoHppCalculatorService
         // =====================================================================
         $etiketPerRepeat = $etiketSepanjangRepeat * $jalurMelintang;
         $repeatDibutuhkan = (int) ceil($targetOrder / max(1, $etiketPerRepeat));
-        $panjangProduksiTeoritis = ($repeatDibutuhkan * $repeatCylinder) / 1000.0; // meter
+        // Panjang produksi teoritis (meter) = repeat * repeatCylinder (cm) / 100
+        $panjangProduksiTeoritis = ($repeatDibutuhkan * $repeatCylinder) / 100.0; // meter
 
         $wasteSetting = isset($data['waste_setting']) ? (float) $data['waste_setting'] : self::DEFAULT_WASTE_SETTING;
         $wastePersenRaw = isset($data['waste_tambahan_persen']) ? (float) $data['waste_tambahan_persen'] : self::DEFAULT_WASTE_PERSEN;
@@ -68,11 +94,34 @@ class FlexoHppCalculatorService
 
         $totalPanjangBahan = $panjangProduksiTeoritis + $wasteSetting + $wasteTambahanMeter; // meter
         $gramatur = isset($data['gramatur_kertas']) ? (float) $data['gramatur_kertas'] : self::DEFAULT_GRAMATUR;
-        $hargaBahanPerKg = isset($data['harga_bahan_per_kg']) ? (float) $data['harga_bahan_per_kg'] : self::DEFAULT_HARGA_BAHAN;
 
         // Berat bahan = panjang (m) * lebar (m) * gsm / 1000
-        $beratBahanTeoritis = $totalPanjangBahan * ($lebarBahan / 1000.0) * ($gramatur / 1000.0); // kg
-        $biayaBahan = $beratBahanTeoritis * $hargaBahanPerKg;
+        // Karena $lebarBahan dalam cm, diubah ke meter: $lebarBahan / 100.0
+        $beratBahanTeoritis = $totalPanjangBahan * ($lebarBahan / 100.0) * ($gramatur / 1000.0); // kg
+
+        // Konversi Berat per Meter Linear (kg/meter):
+        $kgPerMeter = ($lebarBahan / 100.0) * ($gramatur / 1000.0); // kg/meter
+
+        $hargaBahanPerKg = isset($data['harga_bahan_per_kg']) ? (float) $data['harga_bahan_per_kg'] : 0;
+        $hargaBahanPerMeter = isset($data['harga_bahan_per_meter']) ? (float) $data['harga_bahan_per_meter'] : 0;
+        $basisHarga = $data['basis_harga_bahan'] ?? ($hargaBahanPerMeter > 0 && $hargaBahanPerKg <= 0 ? 'meter' : 'kg');
+
+        if ($basisHarga === 'meter' && $hargaBahanPerMeter > 0) {
+            $biayaBahan = $totalPanjangBahan * $hargaBahanPerMeter;
+            $hargaBahanPerKg = $kgPerMeter > 0 ? ($hargaBahanPerMeter / $kgPerMeter) : 0;
+        } else {
+            if ($hargaBahanPerKg <= 0 && $hargaBahanPerMeter <= 0) {
+                $hargaBahanPerKg = self::DEFAULT_HARGA_BAHAN;
+            }
+            if ($hargaBahanPerKg > 0) {
+                $biayaBahan = $beratBahanTeoritis * $hargaBahanPerKg;
+                $hargaBahanPerMeter = $kgPerMeter * $hargaBahanPerKg;
+            } else {
+                $biayaBahan = $totalPanjangBahan * $hargaBahanPerMeter;
+                $hargaBahanPerKg = $kgPerMeter > 0 ? ($hargaBahanPerMeter / $kgPerMeter) : 0;
+            }
+        }
+
         $biayaBahanPerEtiket = $targetOrder > 0 ? ($biayaBahan / $targetOrder) : 0;
 
         // =====================================================================
@@ -108,7 +157,7 @@ class FlexoHppCalculatorService
         $hargaJualIndikatif = $hppPerEtiket * (1 + $marginRatio);
 
         return [
-            // Section A: Layout
+            // Section A: Layout (Satuan CM)
             'panjang_etiket_jadi' => round($panjangEtiket, 2),
             'lebar_etiket_jadi' => round($lebarEtiket, 2),
             'lebihan_cetak_panjang' => round($allowancePanjang, 2),
@@ -136,6 +185,8 @@ class FlexoHppCalculatorService
             'gramatur_kertas' => round($gramatur, 2),
             'berat_bahan_teoritis' => round($beratBahanTeoritis, 3),
             'harga_bahan_per_kg' => round($hargaBahanPerKg, 2),
+            'harga_bahan_per_meter' => round($hargaBahanPerMeter, 2),
+            'basis_harga_bahan' => $basisHarga,
             'biaya_bahan' => round($biayaBahan, 2),
             'biaya_bahan_per_etiket' => round($biayaBahanPerEtiket, 4),
 
@@ -155,10 +206,10 @@ class FlexoHppCalculatorService
             // Section D: Ringkasan HPP & Margin
             'biaya_overhead' => round($biayaOverhead, 2),
             'total_biaya_order' => round($totalBiayaOrder, 2),
+            'terbilang_total_biaya' => MoneyHelper::terbilang($totalBiayaOrder),
             'hpp_per_etiket' => round($hppPerEtiket, 2),
             'margin_persen' => round($marginPersenRaw, 2),
             'harga_jual_indikatif' => round($hargaJualIndikatif, 2),
         ];
     }
 }
-

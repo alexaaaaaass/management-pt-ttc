@@ -110,8 +110,10 @@ class OrderConfirmationResource extends Resource
                                                     $uuid = (string) \Illuminate\Support\Str::uuid();
                                                     $targetQty = (float) $item->qty ?: 100000;
                                                     $fg = $fgId ? FinishGoodItem::find($fgId) : null;
-                                                    $panjang = $fg?->panjang ? (float) $fg->panjang : 178.0;
-                                                    $lebar = $fg?->lebar ? (float) $fg->lebar : 119.0;
+                                                    $panjang = $fg?->panjang ? (float) $fg->panjang : 17.8;
+                                                    if ($panjang > 50) $panjang /= 10.0;
+                                                    $lebar = $fg?->lebar ? (float) $fg->lebar : 11.9;
+                                                    if ($lebar > 50) $lebar /= 10.0;
                                                     $gramatur = $fg?->gramasi ? (float) $fg->gramasi : FlexoHppCalculatorService::DEFAULT_GRAMATUR;
 
                                                     $calc = app(FlexoHppCalculatorService::class)->calculate([
@@ -359,8 +361,10 @@ class OrderConfirmationResource extends Resource
                                                     $targetQty = (float) static::cleanNumeric($get('qty') ?? 100000);
                                                     if ($targetQty <= 0) $targetQty = 100000;
 
-                                                    $panjang = $fg->panjang ? (float) $fg->panjang : 178.0;
-                                                    $lebar = $fg->lebar ? (float) $fg->lebar : 119.0;
+                                                    $panjang = $fg->panjang ? (float) $fg->panjang : 17.8;
+                                                    if ($panjang > 50) $panjang /= 10.0;
+                                                    $lebar = $fg->lebar ? (float) $fg->lebar : 11.9;
+                                                    if ($lebar > 50) $lebar /= 10.0;
                                                     $gramatur = $fg->gramasi ? (float) $fg->gramasi : FlexoHppCalculatorService::DEFAULT_GRAMATUR;
 
                                                     $calculator = app(FlexoHppCalculatorService::class);
@@ -430,7 +434,7 @@ class OrderConfirmationResource extends Resource
                                             ->button()
                                             ->color('warning')
                                             ->modalHeading(fn (Get $get) => 'Kalkulasi HPP & Kertas: ' . ($get('item_name') ?: 'Item Penawaran'))
-                                            ->modalDescription('Kalkulasi spesifikasi layout repeat cylinder, kebutuhan bahan kertas (meter & kg), biaya proses cetak flexo, dan rekomendasi harga jual berdasarkan standar mesin Flexo Zonten TTC.')
+                                            ->modalDescription('Kalkulasi spesifikasi layout repeat cylinder (cm), kebutuhan bahan kertas (meter & kg), biaya proses cetak flexo, dan rekomendasi harga jual berdasarkan standar mesin Flexo Zonten TTC.')
                                             ->modalWidth('7xl')
                                             ->modalSubmitActionLabel('Simpan & Terapkan')
                                             ->fillForm(function (Get $get): array {
@@ -439,9 +443,52 @@ class OrderConfirmationResource extends Resource
                                                 if ($targetOrder <= 0) $targetOrder = 100000;
 
                                                 if (!empty($existing) && is_array($existing)) {
+                                                    // Normalisasi backward-compatibility jika ada data lama yang tersimpan dalam format MM
+                                                    if (isset($existing['panjang_etiket_jadi']) && (float) $existing['panjang_etiket_jadi'] > 50) {
+                                                        $existing['panjang_etiket_jadi'] = (float) $existing['panjang_etiket_jadi'] / 10.0;
+                                                    }
+                                                    if (isset($existing['lebar_etiket_jadi']) && (float) $existing['lebar_etiket_jadi'] > 50) {
+                                                        $existing['lebar_etiket_jadi'] = (float) $existing['lebar_etiket_jadi'] / 10.0;
+                                                    }
+                                                    if (isset($existing['repeat_cylinder']) && (float) $existing['repeat_cylinder'] > 100) {
+                                                        $existing['repeat_cylinder'] = (float) $existing['repeat_cylinder'] / 10.0;
+                                                    }
+                                                    if (isset($existing['lebihan_cetak_panjang']) && (float) $existing['lebihan_cetak_panjang'] > 1.5) {
+                                                        $existing['lebihan_cetak_panjang'] = (float) $existing['lebihan_cetak_panjang'] / 10.0;
+                                                    }
+                                                    if (isset($existing['lebihan_cetak_lebar']) && (float) $existing['lebihan_cetak_lebar'] > 1.5) {
+                                                        $existing['lebihan_cetak_lebar'] = (float) $existing['lebihan_cetak_lebar'] / 10.0;
+                                                    }
+                                                    if (isset($existing['lebihan_lebar_bahan']) && (float) $existing['lebihan_lebar_bahan'] > 10) {
+                                                        $existing['lebihan_lebar_bahan'] = (float) $existing['lebihan_lebar_bahan'] / 10.0;
+                                                    }
+                                                    if (isset($existing['lebar_bahan']) && (float) $existing['lebar_bahan'] > 100) {
+                                                        $existing['lebar_bahan'] = (float) $existing['lebar_bahan'] / 10.0;
+                                                    }
+                                                    if (isset($existing['panjang_cetak_pitch']) && (float) $existing['panjang_cetak_pitch'] > 50) {
+                                                        $existing['panjang_cetak_pitch'] = (float) $existing['panjang_cetak_pitch'] / 10.0;
+                                                    }
+                                                    if (isset($existing['panjang_kebutuhan_per_repeat']) && (float) $existing['panjang_kebutuhan_per_repeat'] > 100) {
+                                                        $existing['panjang_kebutuhan_per_repeat'] = (float) $existing['panjang_kebutuhan_per_repeat'] / 10.0;
+                                                    }
+                                                    if (isset($existing['sisa_repeat']) && (float) $existing['sisa_repeat'] > 25) {
+                                                        $existing['sisa_repeat'] = (float) $existing['sisa_repeat'] / 10.0;
+                                                    }
+
                                                     $existing['target_order'] = $targetOrder;
                                                     if (!isset($existing['apply_harga_to_item'])) {
                                                         $existing['apply_harga_to_item'] = true;
+                                                    }
+                                                    if (!isset($existing['basis_harga_bahan'])) {
+                                                        $existing['basis_harga_bahan'] = 'kg';
+                                                    }
+                                                    if (!isset($existing['harga_bahan_per_meter']) || (float) $existing['harga_bahan_per_meter'] <= 0) {
+                                                        $lebarBahanCm = (float) ($existing['lebar_bahan'] ?? 0);
+                                                        $gramatur = (float) ($existing['gramatur_kertas'] ?? FlexoHppCalculatorService::DEFAULT_GRAMATUR);
+                                                        $hargaPerKg = (float) ($existing['harga_bahan_per_kg'] ?? FlexoHppCalculatorService::DEFAULT_HARGA_BAHAN);
+                                                        if ($lebarBahanCm > 0) {
+                                                            $existing['harga_bahan_per_meter'] = round(($lebarBahanCm / 100.0) * ($gramatur / 1000.0) * $hargaPerKg, 2);
+                                                        }
                                                     }
                                                     return $existing;
                                                 }
@@ -449,8 +496,10 @@ class OrderConfirmationResource extends Resource
                                                 $fgId = $get('finish_good_item_id');
                                                 $fg = $fgId ? FinishGoodItem::find($fgId) : null;
 
-                                                $panjang = $fg?->panjang ? (float) $fg->panjang : 178.0;
-                                                $lebar = $fg?->lebar ? (float) $fg->lebar : 119.0;
+                                                $panjang = $fg?->panjang ? (float) $fg->panjang : 17.8;
+                                                if ($panjang > 50) $panjang /= 10.0;
+                                                $lebar = $fg?->lebar ? (float) $fg->lebar : 11.9;
+                                                if ($lebar > 50) $lebar /= 10.0;
                                                 $gramatur = $fg?->gramasi ? (float) $fg->gramasi : FlexoHppCalculatorService::DEFAULT_GRAMATUR;
 
                                                 $calculator = app(FlexoHppCalculatorService::class);
@@ -479,6 +528,7 @@ class OrderConfirmationResource extends Resource
 
                                                 $initialCalc['target_order'] = $targetOrder;
                                                 $initialCalc['apply_harga_to_item'] = true;
+                                                $initialCalc['basis_harga_bahan'] = 'kg';
                                                 return $initialCalc;
                                             })
                                             ->form(FlexoHppModalSchema::getFormSchema())

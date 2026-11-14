@@ -20,6 +20,8 @@ class HppCalculatorController extends Controller
             'lebar_etiket_jadi'              => ['required', 'numeric', 'min:1'],
             'gramatur_kertas'                => ['nullable', 'numeric', 'min:1'],
             'harga_bahan_per_kg'             => ['nullable', 'numeric', 'min:0'],
+            'harga_bahan_per_meter'          => ['nullable', 'numeric', 'min:0'],
+            'basis_harga_bahan'              => ['nullable', 'string', 'in:kg,meter'],
             'jumlah_etiket_sepanjang_repeat' => ['nullable', 'integer', 'min:1'],
             'jumlah_etiket_sepanjang_lebar'  => ['nullable', 'integer', 'min:1'],
             'jumlah_up_keliling'             => ['nullable', 'integer', 'min:1'],
