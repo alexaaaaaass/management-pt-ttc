@@ -740,9 +740,32 @@ class SalesOrderResource extends Resource
                 Tables\Columns\TextColumn::make('orderConfirmation.doc_no')
                     ->label('No OC')
                     ->badge()
-                    ->color('gray')
+                    ->color(fn ($record) => $record->orderConfirmation ? 'warning' : 'gray')
+                    ->icon(fn ($record) => $record->orderConfirmation ? 'heroicon-m-document-magnifying-glass' : null)
                     ->placeholder('-')
-                    ->searchable(),
+                    ->searchable()
+                    ->tooltip(fn ($record) => $record->orderConfirmation ? 'Klik untuk melihat rincian item Order Confirmation' : null)
+                    ->action(
+                        Tables\Actions\Action::make('view_oc_modal')
+                            ->modalHeading(fn (SalesOrder $record) => 'Order Confirmation: ' . ($record->orderConfirmation?->doc_no ?? '-'))
+                            ->modalWidth('5xl')
+                            ->modalSubmitAction(false)
+                            ->modalCancelActionLabel('Tutup')
+                            ->modalContent(function (SalesOrder $record) {
+                                $oc = $record->orderConfirmation;
+                                if (! $oc) {
+                                    return new \Illuminate\Support\HtmlString('<div class="p-6 text-center text-sm text-gray-400">Tidak ada Order Confirmation terkait.</div>');
+                                }
+
+                                $oc->loadMissing(['customer', 'items.finishGoodItem']);
+
+                                return view('filament.sales-order.oc-items-modal', [
+                                    'orderConfirmation' => $oc,
+                                    'salesOrder' => $record,
+                                ]);
+                            })
+                            ->disabled(fn (SalesOrder $record) => ! $record->orderConfirmation)
+                    ),
 
                 Tables\Columns\TextColumn::make('order_type')
                     ->label('Tipe')
@@ -858,7 +881,7 @@ class SalesOrderResource extends Resource
     {
         return parent::getEloquentQuery()
             ->with([
-                'orderConfirmation',
+                'orderConfirmation.items.finishGoodItem',
                 'customer',
                 'itemable',
                 'items.material',
