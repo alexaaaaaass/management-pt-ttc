@@ -534,18 +534,21 @@ class OrderConfirmationResource extends Resource
                                             }),
 
                                         Forms\Components\Actions\Action::make('sync_harga_to_hpp')
-                                            ->label(fn (Get $get) => 'Samakan Harga = HPP (Rp ' . (\App\Support\MoneyHelper::format($get('hpp_per_pcs'), 2) ?? '0') . ')')
+                                            ->label('Samakan Harga = HPP')
+                                            ->icon('heroicon-m-arrows-right-left')
                                             ->button()
                                             ->outlined()
                                             ->color('success')
-                                            ->visible(function (Get $get): bool {
-                                                $hpp = static::cleanNumeric($get('hpp_per_pcs'));
-                                                $harga = static::cleanNumeric($get('harga'));
-                                                return $hpp > 0 && abs($hpp - $harga) > 0.01;
-                                            })
                                             ->action(function (Get $get, Set $set) {
                                                 $hpp = static::cleanNumeric($get('hpp_per_pcs'));
-                                                if ($hpp <= 0) return;
+                                                if ($hpp <= 0) {
+                                                    Notification::make()
+                                                        ->title('HPP Belum Tersedia')
+                                                        ->body('Silakan kalkulasi HPP produk terlebih dahulu.')
+                                                        ->warning()
+                                                        ->send();
+                                                    return;
+                                                }
 
                                                 $set('harga', \App\Support\MoneyHelper::format($hpp, 2) ?? '0');
                                                 $set('harga_jual_indikatif', $hpp);
@@ -553,21 +556,30 @@ class OrderConfirmationResource extends Resource
                                                 $rowTotal = $qty * $hpp;
                                                 $set('total', \App\Support\MoneyHelper::format($rowTotal, 2) ?? '0');
                                                 static::updateTotals($get, $set, isInsideRow: true);
+
+                                                Notification::make()
+                                                    ->title('Harga Disamakan dengan HPP')
+                                                    ->body('Harga satuan berhasil diatur menjadi Rp ' . (\App\Support\MoneyHelper::format($hpp, 2) ?? '0'))
+                                                    ->success()
+                                                    ->send();
                                             }),
 
                                         Forms\Components\Actions\Action::make('fix_hpp_to_harga')
-                                            ->label(fn (Get $get) => 'Jadikan Fix HPP = Harga (Rp ' . (\App\Support\MoneyHelper::format($get('harga'), 2) ?? '0') . ')')
+                                            ->label('Jadikan Fix HPP = Harga')
+                                            ->icon('heroicon-m-lock-closed')
                                             ->button()
                                             ->outlined()
                                             ->color('info')
-                                            ->visible(function (Get $get): bool {
-                                                $hpp = static::cleanNumeric($get('hpp_per_pcs'));
-                                                $harga = static::cleanNumeric($get('harga'));
-                                                return $harga > 0 && abs($hpp - $harga) > 0.01;
-                                            })
                                             ->action(function (Get $get, Set $set) {
                                                 $harga = static::cleanNumeric($get('harga'));
-                                                if ($harga <= 0) return;
+                                                if ($harga <= 0) {
+                                                    Notification::make()
+                                                        ->title('Harga Satuan Belum Diisi')
+                                                        ->body('Silakan masukkan harga satuan terlebih dahulu.')
+                                                        ->warning()
+                                                        ->send();
+                                                    return;
+                                                }
 
                                                 $set('hpp_per_pcs', $harga);
                                                 $set('harga_jual_indikatif', $harga);
@@ -579,6 +591,12 @@ class OrderConfirmationResource extends Resource
                                                     $hppData['harga_jual_indikatif'] = $harga;
                                                     $set('kalkulasi_hpp_data', $hppData);
                                                 }
+
+                                                Notification::make()
+                                                    ->title('HPP Disesuaikan')
+                                                    ->body('Nilai HPP berhasil ditetapkan sama dengan Harga (Rp ' . (\App\Support\MoneyHelper::format($harga, 2) ?? '0') . ')')
+                                                    ->success()
+                                                    ->send();
                                             }),
                                     ]),
 
