@@ -660,28 +660,27 @@ class OrderConfirmationResource extends Resource
 
                                             if ($hpp <= 0 && $kertasKg <= 0) {
                                                 return new \Illuminate\Support\HtmlString('
-                                                    <div style="margin-top: 4px; padding: 6px 12px; background: rgba(255, 255, 255, 0.03); border: 1px dashed rgba(255, 255, 255, 0.15); border-radius: 8px; font-size: 11px; color: #9ca3af; display: flex; align-items: center; gap: 8px;">
-                                                        <span style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #6b7280;"></span>
-                                                        <span>HPP & Kebutuhan Kertas belum dikalkulasi. Klik tombol <strong>Kalkulator HPP & Kertas</strong> di atas untuk menghitung otomatis.</span>
+                                                    <div style="margin-top: 4px; padding: 8px 12px; border: 1px dashed rgba(156, 163, 175, 0.35); border-radius: 6px; font-size: 11px; color: #9ca3af;">
+                                                        HPP & Kebutuhan Kertas belum dikalkulasi. Klik tombol <strong>HPP Produk</strong> di atas untuk menghitung otomatis.
                                                     </div>
                                                 ');
                                             }
 
                                             return new \Illuminate\Support\HtmlString('
-                                                <div style="margin-top: 4px; padding: 8px 14px; background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.25); border-radius: 8px; font-size: 12px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px;">
-                                                    <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
-                                                        <span style="font-weight: 700; color: #10b981; display: inline-flex; align-items: center; gap: 4px;">
-                                                            <span>📦 Kebutuhan Kertas:</span> ' . number_format($kertasKg, 2) . ' kg (' . number_format($kertasMeter, 0, '.', ',') . ' m)
+                                                <div style="margin-top: 4px; padding: 8px 14px; background: rgba(16, 185, 129, 0.06); border: 1px solid rgba(16, 185, 129, 0.25); border-left: 3px solid #10b981; border-radius: 6px; font-size: 12px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px;">
+                                                    <div style="display: flex; align-items: center; gap: 16px; flex-wrap: wrap;">
+                                                        <span style="font-weight: 600; color: #10b981;">
+                                                            Kebutuhan Kertas: <strong>' . number_format($kertasKg, 2) . ' kg (' . number_format($kertasMeter, 0, '.', ',') . ' m)</strong>
                                                         </span>
-                                                        <span style="font-weight: 700; color: #f59e0b; display: inline-flex; align-items: center; gap: 4px;">
-                                                            <span>🏷️ HPP Pokok:</span> Rp ' . number_format($hpp, 2) . ' / pcs
+                                                        <span style="font-weight: 600; color: #f59e0b;">
+                                                            HPP Pokok: <strong>Rp ' . number_format($hpp, 2) . ' / pcs</strong>
                                                         </span>
-                                                        <span style="font-weight: 700; color: #60a5fa; display: inline-flex; align-items: center; gap: 4px;">
-                                                            <span>💡 Harga Indikatif:</span> Rp ' . number_format($hargaIndikatif, 2) . ' / pcs
+                                                        <span style="font-weight: 600; color: #3b82f6;">
+                                                            Rekomendasi Jual: <strong>Rp ' . number_format($hargaIndikatif, 2) . ' / pcs</strong>
                                                         </span>
                                                     </div>
-                                                    <span style="font-size: 10px; color: #10b981; font-weight: 600; background: rgba(16, 185, 129, 0.15); padding: 2px 8px; border-radius: 6px;">
-                                                        ✓ Terkalkulasi Mesin Flexo
+                                                    <span style="font-size: 10px; color: #10b981; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em;">
+                                                        Terkalkulasi Flexo
                                                     </span>
                                                 </div>
                                             ');

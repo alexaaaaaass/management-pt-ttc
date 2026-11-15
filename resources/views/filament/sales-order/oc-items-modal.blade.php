@@ -14,115 +14,233 @@
         default           => strtoupper($oc->status ?? '-'),
     };
 
-    $statusColor = match ($oc->status) {
-        'draft'           => 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300 border-gray-300 dark:border-gray-700',
-        'deal'            => 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 border-emerald-300 dark:border-emerald-700',
-        'partial_so'      => 'bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300 border-amber-300 dark:border-amber-700',
-        'converted_to_so' => 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 border-emerald-300 dark:border-emerald-700',
-        'rejected'        => 'bg-rose-50 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300 border-rose-300 dark:border-rose-700',
-        default           => 'bg-blue-50 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300 border-blue-300 dark:border-blue-700',
-    };
+    $isSuccessStatus = in_array($oc->status, ['deal', 'converted_to_so']);
+    $isDangerStatus = $oc->status === 'rejected';
 @endphp
 
-<div class="space-y-6 text-gray-900 dark:text-gray-100">
+<style>
+    .oc-modal-wrap {
+        --oc-bg-card: #ffffff;
+        --oc-bg-subtle: #f8fafc;
+        --oc-bg-badge: #f1f5f9;
+        --oc-border: #e2e8f0;
+        --oc-border-subtle: #e2e8f0;
+        --oc-text-main: #0f172a;
+        --oc-text-secondary: #475569;
+        --oc-text-muted: #64748b;
+        --oc-accent: #d97706;
+        --oc-accent-bg: rgba(245, 158, 11, 0.08);
+        --oc-accent-border: rgba(245, 158, 11, 0.35);
+        --oc-success: #059669;
+        --oc-success-bg: rgba(16, 185, 129, 0.08);
+        --oc-success-border: rgba(16, 185, 129, 0.3);
+        --oc-danger: #e11d48;
+        --oc-danger-bg: rgba(225, 29, 72, 0.08);
+        --oc-danger-border: rgba(225, 29, 72, 0.3);
+        color: var(--oc-text-main);
+        font-family: inherit;
+    }
 
-    {{-- ================= Top Info & Quick Actions ================= --}}
-    <div class="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-5 shadow-sm">
+    .dark .oc-modal-wrap {
+        --oc-bg-card: #18181b;
+        --oc-bg-subtle: #222226;
+        --oc-bg-badge: #27272a;
+        --oc-border: #2e2e34;
+        --oc-border-subtle: #323238;
+        --oc-text-main: #f4f4f5;
+        --oc-text-secondary: #d4d4d8;
+        --oc-text-muted: #a1a1aa;
+        --oc-accent: #fbbf24;
+        --oc-accent-bg: rgba(245, 158, 11, 0.12);
+        --oc-accent-border: rgba(245, 158, 11, 0.4);
+        --oc-success: #34d399;
+        --oc-success-bg: rgba(16, 185, 129, 0.12);
+        --oc-success-border: rgba(16, 185, 129, 0.35);
+        --oc-danger: #fb7185;
+        --oc-danger-bg: rgba(225, 29, 72, 0.12);
+        --oc-danger-border: rgba(225, 29, 72, 0.35);
+    }
+
+    .oc-card {
+        background-color: var(--oc-bg-card);
+        border: 1px solid var(--oc-border);
+        border-radius: 10px;
+        padding: 16px 20px;
+    }
+
+    .oc-card-active {
+        border-color: var(--oc-accent-border);
+    }
+
+    .oc-pill {
+        display: inline-flex;
+        align-items: center;
+        padding: 2px 9px;
+        border-radius: 6px;
+        font-size: 11px;
+        font-weight: 600;
+        letter-spacing: 0.02em;
+        background-color: var(--oc-bg-badge);
+        color: var(--oc-text-secondary);
+        border: 1px solid var(--oc-border-subtle);
+    }
+
+    .oc-pill-success {
+        background-color: var(--oc-success-bg);
+        color: var(--oc-success);
+        border-color: var(--oc-success-border);
+    }
+
+    .oc-pill-accent {
+        background-color: var(--oc-accent-bg);
+        color: var(--oc-accent);
+        border-color: var(--oc-accent-border);
+    }
+
+    .oc-pill-danger {
+        background-color: var(--oc-danger-bg);
+        color: var(--oc-danger);
+        border-color: var(--oc-danger-border);
+    }
+
+    .oc-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 6px 12px;
+        font-size: 12px;
+        font-weight: 500;
+        border-radius: 6px;
+        text-decoration: none;
+        transition: opacity 0.15s ease;
+        border: 1px solid var(--oc-border);
+        background-color: var(--oc-bg-subtle);
+        color: var(--oc-text-main);
+    }
+
+    .oc-btn:hover {
+        opacity: 0.85;
+    }
+
+    .oc-btn-primary {
+        background-color: #d97706;
+        border-color: #d97706;
+        color: #ffffff;
+    }
+
+    .oc-spec-box {
+        background-color: var(--oc-bg-subtle);
+        border: 1px solid var(--oc-border-subtle);
+        border-radius: 6px;
+        padding: 8px 10px;
+    }
+
+    .oc-flexo-bar {
+        background-color: var(--oc-bg-subtle);
+        border: 1px solid var(--oc-border-subtle);
+        border-left: 3px solid var(--oc-accent);
+        border-radius: 6px;
+        padding: 9px 14px;
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 8px 20px;
+        font-size: 12px;
+        color: var(--oc-text-secondary);
+    }
+
+    .oc-section-title {
+        font-size: 11px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        color: var(--oc-text-muted);
+    }
+</style>
+
+<div class="oc-modal-wrap space-y-5">
+
+    {{-- ================= Header Info & Quick Actions ================= --}}
+    <div class="oc-card">
         <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <div>
+            <div class="space-y-1.5">
                 <div class="flex flex-wrap items-center gap-2">
-                    <span class="text-xs font-semibold uppercase tracking-wider text-primary-600 dark:text-primary-400">
-                        Order Confirmation
-                    </span>
-                    <span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium border {{ $statusColor }}">
+                    <span class="oc-section-title" style="color: var(--oc-accent);">Order Confirmation</span>
+                    <span class="oc-pill {{ $isSuccessStatus ? 'oc-pill-success' : ($isDangerStatus ? 'oc-pill-danger' : 'oc-pill-accent') }}">
                         {{ $statusLabel }}
                     </span>
                     @if($salesOrder)
-                        <span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300 border border-amber-200 dark:border-amber-800">
-                            No SO Terkait: {{ $salesOrder->no_sales_order }}
+                        <span class="oc-pill">
+                            SO: {{ $salesOrder->no_sales_order }}
                         </span>
                     @endif
                 </div>
 
-                <div class="mt-2 flex flex-wrap items-baseline gap-3">
-                    <h2 class="text-xl font-bold tracking-tight text-gray-900 dark:text-white">
+                <div class="flex flex-wrap items-baseline gap-2.5 pt-0.5">
+                    <h2 style="font-size: 19px; font-weight: 700; color: var(--oc-text-main); margin: 0;">
                         {{ $oc->doc_no }}
                     </h2>
                     @if($oc->order_id)
-                        <span class="text-xs font-mono bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 px-2 py-0.5 rounded">
+                        <span class="oc-pill" style="font-family: ui-monospace, monospace; font-weight: 500;">
                             Order ID: {{ $oc->order_id }}
                         </span>
                     @endif
                 </div>
-
-                <div class="mt-3 grid grid-cols-2 sm:grid-cols-4 gap-x-6 gap-y-2 text-xs text-gray-600 dark:text-gray-400">
-                    <div>
-                        <span class="block text-gray-400 dark:text-gray-500">Customer:</span>
-                        <span class="font-semibold text-gray-800 dark:text-gray-200">
-                            {{ $customer?->nama_customer ?? '-' }}
-                        </span>
-                    </div>
-                    <div>
-                        <span class="block text-gray-400 dark:text-gray-500">Tanggal OC:</span>
-                        <span class="font-semibold text-gray-800 dark:text-gray-200">
-                            {{ $oc->tanggal ? \Carbon\Carbon::parse($oc->tanggal)->format('d/m/Y') : '-' }}
-                        </span>
-                    </div>
-                    <div>
-                        <span class="block text-gray-400 dark:text-gray-500">Lead Time:</span>
-                        <span class="font-semibold text-gray-800 dark:text-gray-200">
-                            {{ $oc->lead_time ?: '21 Hari Kerja' }}
-                        </span>
-                    </div>
-                    <div>
-                        <span class="block text-gray-400 dark:text-gray-500">Total Item:</span>
-                        <span class="font-semibold text-gray-800 dark:text-gray-200">
-                            {{ $items->count() }} Item Pesanan
-                        </span>
-                    </div>
-                </div>
             </div>
 
-            {{-- Quick action buttons --}}
-            <div class="flex flex-wrap md:flex-col items-stretch md:items-end gap-2 shrink-0">
+            <div class="flex flex-wrap items-center gap-2 shrink-0">
                 <a
                     href="{{ route('filament.admin.resources.order-confirmations.edit', $oc) }}"
                     target="_blank"
-                    class="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-medium text-white bg-primary-600 hover:bg-primary-500 rounded-lg shadow-sm transition"
+                    class="oc-btn oc-btn-primary"
                 >
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
                     Buka Dokumen OC
                 </a>
                 <a
                     href="{{ route('order-confirmation.preview', $oc) }}"
                     target="_blank"
-                    class="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-700 dark:text-gray-200 bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 rounded-lg transition"
+                    class="oc-btn"
                 >
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
                     Preview PDF
                 </a>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-4 pt-3.5" style="border-top: 1px solid var(--oc-border); font-size: 12px;">
+            <div>
+                <span style="display: block; color: var(--oc-text-muted); font-size: 11px;">Customer</span>
+                <span style="font-weight: 600; color: var(--oc-text-main);">{{ $customer?->nama_customer ?? '-' }}</span>
+            </div>
+            <div>
+                <span style="display: block; color: var(--oc-text-muted); font-size: 11px;">Tanggal OC</span>
+                <span style="font-weight: 600; color: var(--oc-text-main);">{{ $oc->tanggal ? \Carbon\Carbon::parse($oc->tanggal)->format('d/m/Y') : '-' }}</span>
+            </div>
+            <div>
+                <span style="display: block; color: var(--oc-text-muted); font-size: 11px;">Lead Time</span>
+                <span style="font-weight: 600; color: var(--oc-text-main);">{{ $oc->lead_time ?: '21 Hari Kerja' }}</span>
+            </div>
+            <div>
+                <span style="display: block; color: var(--oc-text-muted); font-size: 11px;">Total Item</span>
+                <span style="font-weight: 600; color: var(--oc-text-main);">{{ $items->count() }} Item Pesanan</span>
             </div>
         </div>
     </div>
 
     {{-- ================= Daftar Item Order Confirmation ================= --}}
-    <div class="space-y-4">
-        <div class="flex items-center justify-between">
-            <h3 class="text-sm font-bold uppercase tracking-wider text-gray-800 dark:text-gray-200 flex items-center gap-2">
-                <svg class="w-4 h-4 text-primary-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>
-                Daftar Item & Penawaran Harga
-            </h3>
-            <span class="text-xs text-gray-500 dark:text-gray-400">
-                {{ $items->count() }} Item Terdaftar
+    <div class="space-y-3">
+        <div class="flex items-center justify-between px-0.5">
+            <h3 class="oc-section-title">Daftar Item & Penawaran Harga</h3>
+            <span style="font-size: 11px; color: var(--oc-text-muted);">
+                {{ $items->count() }} Item
             </span>
         </div>
 
         @if($items->isEmpty())
-            <div class="rounded-xl border border-dashed border-gray-300 dark:border-gray-700 p-8 text-center text-sm text-gray-500">
+            <div class="oc-card text-center" style="color: var(--oc-text-muted); font-size: 13px; padding: 32px;">
                 Tidak ada item terdaftar pada Order Confirmation ini.
             </div>
         @else
-            <div class="space-y-4">
+            <div class="space-y-3">
                 @foreach($items as $index => $item)
                     @php
                         $isCurrentSoItem = $salesOrder && (
@@ -139,27 +257,27 @@
                         $kertasMeter = (float) ($item->kebutuhan_kertas_meter ?? 0);
                     @endphp
 
-                    <div class="rounded-xl border {{ $isCurrentSoItem ? 'border-primary-500 ring-2 ring-primary-500/20 bg-primary-50/10 dark:bg-primary-950/10' : 'border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900' }} p-4 shadow-sm transition">
+                    <div class="oc-card {{ $isCurrentSoItem ? 'oc-card-active' : '' }}">
                         <div class="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
                             <div class="space-y-1">
                                 <div class="flex flex-wrap items-center gap-2">
-                                    <span class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-gray-100 dark:bg-gray-800 text-xs font-bold text-gray-600 dark:text-gray-300">
-                                        {{ $index + 1 }}
+                                    <span style="font-size: 12px; font-weight: 600; color: var(--oc-text-muted);">
+                                        {{ $index + 1 }}.
                                     </span>
-                                    <h4 class="text-base font-bold text-gray-900 dark:text-white">
+                                    <h4 style="font-size: 15px; font-weight: 700; color: var(--oc-text-main); margin: 0;">
                                         {{ $item->item_name ?? ($item->finishGoodItem?->nama_barang ?? 'Item Penawaran') }}
                                     </h4>
                                     @if($isCurrentSoItem)
-                                        <span class="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700">
-                                            👉 Terkait Sales Order Ini
+                                        <span class="oc-pill oc-pill-success">
+                                            Terkait Sales Order Ini
                                         </span>
                                     @endif
                                 </div>
 
                                 @if($item->finishGoodItem)
-                                    <div class="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-2">
-                                        <span>Master Finish Good:</span>
-                                        <span class="font-mono bg-gray-100 dark:bg-gray-800 px-1.5 py-0.5 rounded text-gray-700 dark:text-gray-300">
+                                    <div style="font-size: 11px; color: var(--oc-text-muted);" class="flex flex-wrap items-center gap-1.5">
+                                        <span>Finish Good:</span>
+                                        <span style="font-family: ui-monospace, monospace; color: var(--oc-text-secondary); font-weight: 600;">
                                             {{ $item->finishGoodItem->kode_material_produk ?? '-' }}
                                         </span>
                                         <span>({{ $item->finishGoodItem->nama_barang }})</span>
@@ -168,59 +286,64 @@
                             </div>
 
                             {{-- Harga & Total item --}}
-                            <div class="sm:text-right shrink-0 bg-gray-50 dark:bg-gray-800/50 p-2.5 rounded-lg border border-gray-100 dark:border-gray-800">
-                                <div class="text-xs text-gray-500 dark:text-gray-400">
+                            <div class="sm:text-right shrink-0">
+                                <div style="font-size: 11px; color: var(--oc-text-muted);">
                                     {{ number_format($qty, 0, ',', '.') }} {{ $item->satuan ?: 'Pcs' }} &times; Rp {{ number_format($harga, 2, ',', '.') }}
                                 </div>
-                                <div class="text-base font-bold text-gray-900 dark:text-white">
+                                <div style="font-size: 15px; font-weight: 700; color: var(--oc-text-main); margin-top: 1px;">
                                     Rp {{ number_format($total, 2, ',', '.') }}
                                 </div>
                             </div>
                         </div>
 
-                        {{-- Spesifikasi Teknis Pills --}}
-                        <div class="mt-3 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-2 text-xs">
-                            <div class="rounded-lg bg-gray-50 dark:bg-gray-800/60 p-2">
-                                <span class="block text-gray-400 dark:text-gray-500 text-[10px] uppercase font-semibold">Jenis</span>
-                                <span class="font-medium text-gray-700 dark:text-gray-300 truncate block">{{ $item->jenis ?: '-' }}</span>
+                        {{-- Spesifikasi Teknis --}}
+                        <div class="mt-3 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-2">
+                            <div class="oc-spec-box">
+                                <span style="display: block; font-size: 10px; text-transform: uppercase; font-weight: 600; color: var(--oc-text-muted);">Jenis</span>
+                                <span style="display: block; font-size: 12px; font-weight: 500; color: var(--oc-text-main); margin-top: 2px;" class="truncate">{{ $item->jenis ?: '-' }}</span>
                             </div>
-                            <div class="rounded-lg bg-gray-50 dark:bg-gray-800/60 p-2">
-                                <span class="block text-gray-400 dark:text-gray-500 text-[10px] uppercase font-semibold">Komponen</span>
-                                <span class="font-medium text-gray-700 dark:text-gray-300 truncate block">{{ $item->komponen ?: '-' }}</span>
+                            <div class="oc-spec-box">
+                                <span style="display: block; font-size: 10px; text-transform: uppercase; font-weight: 600; color: var(--oc-text-muted);">Komponen</span>
+                                <span style="display: block; font-size: 12px; font-weight: 500; color: var(--oc-text-main); margin-top: 2px;" class="truncate">{{ $item->komponen ?: '-' }}</span>
                             </div>
-                            <div class="rounded-lg bg-gray-50 dark:bg-gray-800/60 p-2">
-                                <span class="block text-gray-400 dark:text-gray-500 text-[10px] uppercase font-semibold">Kertas</span>
-                                <span class="font-medium text-gray-700 dark:text-gray-300 truncate block">{{ $item->kertas ?: '-' }}</span>
+                            <div class="oc-spec-box">
+                                <span style="display: block; font-size: 10px; text-transform: uppercase; font-weight: 600; color: var(--oc-text-muted);">Kertas</span>
+                                <span style="display: block; font-size: 12px; font-weight: 500; color: var(--oc-text-main); margin-top: 2px;" class="truncate">{{ $item->kertas ?: '-' }}</span>
                             </div>
-                            <div class="rounded-lg bg-gray-50 dark:bg-gray-800/60 p-2">
-                                <span class="block text-gray-400 dark:text-gray-500 text-[10px] uppercase font-semibold">Warna</span>
-                                <span class="font-medium text-gray-700 dark:text-gray-300 truncate block">{{ $item->warna ?: '-' }}</span>
+                            <div class="oc-spec-box">
+                                <span style="display: block; font-size: 10px; text-transform: uppercase; font-weight: 600; color: var(--oc-text-muted);">Warna</span>
+                                <span style="display: block; font-size: 12px; font-weight: 500; color: var(--oc-text-main); margin-top: 2px;" class="truncate">{{ $item->warna ?: '-' }}</span>
                             </div>
-                            <div class="rounded-lg bg-gray-50 dark:bg-gray-800/60 p-2">
-                                <span class="block text-gray-400 dark:text-gray-500 text-[10px] uppercase font-semibold">Finishing</span>
-                                <span class="font-medium text-gray-700 dark:text-gray-300 truncate block" title="{{ $item->finishing }}">{{ $item->finishing ?: '-' }}</span>
+                            <div class="oc-spec-box">
+                                <span style="display: block; font-size: 10px; text-transform: uppercase; font-weight: 600; color: var(--oc-text-muted);">Finishing</span>
+                                <span style="display: block; font-size: 12px; font-weight: 500; color: var(--oc-text-main); margin-top: 2px;" class="truncate" title="{{ $item->finishing }}">{{ $item->finishing ?: '-' }}</span>
                             </div>
-                            <div class="rounded-lg bg-gray-50 dark:bg-gray-800/60 p-2">
-                                <span class="block text-gray-400 dark:text-gray-500 text-[10px] uppercase font-semibold">Isi / Batang</span>
-                                <span class="font-medium text-gray-700 dark:text-gray-300 truncate block">{{ $item->isi ? $item->isi . ' Batang' : '-' }}</span>
+                            <div class="oc-spec-box">
+                                <span style="display: block; font-size: 10px; text-transform: uppercase; font-weight: 600; color: var(--oc-text-muted);">Isi / Batang</span>
+                                <span style="display: block; font-size: 12px; font-weight: 500; color: var(--oc-text-main); margin-top: 2px;" class="truncate">{{ $item->isi ? $item->isi . ' Batang' : '-' }}</span>
                             </div>
                         </div>
 
-                        {{-- Flexo HPP breakdown jika ada --}}
+                        {{-- Flexo HPP breakdown (Minimalis & Jelas di Dark/Light Mode) --}}
                         @if($hpp > 0 || $kertasKg > 0)
-                            <div class="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1.5 rounded-lg border border-amber-200 dark:border-amber-900/50 bg-amber-50/50 dark:bg-amber-950/20 px-3 py-2 text-xs text-amber-900 dark:text-amber-200">
-                                <span class="font-semibold text-amber-700 dark:text-amber-400 flex items-center gap-1">
-                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>
-                                    Kalkulasi Mesin Flexo:
+                            <div class="mt-3 oc-flexo-bar">
+                                <span style="font-weight: 700; color: var(--oc-accent);">
+                                    Kalkulasi Mesin Flexo
                                 </span>
                                 @if($kertasKg > 0)
-                                    <span>📦 Kebutuhan Kertas: <strong>{{ number_format($kertasKg, 2, ',', '.') }} kg</strong> ({{ number_format($kertasMeter, 0, ',', '.') }} m)</span>
+                                    <span>
+                                        Kebutuhan Kertas: <strong style="color: var(--oc-text-main); font-weight: 600;">{{ number_format($kertasKg, 2, ',', '.') }} kg ({{ number_format($kertasMeter, 0, ',', '.') }} m)</strong>
+                                    </span>
                                 @endif
                                 @if($hpp > 0)
-                                    <span>🏷️ HPP Pokok: <strong>Rp {{ number_format($hpp, 2, ',', '.') }}</strong> / pcs</span>
+                                    <span>
+                                        HPP Pokok: <strong style="color: var(--oc-text-main); font-weight: 600;">Rp {{ number_format($hpp, 2, ',', '.') }} / pcs</strong>
+                                    </span>
                                 @endif
                                 @if($hargaIndikatif > 0)
-                                    <span>💡 Rekomendasi Jual: <strong>Rp {{ number_format($hargaIndikatif, 2, ',', '.') }}</strong> / pcs</span>
+                                    <span>
+                                        Rekomendasi Jual: <strong style="color: var(--oc-text-main); font-weight: 600;">Rp {{ number_format($hargaIndikatif, 2, ',', '.') }} / pcs</strong>
+                                    </span>
                                 @endif
                             </div>
                         @endif
@@ -231,37 +354,34 @@
     </div>
 
     {{-- ================= Ringkasan Biaya ================= --}}
-    <div class="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-5 shadow-sm">
-        <h3 class="text-sm font-bold uppercase tracking-wider text-gray-800 dark:text-gray-200 mb-3 flex items-center gap-2">
-            <svg class="w-4 h-4 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-            Ringkasan Biaya Order Confirmation
-        </h3>
+    <div class="oc-card">
+        <h3 class="oc-section-title mb-3">Ringkasan Biaya Order Confirmation</h3>
 
-        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div class="rounded-lg bg-gray-50 dark:bg-gray-800/60 p-3">
-                <span class="block text-xs text-gray-500 dark:text-gray-400">Subtotal Penawaran:</span>
-                <span class="text-base font-bold text-gray-900 dark:text-white">
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div class="oc-spec-box" style="padding: 10px 14px;">
+                <span style="display: block; font-size: 11px; color: var(--oc-text-muted);">Subtotal Penawaran</span>
+                <span style="display: block; font-size: 15px; font-weight: 700; color: var(--oc-text-main); margin-top: 2px;">
                     Rp {{ number_format((float) ($oc->subtotal ?? 0), 2, ',', '.') }}
                 </span>
             </div>
-            <div class="rounded-lg bg-gray-50 dark:bg-gray-800/60 p-3">
-                <span class="block text-xs text-gray-500 dark:text-gray-400">Diskon:</span>
-                <span class="text-base font-bold text-amber-600 dark:text-amber-400">
+            <div class="oc-spec-box" style="padding: 10px 14px;">
+                <span style="display: block; font-size: 11px; color: var(--oc-text-muted);">Diskon</span>
+                <span style="display: block; font-size: 15px; font-weight: 700; color: var(--oc-accent); margin-top: 2px;">
                     Rp {{ number_format((float) ($oc->diskon ?? 0), 2, ',', '.') }}
                 </span>
             </div>
-            <div class="rounded-lg bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 p-3">
-                <span class="block text-xs text-emerald-700 dark:text-emerald-300 font-medium">Total Akhir (Grand Total):</span>
-                <span class="text-lg font-extrabold text-emerald-800 dark:text-emerald-200">
+            <div class="oc-spec-box" style="padding: 10px 14px; background-color: var(--oc-success-bg); border-color: var(--oc-success-border);">
+                <span style="display: block; font-size: 11px; color: var(--oc-success); font-weight: 600;">Total Akhir (Grand Total)</span>
+                <span style="display: block; font-size: 16px; font-weight: 800; color: var(--oc-success); margin-top: 2px;">
                     Rp {{ number_format((float) ($oc->grand_total ?? 0), 2, ',', '.') }}
                 </span>
             </div>
         </div>
 
         @if(!empty($oc->catatan))
-            <div class="mt-4 pt-4 border-t border-gray-100 dark:border-gray-800 text-xs">
-                <span class="font-semibold text-gray-700 dark:text-gray-300 block mb-1">Catatan Tambahan:</span>
-                <p class="text-gray-600 dark:text-gray-400 whitespace-pre-line">{{ $oc->catatan }}</p>
+            <div class="mt-3 pt-3" style="border-top: 1px solid var(--oc-border); font-size: 12px;">
+                <span style="font-weight: 600; color: var(--oc-text-secondary); display: block; margin-bottom: 2px;">Catatan Tambahan:</span>
+                <p style="color: var(--oc-text-muted); margin: 0;" class="whitespace-pre-line">{{ $oc->catatan }}</p>
             </div>
         @endif
     </div>

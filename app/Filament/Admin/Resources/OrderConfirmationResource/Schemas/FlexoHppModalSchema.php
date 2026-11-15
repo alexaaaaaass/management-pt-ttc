@@ -519,12 +519,9 @@ class FlexoHppModalSchema
                                             $val = $get('total_biaya_order');
                                             $terbilang = \App\Support\MoneyHelper::terbilang($val);
                                             return new HtmlString('
-                                                <div style="background: rgba(59, 130, 246, 0.08); border: 1px solid rgba(59, 130, 246, 0.25); border-left: 4px solid #3b82f6; border-radius: 8px; padding: 10px 14px; margin-top: 2px;">
-                                                    <div style="display: flex; align-items: center; gap: 8px;">
-                                                        <span style="font-size: 15px;">🗣️</span>
-                                                        <span style="font-size: 11px; font-weight: 700; color: #60a5fa; text-transform: uppercase; letter-spacing: 0.5px;">Terbilang Total Biaya:</span>
-                                                    </div>
-                                                    <div style="font-size: 13px; font-weight: 600; color: #f3f4f6; margin-top: 4px; font-style: italic; line-height: 1.4;">
+                                                <div style="background: rgba(59, 130, 246, 0.06); border: 1px solid rgba(59, 130, 246, 0.25); border-left: 3px solid #3b82f6; border-radius: 6px; padding: 8px 14px; margin-top: 2px;">
+                                                    <div style="font-size: 10px; font-weight: 700; color: #3b82f6; text-transform: uppercase; letter-spacing: 0.05em;">Terbilang Total Biaya</div>
+                                                    <div style="font-size: 13px; font-weight: 600; margin-top: 2px; font-style: italic; line-height: 1.4;">
                                                         “' . e($terbilang) . '”
                                                     </div>
                                                 </div>
