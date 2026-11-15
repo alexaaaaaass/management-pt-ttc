@@ -3,16 +3,17 @@
 namespace App\Filament\Admin\Resources\AdminResource\Widgets;
 
 use App\Models\MasterSpk;
-use Filament\Tables;
-use Filament\Tables\Table;
-use Filament\Widgets\TableWidget;
-use Filament\Tables\Actions\Action;
 use Filament\Infolists\Components\Section;
 use Filament\Infolists\Components\TextEntry;
-
+use Filament\Tables;
+use Filament\Tables\Actions\Action;
+use Filament\Tables\Table;
+use Filament\Widgets\TableWidget;
 
 class ProductionMonitoringWidget extends TableWidget
 {
+    protected static bool $isLazy = true;
+
     protected static ?string $heading = 'Production Monitoring Board';
 
     protected int|string|array $columnSpan = 'full';
@@ -27,11 +28,10 @@ class ProductionMonitoringWidget extends TableWidget
                         'printings',
                         'finishings',
                         'packagings',
-                        'suratJalans'
+                        'suratJalans',
                     ])
             )
             ->columns([
-
                 Tables\Columns\TextColumn::make('no_spk')
                     ->label('SPK')
                     ->searchable(),
@@ -57,11 +57,9 @@ class ProductionMonitoringWidget extends TableWidget
                     ->badge()
                     ->color(fn ($state) => $state == 0 ? 'success' : 'danger')
                     ->getStateUsing(function ($record) {
-
-                        $order = $record->salesOrder?->qty ?? 0;
-
-                        $terkirim = $record->suratJalans()
-                            ->sum('qty_pengiriman');
+                        $order = (float) ($record->salesOrder?->qty ?? 0);
+                        // Gunakan collection hasil eager loading (tanpa query N+1)
+                        $terkirim = (float) $record->suratJalans->sum('qty_pengiriman');
 
                         return max(0, $order - $terkirim);
                     }),
@@ -69,196 +67,171 @@ class ProductionMonitoringWidget extends TableWidget
                 Tables\Columns\TextColumn::make('status')
                     ->badge()
                     ->color(function ($state) {
-
-                        if ($state == 'Complete')
+                        if ($state == 'Complete') {
                             return 'success';
+                        }
 
-                        if (str_contains($state, 'Packaging'))
+                        if (str_contains($state, 'Packaging')) {
                             return 'primary';
+                        }
 
-                        if (str_contains($state, 'Finishing'))
+                        if (str_contains($state, 'Finishing')) {
                             return 'warning';
+                        }
 
                         return 'danger';
                     })
                     ->getStateUsing(function ($record) {
+                        $order = (float) ($record->salesOrder?->qty ?? 0);
+                        $terkirim = (float) $record->suratJalans->sum('qty_pengiriman');
 
-                        $order = $record->salesOrder?->qty ?? 0;
-
-                        $terkirim = $record->suratJalans()
-                            ->sum('qty_pengiriman');
-
-                        if ($terkirim >= $order) {
+                        if ($order > 0 && $terkirim >= $order) {
                             return 'Complete';
                         }
 
-                        if ($record->packagings()->exists()) {
+                        if ($record->packagings->isNotEmpty()) {
                             return 'Packaging';
                         }
 
-                        $finishing = $record->finishings()
-                            ->latest()
-                            ->first();
-
+                        $finishing = $record->finishings->sortByDesc('id')->first();
                         if ($finishing) {
-                            return 'Finishing - ' .
-                                ucfirst($finishing->proses_finishing);
+                            return 'Finishing - ' . ucfirst((string) $finishing->proses_finishing);
                         }
 
-                        $printing = $record->printings()
-                            ->latest()
-                            ->first();
-
+                        $printing = $record->printings->sortByDesc('id')->first();
                         if ($printing) {
-                            return 'Printing - ' .
-                                ucfirst($printing->tahap_printing);
+                            return 'Printing - ' . ucfirst((string) $printing->tahap_printing);
                         }
 
                         return 'Belum Produksi';
                     }),
-
             ])
-         ->actions([
+            ->actions([
+                Action::make('view')
+                    ->label('')
+                    ->icon('heroicon-o-eye')
+                    ->color('primary')
+                    ->modalHeading('Detail Progress Tahapan Produksi Terakhir')
+                    ->modalWidth('7xl')
+                    ->infolist([
+                        Section::make('Informasi SPK')
+                            ->schema([
+                                TextEntry::make('no_spk')
+                                    ->label('No SPK'),
 
-    Action::make('view')
-        ->label('')
-        ->icon('heroicon-o-eye')
-        ->color('primary')
-        ->modalHeading('Detail Progress Tahapan Produksi Terakhir')
-        ->modalWidth('7xl')
+                                TextEntry::make('salesOrder.itemable.nama_barang')
+                                    ->label('Produk'),
 
-       ->infolist([
+                                TextEntry::make('salesOrder.qty')
+                                    ->label('Qty Order')
+                                    ->numeric(),
 
-    Section::make('Informasi SPK')
-        ->schema([
+                                TextEntry::make('tanggal_estimasi_selesai')
+                                    ->label('Deadline')
+                                    ->date(),
+                            ])
+                            ->columns(2),
 
-            TextEntry::make('no_spk')
-                ->label('No SPK'),
+                        Section::make('Printing')
+                            ->schema([
+                                TextEntry::make('proses_printing')
+                                    ->state(fn ($record) =>
+                                        $record->printings->sortByDesc('id')->first()?->proses_printing
+                                    ),
 
-            TextEntry::make('salesOrder.itemable.nama_barang')
-                ->label('Produk'),
+                                TextEntry::make('tahap_printing')
+                                    ->state(fn ($record) =>
+                                        $record->printings->sortByDesc('id')->first()?->tahap_printing
+                                    ),
 
-            TextEntry::make('salesOrder.qty')
-                ->label('Qty Order')
-                ->numeric(),
+                                TextEntry::make('hasil_baik')
+                                    ->numeric()
+                                    ->state(fn ($record) =>
+                                        $record->printings->sortByDesc('id')->first()?->hasil_baik
+                                    ),
 
-            TextEntry::make('tanggal_estimasi_selesai')
-                ->label('Deadline')
-                ->date(),
+                                TextEntry::make('hasil_rusak')
+                                    ->numeric()
+                                    ->state(fn ($record) =>
+                                        $record->printings->sortByDesc('id')->first()?->hasil_rusak
+                                    ),
+                            ])
+                            ->columns(2),
 
-        ])
-        ->columns(2),
+                        Section::make('Finishing')
+                            ->schema([
+                                TextEntry::make('proses_finishing')
+                                    ->label('Proses')
+                                    ->state(fn ($record) =>
+                                        $record->finishings->sortByDesc('id')->first()?->proses_finishing
+                                    ),
 
-    Section::make('Printing')
-    ->schema([
+                                TextEntry::make('tahap_finishing')
+                                    ->label('Tahap')
+                                    ->state(fn ($record) =>
+                                        $record->finishings->sortByDesc('id')->first()?->tahap_finishing
+                                    ),
 
-        TextEntry::make('proses_printing')
-            ->state(fn ($record) =>
-                $record->printings()->latest()->first()?->proses_printing
-            ),
+                                TextEntry::make('hasil_baik_finishing')
+                                    ->label('Hasil Baik')
+                                    ->numeric()
+                                    ->state(fn ($record) =>
+                                        $record->finishings->sortByDesc('id')->first()?->hasil_baik
+                                    ),
 
-        TextEntry::make('tahap_printing')
-            ->state(fn ($record) =>
-                $record->printings()->latest()->first()?->tahap_printing
-            ),
+                                TextEntry::make('hasil_rusak_finishing')
+                                    ->label('Hasil Rusak')
+                                    ->numeric()
+                                    ->state(fn ($record) =>
+                                        $record->finishings->sortByDesc('id')->first()?->hasil_rusak
+                                    ),
+                            ])
+                            ->columns(2)
+                            ->collapsible(),
 
-        TextEntry::make('hasil_baik')
-            ->numeric()
-            ->state(fn ($record) =>
-                $record->printings()->latest()->first()?->hasil_baik
-            ),
+                        Section::make('Packaging')
+                            ->schema([
+                                TextEntry::make('kode_packaging')
+                                    ->label('Kode Packaging')
+                                    ->state(fn ($record) =>
+                                        $record->packagings->sortByDesc('id')->first()?->kode_packaging
+                                    ),
 
-        TextEntry::make('hasil_rusak')
-            ->numeric()
-            ->state(fn ($record) =>
-                $record->printings()->latest()->first()?->hasil_rusak
-            ),
+                                TextEntry::make('qty_packaging')
+                                    ->label('Qty Packaging')
+                                    ->numeric()
+                                    ->state(fn ($record) =>
+                                        $record->packagings->sum('grand_total')
+                                    ),
+                            ])
+                            ->columns(2)
+                            ->collapsible(),
 
-    ])
-    ->columns(2),
+                        Section::make('Pengiriman')
+                            ->schema([
+                                TextEntry::make('qty_kirim')
+                                    ->label('Qty Kirim')
+                                    ->numeric()
+                                    ->state(fn ($record) =>
+                                        $record->suratJalans->sum('qty_pengiriman')
+                                    ),
 
-   Section::make('Finishing')
-    ->schema([
+                                TextEntry::make('tanggal_kirim')
+                                    ->label('Tanggal Kirim Terakhir')
+                                    ->date()
+                                    ->state(fn ($record) =>
+                                        $record->suratJalans->sortByDesc('id')->first()?->tanggal_surat_jalan
+                                    ),
 
-        TextEntry::make('proses_finishing')
-            ->label('Proses')
-            ->state(fn ($record) =>
-                $record->finishings()->latest()->first()?->proses_finishing
-            ),
-
-        TextEntry::make('tahap_finishing')
-            ->label('Tahap')
-            ->state(fn ($record) =>
-                $record->finishings()->latest()->first()?->tahap_finishing
-            ),
-
-        TextEntry::make('hasil_baik_finishing')
-            ->label('Hasil Baik')
-            ->numeric()
-            ->state(fn ($record) =>
-                $record->finishings()->latest()->first()?->hasil_baik
-            ),
-
-        TextEntry::make('hasil_rusak_finishing')
-            ->label('Hasil Rusak')
-            ->numeric()
-            ->state(fn ($record) =>
-                $record->finishings()->latest()->first()?->hasil_rusak
-            ),
-
-    ])
-    ->columns(2)
-    ->collapsible(),
-
-Section::make('Packaging')
-    ->schema([
-
-        TextEntry::make('kode_packaging')
-            ->label('Kode Packaging')
-            ->state(fn ($record) =>
-                $record->packagings()->latest()->first()?->kode_packaging
-            ),
-
-        TextEntry::make('qty_packaging')
-            ->label('Qty Packaging')
-            ->numeric()
-            ->state(fn ($record) =>
-                $record->packagings()->sum('grand_total')
-            ),
-
-    ])
-    ->columns(2)
-    ->collapsible(),
-
-Section::make('Pengiriman')
-    ->schema([
-
-        TextEntry::make('qty_kirim')
-            ->label('Qty Kirim')
-            ->numeric()
-            ->state(fn ($record) =>
-                $record->suratJalans()->sum('qty_pengiriman')
-            ),
-
-        TextEntry::make('tanggal_kirim')
-            ->label('Tanggal Kirim Terakhir')
-            ->date()
-            ->state(fn ($record) =>
-                $record->suratJalans()->latest()->first()?->tanggal_surat_jalan
-            ),
-
-        TextEntry::make('kode_surat_jalan')
-            ->label('Surat Jalan Terakhir')
-            ->state(fn ($record) =>
-                $record->suratJalans()->latest()->first()?->kode_surat_jalan
-            ),
-
-    ])
-    ->columns(2)
-    ->collapsible(),
-
-])
-
-]);
+                                TextEntry::make('kode_surat_jalan')
+                                    ->label('Surat Jalan Terakhir')
+                                    ->state(fn ($record) =>
+                                        $record->suratJalans->sortByDesc('id')->first()?->kode_surat_jalan
+                                    ),
+                            ])
+                            ->columns(2)
+                            ->collapsible(),
+                    ]),
+            ]);
     }
 }

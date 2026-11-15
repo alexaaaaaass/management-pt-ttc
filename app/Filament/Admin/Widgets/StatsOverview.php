@@ -2,14 +2,16 @@
 
 namespace App\Filament\Admin\Widgets;
 
-use App\Models\SalesOrder;
 use App\Models\PurchaseOrder;
 use App\Models\PurchaseRequest;
+use App\Models\SalesOrder;
 use Filament\Widgets\StatsOverviewWidget as BaseWidget;
 use Filament\Widgets\StatsOverviewWidget\Stat;
 
 class StatsOverview extends BaseWidget
 {
+    protected static bool $isLazy = true;
+
     protected function getStats(): array
     {
         return [
@@ -32,7 +34,7 @@ class StatsOverview extends BaseWidget
             Stat::make(
                 'Pengajuan Purchase Request',
                 $this->safeCount(PurchaseRequest::class, [
-                    'status' => 'deotorisasi'
+                    'status' => 'deotorisasi',
                 ])
             )
                 ->description('Menunggu approval')
@@ -66,7 +68,6 @@ class StatsOverview extends BaseWidget
             }
 
             return $query->count();
-
         } catch (\Throwable $e) {
             return 0;
         }
