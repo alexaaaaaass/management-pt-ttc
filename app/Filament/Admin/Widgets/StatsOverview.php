@@ -5,6 +5,7 @@ namespace App\Filament\Admin\Widgets;
 use App\Models\Invoice;
 use App\Models\MasterCOA;
 use App\Models\PoBilling;
+use App\Models\PoBillPay;
 use App\Models\SalesOrder;
 use App\Models\TransKas;
 use App\Models\TransKasBank;
@@ -16,6 +17,8 @@ use Illuminate\Support\Facades\Schema;
 class StatsOverview extends BaseWidget
 {
     protected static ?int $sort = 1;
+
+    protected static bool $isLazy = true;
 
     protected function getStats(): array
     {
@@ -59,7 +62,7 @@ class StatsOverview extends BaseWidget
     {
         try {
             if (Schema::hasTable('master_coas')) {
-                $coas = MasterCOA::query()
+                $total = (float) MasterCOA::query()
                     ->where(function ($q) {
                         $q->where('kode_akun', 'like', '111%')
                             ->orWhere('kode_akun', 'like', '110%')
@@ -69,12 +72,7 @@ class StatsOverview extends BaseWidget
                             ->orWhere('account_class', 'like', '%Bank%');
                     })
                     ->where('status', 'aktif')
-                    ->get();
-
-                $total = 0;
-                foreach ($coas as $coa) {
-                    $total += $coa->saldo_berjalan;
-                }
+                    ->sum(DB::raw('COALESCE(saldo_debit, 0) - COALESCE(saldo_kredit, 0)'));
 
                 if ($total > 0) {
                     return (float) $total;
@@ -83,14 +81,14 @@ class StatsOverview extends BaseWidget
 
             $totalKas = 0;
             if (Schema::hasTable('trans_kas')) {
-                $kasMasuk = TransKas::where('tipe_transaksi', 'KAS_MASUK')->sum('nominal');
-                $kasKeluar = TransKas::where('tipe_transaksi', 'KAS_KELUAR')->sum('nominal');
+                $kasMasuk = (float) TransKas::where('tipe_transaksi', 'KAS_MASUK')->sum('nominal');
+                $kasKeluar = (float) TransKas::where('tipe_transaksi', 'KAS_KELUAR')->sum('nominal');
                 $totalKas += ($kasMasuk - $kasKeluar);
             }
 
             if (Schema::hasTable('trans_kas_banks')) {
-                $bankMasuk = TransKasBank::where('tipe_transaksi', 'BANK_MASUK')->sum('nominal');
-                $bankKeluar = TransKasBank::where('tipe_transaksi', 'BANK_KELUAR')->sum('nominal');
+                $bankMasuk = (float) TransKasBank::where('tipe_transaksi', 'BANK_MASUK')->sum('nominal');
+                $bankKeluar = (float) TransKasBank::where('tipe_transaksi', 'BANK_KELUAR')->sum('nominal');
                 $totalKas += ($bankMasuk - $bankKeluar);
             }
 
@@ -108,17 +106,19 @@ class StatsOverview extends BaseWidget
             }
 
             $now = now();
-            $query = Invoice::query()
+            $nominal = (float) Invoice::query()
                 ->whereMonth('tanggal_invoice', $now->month)
-                ->whereYear('tanggal_invoice', $now->year);
+                ->whereYear('tanggal_invoice', $now->year)
+                ->sum('grand_total');
 
-            $nominal = (float) $query->sum('grand_total');
-            $count = $query->count();
+            $count = Invoice::query()
+                ->whereMonth('tanggal_invoice', $now->month)
+                ->whereYear('tanggal_invoice', $now->year)
+                ->count();
 
             if ($count === 0) {
-                $allQuery = Invoice::query();
-                $nominal = (float) $allQuery->sum('grand_total');
-                $count = $allQuery->count();
+                $nominal = (float) Invoice::sum('grand_total');
+                $count = Invoice::count();
                 return [
                     'nominal' => $nominal,
                     'count' => $count,
@@ -143,15 +143,21 @@ class StatsOverview extends BaseWidget
                 return ['nominal' => 0, 'unpaid_count' => 0, 'overdue_count' => 0];
             }
 
-            $unpaid = Invoice::query()
+            $nominal = (float) Invoice::query()
                 ->where('status', '!=', 'PAID')
                 ->where(function ($q) {
                     $q->where('sisa_tagihan', '>', 0)
                         ->orWhereNull('sisa_tagihan');
-                });
+                })
+                ->sum(DB::raw('COALESCE(sisa_tagihan, grand_total, 0)'));
 
-            $nominal = (float) $unpaid->sum(DB::raw('COALESCE(sisa_tagihan, grand_total, 0)'));
-            $unpaidCount = $unpaid->count();
+            $unpaidCount = Invoice::query()
+                ->where('status', '!=', 'PAID')
+                ->where(function ($q) {
+                    $q->where('sisa_tagihan', '>', 0)
+                        ->orWhereNull('sisa_tagihan');
+                })
+                ->count();
 
             $overdueCount = Invoice::query()
                 ->where('status', '!=', 'PAID')
@@ -176,21 +182,17 @@ class StatsOverview extends BaseWidget
                 return ['nominal' => 0, 'count' => 0];
             }
 
-            $billings = PoBilling::with('payments')->get();
-            $totalHutang = 0;
-            $unpaidCount = 0;
+            $totalBilling = (float) PoBilling::sum('grand_total');
+            $totalPaid = Schema::hasTable('po_bill_pays')
+                ? (float) PoBillPay::sum('total_pembayaran')
+                : 0.0;
 
-            foreach ($billings as $bill) {
-                $sisa = $bill->sisa_tagihan;
-                if ($sisa > 0) {
-                    $totalHutang += $sisa;
-                    $unpaidCount++;
-                }
-            }
+            $totalHutang = max(0, $totalBilling - $totalPaid);
+            $count = PoBilling::count();
 
             return [
                 'nominal' => $totalHutang,
-                'count' => $unpaidCount,
+                'count' => $count,
             ];
         } catch (\Throwable $e) {
             return ['nominal' => 0, 'count' => 0];
@@ -205,16 +207,10 @@ class StatsOverview extends BaseWidget
             }
 
             $total = SalesOrder::count();
-
-            $activeQuery = SalesOrder::query();
-            if (Schema::hasTable('surat_jalans')) {
-                $activeQuery->whereRaw("((SELECT COALESCE(SUM(qty_pengiriman), 0) FROM surat_jalans WHERE surat_jalans.sales_order_id = sales_orders.id) < COALESCE(sales_orders.qty, 0))");
-            }
-
-            $active = $activeQuery->count();
+            $active = SalesOrder::whereNull('deleted_at')->count();
 
             return [
-                'count' => $active > 0 ? $active : $total,
+                'count' => $active,
                 'total' => $total,
             ];
         } catch (\Throwable $e) {

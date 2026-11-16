@@ -17,6 +17,8 @@ class ProductionMonitoringWidget extends TableWidget
 
     protected static ?int $sort = 6;
 
+    protected static bool $isLazy = true;
+
     protected int|string|array $columnSpan = 'full';
 
     public function table(Table $table): Table
@@ -32,6 +34,8 @@ class ProductionMonitoringWidget extends TableWidget
                         'suratJalans'
                     ])
             )
+            ->defaultPaginationPageOption(5)
+            ->paginationPageOptions([5, 10, 25])
             ->columns([
 
                 Tables\Columns\TextColumn::make('no_spk')
@@ -62,7 +66,7 @@ class ProductionMonitoringWidget extends TableWidget
 
                         $order = $record->salesOrder?->qty ?? 0;
 
-                        $terkirim = $record->suratJalans()
+                        $terkirim = $record->suratJalans
                             ->sum('qty_pengiriman');
 
                         return max(0, $order - $terkirim);
@@ -87,19 +91,19 @@ class ProductionMonitoringWidget extends TableWidget
 
                         $order = $record->salesOrder?->qty ?? 0;
 
-                        $terkirim = $record->suratJalans()
+                        $terkirim = $record->suratJalans
                             ->sum('qty_pengiriman');
 
-                        if ($terkirim >= $order) {
+                        if ($order > 0 && $terkirim >= $order) {
                             return 'Complete';
                         }
 
-                        if ($record->packagings()->exists()) {
+                        if ($record->packagings->isNotEmpty()) {
                             return 'Packaging';
                         }
 
-                        $finishing = $record->finishings()
-                            ->latest()
+                        $finishing = $record->finishings
+                            ->sortByDesc('id')
                             ->first();
 
                         if ($finishing) {
@@ -107,8 +111,8 @@ class ProductionMonitoringWidget extends TableWidget
                                 ucfirst($finishing->proses_finishing);
                         }
 
-                        $printing = $record->printings()
-                            ->latest()
+                        $printing = $record->printings
+                            ->sortByDesc('id')
                             ->first();
 
                         if ($printing) {

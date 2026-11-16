@@ -2,16 +2,19 @@
 
 namespace App\Filament\Admin\Resources\AdminResource\Widgets;
 
-use App\Models\PoBillPay;
 use App\Models\OperasionalPay;
+use App\Models\PoBillPay;
 use App\Models\TransKas;
 use Filament\Widgets\ChartWidget;
+use Illuminate\Support\Facades\Schema;
 
 class PengeluaranChart extends ChartWidget
 {
     protected static ?string $heading = 'Grafik Arus Kas Keluar (Pengeluaran)';
 
     protected static ?int $sort = 5;
+
+    protected static bool $isLazy = true;
 
     protected int|string|array $columnSpan = [
         'default' => 'full',
@@ -20,68 +23,52 @@ class PengeluaranChart extends ChartWidget
 
     protected function getData(): array
     {
+        $currentYear = now()->year;
         $labels = [];
         $data = [];
 
+        $poBills = [];
+        if (Schema::hasTable('po_bill_pays')) {
+            $poBills = PoBillPay::query()
+                ->selectRaw('MONTH(tanggal_pembayaran) as bulan, SUM(total_pembayaran) as total')
+                ->whereYear('tanggal_pembayaran', $currentYear)
+                ->groupByRaw('MONTH(tanggal_pembayaran)')
+                ->pluck('total', 'bulan')
+                ->all();
+        }
+
+        $operasionals = [];
+        if (Schema::hasTable('operasional_pays')) {
+            $operasionals = OperasionalPay::query()
+                ->selectRaw('MONTH(tanggal_transaksi) as bulan, SUM(nominal) as total')
+                ->whereYear('tanggal_transaksi', $currentYear)
+                ->groupByRaw('MONTH(tanggal_transaksi)')
+                ->pluck('total', 'bulan')
+                ->all();
+        }
+
+        $kasKeluars = [];
+        if (Schema::hasTable('trans_kas')) {
+            $kasKeluars = TransKas::query()
+                ->selectRaw('MONTH(tanggal_transaksi) as bulan, SUM(nominal) as total')
+                ->where('tipe_transaksi', 'KAS_KELUAR')
+                ->whereYear('tanggal_transaksi', $currentYear)
+                ->groupByRaw('MONTH(tanggal_transaksi)')
+                ->pluck('total', 'bulan')
+                ->all();
+        }
+
         for ($bulan = 1; $bulan <= 12; $bulan++) {
-
-            $labels[] = date(
-                'M',
-                mktime(0, 0, 0, $bulan, 1)
-            );
-
-            $poBill =
-                PoBillPay::query()
-                    ->whereMonth(
-                        'tanggal_pembayaran',
-                        $bulan
-                    )
-                    ->whereYear(
-                        'tanggal_pembayaran',
-                        now()->year
-                    )
-                    ->sum('total_pembayaran');
-
-            $operasional =
-                OperasionalPay::query()
-                    ->whereMonth(
-                        'tanggal_transaksi',
-                        $bulan
-                    )
-                    ->whereYear(
-                        'tanggal_transaksi',
-                        now()->year
-                    )
-                    ->sum('nominal');
-
-            $kasKeluar =
-                TransKas::query()
-                    ->where(
-                        'tipe_transaksi',
-                        'KAS_KELUAR'
-                    )
-                    ->whereMonth(
-                        'tanggal_transaksi',
-                        $bulan
-                    )
-                    ->whereYear(
-                        'tanggal_transaksi',
-                        now()->year
-                    )
-                    ->sum('nominal');
-
-            $data[] =
-                $poBill +
-                $operasional +
-                $kasKeluar;
+            $labels[] = date('M', mktime(0, 0, 0, $bulan, 1));
+            $data[] = (float) (($poBills[$bulan] ?? 0) + ($operasionals[$bulan] ?? 0) + ($kasKeluars[$bulan] ?? 0));
         }
 
         return [
             'datasets' => [
                 [
-                    'label' => 'Pengeluaran',
+                    'label' => 'Total Pengeluaran',
                     'data' => $data,
-                    'backgroundColor' => '#ef4444',
+                    'backgroundColor' => '#f43f5e',
                 ],
             ],
             'labels' => $labels,

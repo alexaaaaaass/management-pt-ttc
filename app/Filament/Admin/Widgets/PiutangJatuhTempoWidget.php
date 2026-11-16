@@ -16,6 +16,8 @@ class PiutangJatuhTempoWidget extends TableWidget
 
     protected static ?int $sort = 2;
 
+    protected static bool $isLazy = true;
+
     protected int|string|array $columnSpan = [
         'default' => 'full',
         'md' => 1,
@@ -23,6 +25,10 @@ class PiutangJatuhTempoWidget extends TableWidget
 
     public function table(Table $table): Table
     {
+        if (! Schema::hasTable('invoices')) {
+            return $table->query(Invoice::query()->whereRaw('1=0'));
+        }
+
         return $table
             ->query(
                 Invoice::query()
@@ -35,6 +41,7 @@ class PiutangJatuhTempoWidget extends TableWidget
                     ->orderByRaw('CASE WHEN tanggal_jatuh_tempo IS NULL THEN 1 ELSE 0 END, tanggal_jatuh_tempo ASC')
             )
             ->defaultPaginationPageOption(5)
+            ->paginationPageOptions([5, 10])
             ->columns([
                 Tables\Columns\TextColumn::make('kode_invoice')
                     ->label('No. Faktur')
@@ -97,3 +104,4 @@ class PiutangJatuhTempoWidget extends TableWidget
             ]);
     }
 }
+

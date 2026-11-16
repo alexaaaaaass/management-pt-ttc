@@ -15,6 +15,8 @@ class StockMinimumAlertWidget extends TableWidget
 
     protected static ?int $sort = 3;
 
+    protected static bool $isLazy = true;
+
     protected int|string|array $columnSpan = [
         'default' => 'full',
         'md' => 1,
@@ -22,6 +24,10 @@ class StockMinimumAlertWidget extends TableWidget
 
     public function table(Table $table): Table
     {
+        if (! Schema::hasTable('master_items')) {
+            return $table->query(MasterItem::query()->whereRaw('1=0'));
+        }
+
         return $table
             ->query(
                 MasterItem::query()
@@ -32,6 +38,7 @@ class StockMinimumAlertWidget extends TableWidget
                     ->orderBy('qty', 'asc')
             )
             ->defaultPaginationPageOption(5)
+            ->paginationPageOptions([5, 10])
             ->columns([
                 Tables\Columns\TextColumn::make('kode_master_item')
                     ->label('Kode')
@@ -71,3 +78,4 @@ class StockMinimumAlertWidget extends TableWidget
             ]);
     }
 }
+
