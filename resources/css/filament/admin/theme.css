@@ -1,3 +1,20 @@
+@import "https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap";
 @import "/vendor/filament/filament/resources/css/theme.css";
 
 @config './tailwind.config.js';
+
+/* Accurate Online Typography & Tabular Numerals */
+body, input, select, textarea, button, table {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif !important;
+}
+
+.fi-ta-cell,
+.fi-ta-cell-numeric,
+.fi-in-entry,
+input[inputmode="decimal"],
+input[inputmode="numeric"],
+.fi-badge,
+.fi-stats-overview-stat-value {
+    font-variant-numeric: tabular-nums !important;
+    font-feature-settings: "tnum" 1 !important;
+}

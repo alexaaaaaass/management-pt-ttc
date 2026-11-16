@@ -15,6 +15,8 @@ class ProductionMonitoringWidget extends TableWidget
 {
     protected static ?string $heading = 'Production Monitoring Board';
 
+    protected static ?int $sort = 6;
+
     protected int|string|array $columnSpan = 'full';
 
     public function table(Table $table): Table

@@ -8,10 +8,14 @@ use Filament\Widgets\ChartWidget;
 
 class PemasukanChart extends ChartWidget
 {
-    protected static ?string $heading =
-        'Grafik Pemasukan';
+    protected static ?string $heading = 'Grafik Arus Kas Masuk (Pemasukan)';
 
-    protected int|string|array $columnSpan = 1;
+    protected static ?int $sort = 4;
+
+    protected int|string|array $columnSpan = [
+        'default' => 'full',
+        'md' => 1,
+    ];
 
     protected function getData(): array
     {

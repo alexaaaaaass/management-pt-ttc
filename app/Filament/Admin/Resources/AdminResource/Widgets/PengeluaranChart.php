@@ -9,10 +9,14 @@ use Filament\Widgets\ChartWidget;
 
 class PengeluaranChart extends ChartWidget
 {
-    protected static ?string $heading =
-        'Grafik Pengeluaran';
+    protected static ?string $heading = 'Grafik Arus Kas Keluar (Pengeluaran)';
 
-    protected int|string|array $columnSpan = 1;
+    protected static ?int $sort = 5;
+
+    protected int|string|array $columnSpan = [
+        'default' => 'full',
+        'md' => 1,
+    ];
 
     protected function getData(): array
     {
