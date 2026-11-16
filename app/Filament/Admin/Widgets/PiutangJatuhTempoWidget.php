@@ -14,7 +14,7 @@ class PiutangJatuhTempoWidget extends TableWidget
 {
     protected static ?string $heading = 'Piutang & Tagihan Jatuh Tempo (AR Aging)';
 
-    protected static ?int $sort = 2;
+    protected static ?int $sort = 4;
 
     protected static bool $isLazy = true;
 
@@ -42,6 +42,9 @@ class PiutangJatuhTempoWidget extends TableWidget
             )
             ->defaultPaginationPageOption(5)
             ->paginationPageOptions([5, 10])
+            ->emptyStateHeading('Tidak Ada Piutang Jatuh Tempo')
+            ->emptyStateDescription('Semua tagihan pelanggan saat ini dalam kondisi lancar dan terkendali.')
+            ->emptyStateIcon('heroicon-o-check-circle')
             ->columns([
                 Tables\Columns\TextColumn::make('kode_invoice')
                     ->label('No. Faktur')
@@ -53,7 +56,7 @@ class PiutangJatuhTempoWidget extends TableWidget
                 Tables\Columns\TextColumn::make('customer.nama_customer')
                     ->label('Pelanggan')
                     ->searchable()
-                    ->limit(20)
+                    ->limit(18)
                     ->tooltip(fn ($record) => $record->customer?->nama_customer),
 
                 Tables\Columns\TextColumn::make('tanggal_jatuh_tempo')
@@ -104,4 +107,3 @@ class PiutangJatuhTempoWidget extends TableWidget
             ]);
     }
 }
-

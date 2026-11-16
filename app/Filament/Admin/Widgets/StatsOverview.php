@@ -20,6 +20,13 @@ class StatsOverview extends BaseWidget
 
     protected static bool $isLazy = true;
 
+    protected int | string | array $columns = [
+        'default' => 1,
+        'sm' => 2,
+        'md' => 3,
+        'xl' => 5,
+    ];
+
     protected function getStats(): array
     {
         $kasBank = $this->calculateKasBank();
@@ -32,11 +39,13 @@ class StatsOverview extends BaseWidget
             Stat::make('Kas & Bank', 'Rp ' . number_format($kasBank, 0, ',', '.'))
                 ->description('Likuiditas kas & rekening')
                 ->descriptionIcon('heroicon-m-wallet')
+                ->chart([30, 42, 45, 55, 62, 70, 85])
                 ->color('success'),
 
             Stat::make('Penjualan Bulan Ini' . ($penjualan['label_extra'] ? ' ' . $penjualan['label_extra'] : ''), 'Rp ' . number_format($penjualan['nominal'], 0, ',', '.'))
                 ->description($penjualan['count'] . ' faktur diterbitkan')
                 ->descriptionIcon('heroicon-m-arrow-trending-up')
+                ->chart([15, 25, 38, 48, 62, 75, 90])
                 ->color('primary'),
 
             Stat::make('Piutang Usaha (AR)', 'Rp ' . number_format($piutang['nominal'], 0, ',', '.'))
@@ -44,16 +53,19 @@ class StatsOverview extends BaseWidget
                     ? $piutang['overdue_count'] . ' tagihan jatuh tempo!'
                     : $piutang['unpaid_count'] . ' tagihan belum lunas')
                 ->descriptionIcon('heroicon-m-clock')
+                ->chart([80, 75, 68, 60, 52, 45, 38])
                 ->color($piutang['overdue_count'] > 0 ? 'danger' : 'warning'),
 
             Stat::make('Hutang Usaha (AP)', 'Rp ' . number_format($hutang['nominal'], 0, ',', '.'))
                 ->description($hutang['count'] . ' tagihan vendor aktif')
                 ->descriptionIcon('heroicon-m-credit-card')
+                ->chart([60, 55, 50, 42, 38, 35, 28])
                 ->color('danger'),
 
             Stat::make('Pesanan Aktif (SO)', number_format($pesanan['count'], 0, ',', '.'))
                 ->description('Dari ' . number_format($pesanan['total'], 0, ',', '.') . ' total pesanan')
                 ->descriptionIcon('heroicon-m-clipboard-document-check')
+                ->chart([20, 28, 35, 42, 50, 58, 70])
                 ->color('info'),
         ];
     }

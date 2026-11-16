@@ -12,7 +12,7 @@ class PengeluaranChart extends ChartWidget
 {
     protected static ?string $heading = 'Grafik Arus Kas Keluar (Pengeluaran)';
 
-    protected static ?int $sort = 5;
+    protected static ?int $sort = 3;
 
     protected static bool $isLazy = true;
 
@@ -66,17 +66,67 @@ class PengeluaranChart extends ChartWidget
         return [
             'datasets' => [
                 [
-                    'label' => 'Total Pengeluaran',
+                    'label' => 'Total Pengeluaran (IDR)',
                     'data' => $data,
-                    'backgroundColor' => '#f43f5e',
+                    'fill' => true,
+                    'borderColor' => '#f43f5e',
+                    'backgroundColor' => 'rgba(244, 63, 94, 0.15)',
+                    'borderWidth' => 3,
+                    'tension' => 0.45,
+                    'pointBackgroundColor' => '#f43f5e',
+                    'pointBorderColor' => '#ffffff',
+                    'pointBorderWidth' => 2,
+                    'pointRadius' => 4,
+                    'pointHoverRadius' => 7,
                 ],
             ],
             'labels' => $labels,
         ];
     }
 
+    protected function getOptions(): array
+    {
+        return [
+            'animation' => [
+                'duration' => 2000,
+                'easing' => 'easeOutQuart',
+            ],
+            'animations' => [
+                'y' => [
+                    'easing' => 'easeOutQuart',
+                    'duration' => 2000,
+                    'from' => 0,
+                ],
+            ],
+            'elements' => [
+                'line' => [
+                    'tension' => 0.45,
+                ],
+            ],
+            'plugins' => [
+                'legend' => [
+                    'display' => true,
+                    'position' => 'top',
+                ],
+            ],
+            'scales' => [
+                'y' => [
+                    'beginAtZero' => true,
+                    'grid' => [
+                        'color' => '#f1f5f9',
+                    ],
+                ],
+                'x' => [
+                    'grid' => [
+                        'display' => false,
+                    ],
+                ],
+            ],
+        ];
+    }
+
     protected function getType(): string
     {
-        return 'bar';
+        return 'line';
     }
 }

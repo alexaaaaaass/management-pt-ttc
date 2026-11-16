@@ -13,7 +13,7 @@ class StockMinimumAlertWidget extends TableWidget
 {
     protected static ?string $heading = 'Peringatan Stok Minimum (Reorder Alert)';
 
-    protected static ?int $sort = 3;
+    protected static ?int $sort = 5;
 
     protected static bool $isLazy = true;
 
@@ -39,6 +39,9 @@ class StockMinimumAlertWidget extends TableWidget
             )
             ->defaultPaginationPageOption(5)
             ->paginationPageOptions([5, 10])
+            ->emptyStateHeading('Semua Stok Bahan Baku Aman')
+            ->emptyStateDescription('Tidak ada material atau barang yang berada di bawah batas minimum stok.')
+            ->emptyStateIcon('heroicon-o-shield-check')
             ->columns([
                 Tables\Columns\TextColumn::make('kode_master_item')
                     ->label('Kode')
@@ -49,7 +52,7 @@ class StockMinimumAlertWidget extends TableWidget
                 Tables\Columns\TextColumn::make('nama_master_item')
                     ->label('Nama Barang')
                     ->searchable()
-                    ->limit(22)
+                    ->limit(20)
                     ->tooltip(fn ($record) => $record->nama_master_item),
 
                 Tables\Columns\TextColumn::make('qty')
@@ -78,4 +81,3 @@ class StockMinimumAlertWidget extends TableWidget
             ]);
     }
 }
-

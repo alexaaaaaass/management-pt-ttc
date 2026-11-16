@@ -11,7 +11,7 @@ class PemasukanChart extends ChartWidget
 {
     protected static ?string $heading = 'Grafik Arus Kas Masuk (Pemasukan)';
 
-    protected static ?int $sort = 4;
+    protected static ?int $sort = 2;
 
     protected static bool $isLazy = true;
 
@@ -55,17 +55,67 @@ class PemasukanChart extends ChartWidget
         return [
             'datasets' => [
                 [
-                    'label' => 'Total Pemasukan',
+                    'label' => 'Total Pemasukan (IDR)',
                     'data' => $data,
-                    'backgroundColor' => '#2563eb',
+                    'fill' => true,
+                    'borderColor' => '#2563eb',
+                    'backgroundColor' => 'rgba(37, 99, 235, 0.15)',
+                    'borderWidth' => 3,
+                    'tension' => 0.45,
+                    'pointBackgroundColor' => '#2563eb',
+                    'pointBorderColor' => '#ffffff',
+                    'pointBorderWidth' => 2,
+                    'pointRadius' => 4,
+                    'pointHoverRadius' => 7,
                 ],
             ],
             'labels' => $labels,
         ];
     }
 
+    protected function getOptions(): array
+    {
+        return [
+            'animation' => [
+                'duration' => 2000,
+                'easing' => 'easeOutQuart',
+            ],
+            'animations' => [
+                'y' => [
+                    'easing' => 'easeOutQuart',
+                    'duration' => 2000,
+                    'from' => 0,
+                ],
+            ],
+            'elements' => [
+                'line' => [
+                    'tension' => 0.45,
+                ],
+            ],
+            'plugins' => [
+                'legend' => [
+                    'display' => true,
+                    'position' => 'top',
+                ],
+            ],
+            'scales' => [
+                'y' => [
+                    'beginAtZero' => true,
+                    'grid' => [
+                        'color' => '#f1f5f9',
+                    ],
+                ],
+                'x' => [
+                    'grid' => [
+                        'display' => false,
+                    ],
+                ],
+            ],
+        ];
+    }
+
     protected function getType(): string
     {
-        return 'bar';
+        return 'line';
     }
 }

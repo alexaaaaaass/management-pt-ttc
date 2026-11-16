@@ -52,10 +52,20 @@
     /* Accurate Card & Surface Refinement */
     .fi-section,
     .fi-ta-ctn,
-    .fi-wi-stats-overview-stat {
+    .fi-wi-stats-overview-stat,
+    .fi-wi-chart {
         border-color: #e2e8f0 !important;
         box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.04), 0 1px 2px -1px rgba(0, 0, 0, 0.04) !important;
-        border-radius: 0.625rem !important;
+        border-radius: 0.75rem !important;
+    }
+
+    /* Stat Cards Hover Lift (Interactive Accurate Feel) */
+    .fi-wi-stats-overview-stat {
+        transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.22s cubic-bezier(0.16, 1, 0.3, 1) !important;
+    }
+    .fi-wi-stats-overview-stat:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 16px -4px rgba(0, 0, 0, 0.07), 0 4px 6px -2px rgba(0, 0, 0, 0.04) !important;
     }
 
     /* Accurate Table Headers: crisp, uppercase, high readability */
@@ -77,5 +87,9 @@
     .fi-sidebar-item-active > a {
         font-weight: 600 !important;
     }
-</style>
 
+    /* Smooth Chart Canvas Flow Container */
+    .fi-wi-chart canvas {
+        filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.02));
+    }
+</style>
