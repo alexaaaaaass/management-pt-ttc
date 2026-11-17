@@ -152,3 +152,4 @@ Menyediakan dashboard interaktif sesuai peran pengguna:
 ## 💡 4. Kesimpulan
 
 Dengan menerapkan rekomendasi ini secara bertahap, sistem **TTC Indigama** akan semakin matang, tidak hanya sebagai buku catatan digital, tetapi sebagai **mesin operasional pintar** yang mencegah kesalahan input manusia, mempercepat penanganan keluhan pelanggan, dan memberikan visibilitas penuh terhadap proses produksi maupun keuangan pabrik.
+
