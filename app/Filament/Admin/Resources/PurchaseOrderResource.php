@@ -429,6 +429,11 @@ public static function getNavigationLabel(): string
     ];
         }
 
+        public static function getEloquentQuery(): \Illuminate\Database\Eloquent\Builder
+        {
+            return parent::getEloquentQuery()->with(['purchaseRequest.departemen', 'supplier', 'items']);
+        }
+
         public static function getPages(): array
         {
             return [

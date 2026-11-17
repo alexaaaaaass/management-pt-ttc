@@ -7,12 +7,12 @@ use Filament\Forms\Components\Checkbox;
 use Filament\Forms\Components\Grid;
 use Filament\Forms\Components\Hidden;
 use Filament\Forms\Components\Placeholder;
+use Filament\Forms\Components\Radio;
 use Filament\Forms\Components\Section;
 use Filament\Forms\Components\Tabs;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Get;
 use Filament\Forms\Set;
-use Filament\Support\RawJs;
 use Illuminate\Support\HtmlString;
 
 class FlexoHppModalSchema
@@ -40,7 +40,9 @@ class FlexoHppModalSchema
             'waste_setting' => (float) ($get('waste_setting') ?? FlexoHppCalculatorService::DEFAULT_WASTE_SETTING),
             'waste_tambahan_persen' => (float) ($get('waste_tambahan_persen') ?? FlexoHppCalculatorService::DEFAULT_WASTE_PERSEN),
             'gramatur_kertas' => (float) ($get('gramatur_kertas') ?? FlexoHppCalculatorService::DEFAULT_GRAMATUR),
-            'harga_bahan_per_kg' => (float) ($get('harga_bahan_per_kg') ?? FlexoHppCalculatorService::DEFAULT_HARGA_BAHAN),
+            'harga_bahan_per_kg' => (float) ($get('harga_bahan_per_kg') ?? 0),
+            'harga_bahan_per_meter' => (float) ($get('harga_bahan_per_meter') ?? 0),
+            'basis_harga_bahan' => $get('basis_harga_bahan') ?? 'kg',
             'kecepatan_cetak' => (float) ($get('kecepatan_cetak') ?? FlexoHppCalculatorService::DEFAULT_KECEPATAN_CETAK),
             'waktu_setup' => (float) ($get('waktu_setup') ?? FlexoHppCalculatorService::DEFAULT_WAKTU_SETUP),
             'tarif_mesin_per_jam' => (float) ($get('tarif_mesin_per_jam') ?? 0),
@@ -63,6 +65,14 @@ class FlexoHppModalSchema
         $set('panjang_produksi_teoritis', $result['panjang_produksi_teoritis']);
         $set('total_panjang_bahan', $result['total_panjang_bahan']);
         $set('berat_bahan_teoritis', $result['berat_bahan_teoritis']);
+
+        // Sinkronisasi harga bahan (kg vs meter)
+        if (($get('basis_harga_bahan') ?? 'kg') === 'meter') {
+            $set('harga_bahan_per_kg', $result['harga_bahan_per_kg']);
+        } else {
+            $set('harga_bahan_per_meter', $result['harga_bahan_per_meter']);
+        }
+
         $set('biaya_bahan', $result['biaya_bahan']);
         $set('biaya_bahan_per_etiket', $result['biaya_bahan_per_etiket']);
 
@@ -72,19 +82,22 @@ class FlexoHppModalSchema
         $set('biaya_proses_cetak_total', $result['biaya_proses_cetak_total']);
         $set('biaya_proses_per_etiket', $result['biaya_proses_per_etiket']);
 
-        $set('total_biaya_order', $result['total_biaya_order']);
-        $set('hpp_per_etiket', $result['hpp_per_etiket']);
-        $set('harga_jual_indikatif', $result['harga_jual_indikatif']);
+        $set('total_biaya_order', \App\Support\MoneyHelper::format($result['total_biaya_order'], 2));
+        $set('hpp_per_etiket', \App\Support\MoneyHelper::format($result['hpp_per_etiket'], 2));
+        $set('harga_jual_indikatif', \App\Support\MoneyHelper::format($result['harga_jual_indikatif'], 2));
+        $set('terbilang_total_biaya', $result['terbilang_total_biaya']);
     }
 
     /**
-     * Schema Form lengkap untuk Modal Kalkulator HPP & Kertas Flexo Zonten
+     * Schema Form lengkap untuk Modal Kalkulator HPP & Kertas Flexo Zonten (Satuan CM)
      */
     public static function getFormSchema(): array
     {
         return [
-            // Hidden target order untuk referensi hitungan
+            // Hidden target order & basis harga untuk referensi hitungan
             Hidden::make('target_order'),
+            Hidden::make('basis_harga_bahan')->default('kg'),
+            Hidden::make('terbilang_total_biaya'),
 
             Placeholder::make('header_info')
                 ->content(fn (Get $get) => new HtmlString('
@@ -92,7 +105,7 @@ class FlexoHppModalSchema
                         <div>
                             <span style="font-size: 13px; font-weight: 700; color: #f59e0b; text-transform: uppercase; letter-spacing: 0.5px;">Mesin Standar: Flexo Zonten TTC</span>
                             <div style="font-size: 11px; color: #9ca3af; margin-top: 2px;">
-                                Input kuning dapat disesuaikan; nilai hijau dihitung otomatis oleh sistem secara real-time.
+                                Seluruh ukuran dimensi menggunakan satuan <strong>Centimeter (cm)</strong>. Input kuning dapat disesuaikan; nilai hijau dihitung otomatis.
                             </div>
                         </div>
                         <div style="text-align: right;">
@@ -106,17 +119,17 @@ class FlexoHppModalSchema
             Tabs::make('HppTabs')
                 ->tabs([
                     // =========================================================
-                    // TAB 1: SPESIFIKASI ORDER & LAYOUT
+                    // TAB 1: SPESIFIKASI ORDER & LAYOUT (CM)
                     // =========================================================
                     Tabs\Tab::make('A. Spesifikasi Order & Layout')
                         ->icon('heroicon-o-view-columns')
                         ->schema([
                             Section::make('Dimensi & Allowance (Input)')
-                                ->description('Ukuran etiket jadi dan toleransi pisau/mesin')
+                                ->description('Ukuran etiket jadi dan toleransi pisau/mesin dalam satuan Centimeter (cm)')
                                 ->schema([
                                     Grid::make(3)->schema([
                                         TextInput::make('panjang_etiket_jadi')
-                                            ->label('Panjang Etiket Jadi (mm)')
+                                            ->label('Panjang Etiket Jadi (cm)')
                                             ->numeric()
                                             ->helperText('Arah jalan bahan (feeding)')
                                             ->required()
@@ -124,7 +137,7 @@ class FlexoHppModalSchema
                                             ->afterStateUpdated(fn (Get $get, Set $set) => self::triggerLiveRecalculate($get, $set)),
 
                                         TextInput::make('lebar_etiket_jadi')
-                                            ->label('Lebar Etiket Jadi (mm)')
+                                            ->label('Lebar Etiket Jadi (cm)')
                                             ->numeric()
                                             ->helperText('Melintang terhadap arah bahan')
                                             ->required()
@@ -132,10 +145,10 @@ class FlexoHppModalSchema
                                             ->afterStateUpdated(fn (Get $get, Set $set) => self::triggerLiveRecalculate($get, $set)),
 
                                         TextInput::make('repeat_cylinder')
-                                            ->label('Repeat Cylinder (mm)')
+                                            ->label('Repeat Cylinder (cm)')
                                             ->numeric()
                                             ->default(FlexoHppCalculatorService::DEFAULT_REPEAT_CYLINDER)
-                                            ->helperText('Standar Zonten: 412.75 mm')
+                                            ->helperText('Standar Zonten: 41.28 cm (412.75 mm)')
                                             ->required()
                                             ->live(debounce: 500)
                                             ->afterStateUpdated(fn (Get $get, Set $set) => self::triggerLiveRecalculate($get, $set)),
@@ -143,26 +156,26 @@ class FlexoHppModalSchema
 
                                     Grid::make(3)->schema([
                                         TextInput::make('lebihan_cetak_panjang')
-                                            ->label('Lebihan Cetak Panjang (mm)')
+                                            ->label('Lebihan Cetak Panjang (cm)')
                                             ->numeric()
                                             ->default(FlexoHppCalculatorService::DEFAULT_ALLOWANCE_PANJANG)
-                                            ->helperText('Allowance pitch (default: 3 mm)')
+                                            ->helperText('Allowance pitch (default: 0.3 cm / 3 mm)')
                                             ->live(debounce: 500)
                                             ->afterStateUpdated(fn (Get $get, Set $set) => self::triggerLiveRecalculate($get, $set)),
 
                                         TextInput::make('lebihan_cetak_lebar')
-                                            ->label('Lebihan Cetak Lebar (mm)')
+                                            ->label('Lebihan Cetak Lebar (cm)')
                                             ->numeric()
                                             ->default(FlexoHppCalculatorService::DEFAULT_ALLOWANCE_LEBAR)
-                                            ->helperText('Allowance lebar per item (default: 3 mm)')
+                                            ->helperText('Allowance lebar per item (default: 0.3 cm / 3 mm)')
                                             ->live(debounce: 500)
                                             ->afterStateUpdated(fn (Get $get, Set $set) => self::triggerLiveRecalculate($get, $set)),
 
                                         TextInput::make('lebihan_lebar_bahan')
-                                            ->label('Lebihan Lebar Bahan / Web (mm)')
+                                            ->label('Lebihan Lebar Bahan / Web (cm)')
                                             ->numeric()
                                             ->default(FlexoHppCalculatorService::DEFAULT_ALLOWANCE_WEB)
-                                            ->helperText('Allowance tepi bahan (default: 20 mm)')
+                                            ->helperText('Allowance tepi bahan (default: 2.0 cm / 20 mm)')
                                             ->live(debounce: 500)
                                             ->afterStateUpdated(fn (Get $get, Set $set) => self::triggerLiveRecalculate($get, $set)),
                                     ]),
@@ -192,25 +205,25 @@ class FlexoHppModalSchema
                                 ->schema([
                                     Grid::make(4)->schema([
                                         TextInput::make('lebar_bahan')
-                                            ->label('Lebar Bahan / Web (mm)')
+                                            ->label('Lebar Bahan / Web (cm)')
                                             ->numeric()
                                             ->readOnly()
                                             ->extraInputAttributes(['style' => 'background-color: rgba(16, 185, 129, 0.1); font-weight: bold; color: #10b981;']),
 
                                         TextInput::make('panjang_cetak_pitch')
-                                            ->label('Panjang Cetak / Pitch (mm)')
+                                            ->label('Panjang Cetak / Pitch (cm)')
                                             ->numeric()
                                             ->readOnly()
                                             ->extraInputAttributes(['style' => 'background-color: rgba(16, 185, 129, 0.1); font-weight: bold; color: #10b981;']),
 
                                         TextInput::make('panjang_kebutuhan_per_repeat')
-                                            ->label('Kebutuhan Panjang / Repeat (mm)')
+                                            ->label('Kebutuhan Panjang / Repeat (cm)')
                                             ->numeric()
                                             ->readOnly()
                                             ->extraInputAttributes(['style' => 'background-color: rgba(16, 185, 129, 0.1); font-weight: bold; color: #10b981;']),
 
                                         TextInput::make('sisa_repeat')
-                                            ->label('Sisa Repeat (mm)')
+                                            ->label('Sisa Repeat (cm)')
                                             ->numeric()
                                             ->readOnly()
                                             ->extraInputAttributes(['style' => 'background-color: rgba(16, 185, 129, 0.1); font-weight: bold; color: #10b981;']),
@@ -221,8 +234,8 @@ class FlexoHppModalSchema
                                         ->readOnly()
                                         ->extraInputAttributes(fn ($state) => [
                                             'style' => str_contains($state ?? '', 'MUAT')
-                                                ? 'background-color: rgba(16, 185, 129, 0.2); font-weight: bold; color: #10b981;'
-                                                : 'background-color: rgba(239, 68, 68, 0.2); font-weight: bold; color: #ef4444;',
+                                                 ? 'background-color: rgba(16, 185, 129, 0.2); font-weight: bold; color: #10b981;'
+                                                 : 'background-color: rgba(239, 68, 68, 0.2); font-weight: bold; color: #ef4444;',
                                         ]),
                                 ]),
                         ]),
@@ -235,7 +248,7 @@ class FlexoHppModalSchema
                         ->schema([
                             Section::make('Parameter Bahan Kertas (Input)')
                                 ->schema([
-                                    Grid::make(4)->schema([
+                                    Grid::make(3)->schema([
                                         TextInput::make('gramatur_kertas')
                                             ->label('Gramatur Kertas (GSM)')
                                             ->numeric()
@@ -245,15 +258,31 @@ class FlexoHppModalSchema
                                             ->live(debounce: 500)
                                             ->afterStateUpdated(fn (Get $get, Set $set) => self::triggerLiveRecalculate($get, $set)),
 
+                                        TextInput::make('harga_bahan_per_meter')
+                                            ->label('Harga Bahan per Meter (Rp/m)')
+                                            ->prefix('Rp')
+                                            ->numeric()
+                                            ->helperText('Harga kertas per meter linear')
+                                            ->live(debounce: 500)
+                                            ->afterStateUpdated(function (Get $get, Set $set) {
+                                                $set('basis_harga_bahan', 'meter');
+                                                self::triggerLiveRecalculate($get, $set);
+                                            }),
+
                                         TextInput::make('harga_bahan_per_kg')
-                                            ->label('Harga Bahan per Kg (Rp)')
+                                            ->label('Harga Bahan per Kg (Rp/kg)')
                                             ->prefix('Rp')
                                             ->numeric()
                                             ->default(FlexoHppCalculatorService::DEFAULT_HARGA_BAHAN)
-                                            ->required()
+                                            ->helperText('Harga kertas per kilogram')
                                             ->live(debounce: 500)
-                                            ->afterStateUpdated(fn (Get $get, Set $set) => self::triggerLiveRecalculate($get, $set)),
+                                            ->afterStateUpdated(function (Get $get, Set $set) {
+                                                $set('basis_harga_bahan', 'kg');
+                                                self::triggerLiveRecalculate($get, $set);
+                                            }),
+                                    ]),
 
+                                    Grid::make(2)->schema([
                                         TextInput::make('waste_setting')
                                             ->label('Waste Setting Awal (meter)')
                                             ->numeric()
@@ -466,28 +495,69 @@ class FlexoHppModalSchema
                                             ->label('Total Biaya Order (Rp)')
                                             ->prefix('Rp')
                                             ->readOnly()
-                                            ->formatStateUsing(fn ($state) => number_format((float)$state, 2, '.', ','))
+                                            ->formatStateUsing(fn ($state) => \App\Support\MoneyHelper::format($state, 2))
                                             ->extraInputAttributes(['style' => 'background-color: rgba(59, 130, 246, 0.15); font-weight: 700; color: #3b82f6; font-size: 14px;']),
 
                                         TextInput::make('hpp_per_etiket')
                                             ->label('HPP Pokok per Etiket (Rp/pcs)')
                                             ->prefix('Rp')
                                             ->readOnly()
-                                            ->formatStateUsing(fn ($state) => number_format((float)$state, 2, '.', ','))
+                                            ->formatStateUsing(fn ($state) => \App\Support\MoneyHelper::format($state, 2))
                                             ->extraInputAttributes(['style' => 'background-color: rgba(245, 158, 11, 0.2); font-weight: 800; color: #f59e0b; font-size: 16px;']),
 
                                         TextInput::make('harga_jual_indikatif')
                                             ->label('Harga Jual Indikatif (+Margin) (Rp/pcs)')
                                             ->prefix('Rp')
                                             ->readOnly()
-                                            ->formatStateUsing(fn ($state) => number_format((float)$state, 2, '.', ','))
+                                            ->formatStateUsing(fn ($state) => \App\Support\MoneyHelper::format($state, 2))
                                             ->extraInputAttributes(['style' => 'background-color: rgba(16, 185, 129, 0.25); font-weight: 800; color: #10b981; font-size: 16px;']),
                                     ]),
 
+                                    Placeholder::make('terbilang_total_biaya_box')
+                                        ->label('')
+                                        ->content(function (Get $get) {
+                                            $val = $get('total_biaya_order');
+                                            $terbilang = \App\Support\MoneyHelper::terbilang($val);
+                                            return new HtmlString('
+                                                <div style="background: rgba(59, 130, 246, 0.06); border: 1px solid rgba(59, 130, 246, 0.25); border-left: 3px solid #3b82f6; border-radius: 6px; padding: 8px 14px; margin-top: 2px;">
+                                                    <div style="font-size: 10px; font-weight: 700; color: #3b82f6; text-transform: uppercase; letter-spacing: 0.05em;">Terbilang Total Biaya</div>
+                                                    <div style="font-size: 13px; font-weight: 600; margin-top: 2px; font-style: italic; line-height: 1.4;">
+                                                        “' . e($terbilang) . '”
+                                                    </div>
+                                                </div>
+                                            ');
+                                        })
+                                        ->columnSpanFull(),
+                                ]),
+
+                            Section::make('Pengaturan Harga Satuan & Fix HPP')
+                                ->description('Pilih strategi penetapan harga penawaran atau kunci Fix HPP manual')
+                                ->icon('heroicon-o-adjustments-horizontal')
+                                ->collapsible()
+                                ->collapsed(false)
+                                ->schema([
+                                    Radio::make('harga_mode')
+                                        ->label('Opsi Penetapan Harga Penawaran:')
+                                        ->options([
+                                            'indikatif' => 'Gunakan Harga Jual Indikatif (+Margin) ke Harga (Rp/pcs)',
+                                            'hpp'       => 'Samakan Harga (Rp/pcs) dengan HPP Pokok (Margin 0%)',
+                                            'custom'    => 'Setting Fix HPP / Harga Satuan Manual (Samakan HPP & Harga per Pcs)',
+                                        ])
+                                        ->default('indikatif')
+                                        ->live(),
+
+                                    TextInput::make('fix_hpp_manual')
+                                        ->label('Nilai Fix HPP / Harga Satuan (Rp/pcs)')
+                                        ->prefix('Rp')
+                                        ->currencyMask(2)
+                                        ->visible(fn (Get $get) => $get('harga_mode') === 'custom')
+                                        ->required(fn (Get $get) => $get('harga_mode') === 'custom')
+                                        ->helperText('Nilai ini akan diterapkan sekaligus ke HPP Pokok dan Harga (Rp/pcs) agar sama persis sehingga tidak membingungkan.'),
+
                                     Checkbox::make('apply_harga_to_item')
-                                        ->label('Terapkan Harga Jual Indikatif ini langsung ke field "Harga (Rp/pcs)" penawaran item')
+                                        ->label('Terapkan nilai harga yang dipilih langsung ke field "Harga (Rp/pcs)" penawaran item')
                                         ->default(true)
-                                        ->helperText('Jika dicentang, saat Anda klik "Simpan & Terapkan", harga satuan item penawaran akan otomatis terisi nilai harga jual indikatif di atas.'),
+                                        ->helperText('Jika dicentang, saat Anda klik "Simpan & Terapkan", harga satuan item penawaran akan otomatis terisi dan diformat rapi.'),
                                 ]),
                         ]),
                 ])
@@ -495,4 +565,3 @@ class FlexoHppModalSchema
         ];
     }
 }
-

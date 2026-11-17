@@ -6,7 +6,7 @@ use App\Models\User;
 use App\Models\ImrPrinting;
 use Illuminate\Auth\Access\HandlesAuthorization;
 
-class ImrPrintingPolicy
+class IMRPrintingPolicy
 {
     use HandlesAuthorization;
 

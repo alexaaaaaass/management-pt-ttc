@@ -34,8 +34,10 @@ class CreateOrderConfirmation extends CreateRecord
                     $uuid = (string) Str::uuid();
                     $targetQty = (float) $item->qty ?: 100000;
                     $fg = $fgId ? FinishGoodItem::find($fgId) : null;
-                    $panjang = $fg?->panjang ? (float) $fg->panjang : 178.0;
-                    $lebar = $fg?->lebar ? (float) $fg->lebar : 119.0;
+                    $panjang = $fg?->panjang ? (float) $fg->panjang : 17.8;
+                    if ($panjang > 50) $panjang /= 10.0;
+                    $lebar = $fg?->lebar ? (float) $fg->lebar : 11.9;
+                    if ($lebar > 50) $lebar /= 10.0;
                     $gramatur = $fg?->gramasi ? (float) $fg->gramasi : FlexoHppCalculatorService::DEFAULT_GRAMATUR;
 
                     $calc = app(FlexoHppCalculatorService::class)->calculate([

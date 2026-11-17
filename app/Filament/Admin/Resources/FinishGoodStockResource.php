@@ -67,11 +67,24 @@ class FinishGoodStockResource extends Resource
                     ->placeholder('PCS'),
 
                 Tables\Columns\TextColumn::make('on_hand')
-                    ->label('On Hand (Siap Kirim)')
+                    ->label('On Hand (Total Fisik)')
                     ->numeric(decimalPlaces: 0, decimalSeparator: ',', thousandsSeparator: '.')
                     ->badge()
                     ->color(fn ($state) => (float) $state > 0 ? 'success' : 'gray')
                     ->sortable(),
+
+                Tables\Columns\TextColumn::make('reserved')
+                    ->label('Reserved (Booked SO)')
+                    ->numeric(decimalPlaces: 0, decimalSeparator: ',', thousandsSeparator: '.')
+                    ->badge()
+                    ->color(fn ($state) => (float) $state > 0 ? 'warning' : 'gray')
+                    ->sortable(),
+
+                Tables\Columns\TextColumn::make('available')
+                    ->label('Free Buffer Stock')
+                    ->numeric(decimalPlaces: 0, decimalSeparator: ',', thousandsSeparator: '.')
+                    ->badge()
+                    ->color(fn ($state) => (float) $state > 0 ? 'info' : 'gray'),
 
                 Tables\Columns\TextColumn::make('blocked')
                     ->label('Blocked (QC Hold)')

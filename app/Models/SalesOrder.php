@@ -41,6 +41,9 @@ class SalesOrder extends Model
     'catatan',
     'catatan_colour_range',
     'order_type',
+    'fulfillment_type',
+    'qty_from_stock',
+    'qty_to_produce',
 ];
 
     public function orderConfirmation()
@@ -353,6 +356,18 @@ public function getCurrentStockAttribute()
             if ($so->spk()->exists()) {
                 throw new \Exception('Sales Order tidak dapat dihapus karena sudah memiliki SPK produksi terkait.');
             }
+
+            if ((float) ($so->qty_from_stock ?? 0) > 0 && $so->itemable_id && $so->itemable_type === FinishGoodItem::class) {
+                app(\App\Services\Inventory\FinishGoodStockService::class)->releaseReservedStock(
+                    (int) $so->itemable_id,
+                    (float) $so->qty_from_stock
+                );
+            }
         });
+    }
+
+    public function needsProduction(): bool
+    {
+        return $this->fulfillment_type !== 'FROM_STOCK';
     }
 }

@@ -9,12 +9,14 @@ class FinishGoodStock extends Model
     protected $fillable = [
         'finish_good_item_id',
         'on_hand',
+        'reserved',
         'blocked',
     ];
 
     protected $casts = [
-        'on_hand' => 'float',
-        'blocked' => 'float',
+        'on_hand'  => 'float',
+        'reserved' => 'float',
+        'blocked'  => 'float',
     ];
 
     public function finishGoodItem()
@@ -33,7 +35,7 @@ class FinishGoodStock extends Model
 
     public function getAvailableAttribute(): float
     {
-        return max(0.0, (float) $this->on_hand);
+        return max(0.0, (float) $this->on_hand - (float) ($this->reserved ?? 0));
     }
 }
 

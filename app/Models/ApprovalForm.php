@@ -51,6 +51,30 @@ class ApprovalForm extends Model
     }
 
     /**
+     * Cek apakah seluruh item spesifikasi sudah memiliki Master Finish Good yang terdaftar
+     */
+    public function hasAllFinishGoods(): bool
+    {
+        $items = $this->items;
+        if ($items->isEmpty()) {
+            return false;
+        }
+
+        return $items->every(function ($item) {
+            return ! empty($item->finish_good_item_id) && $item->finishGoodItem !== null;
+        });
+    }
+
+    /**
+     * Cek apakah Order Confirmation sudah pernah diterbitkan untuk Approval Form ini
+     */
+    public function hasOrderConfirmation(): bool
+    {
+        return $this->status === 'converted_to_oc'
+            || ! is_null($this->orderConfirmation);
+    }
+
+    /**
      * Cek status kesiapan Bill of Materials (BOM) di Finish Good
      */
     public function getBomStatusAttribute(): string

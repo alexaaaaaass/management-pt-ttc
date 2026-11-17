@@ -38,14 +38,37 @@ class SalesOrderService
         $qty = (float) ($targetItem?->qty ?? 0);
         $hargaPcs = (float) ($targetItem?->harga ?? 0);
 
-        $bom = ($fg && $qty > 0)
-            ? $this->getBomPreview((int) $fg->id, $qty)
+        $freeBuffer = $fg
+            ? app(\App\Services\Inventory\FinishGoodStockService::class)->getFreeBufferStock((int) $fg->id)
+            : 0.0;
+
+        $fulfillmentType = 'PRODUCTION';
+        $qtyFromStock = 0.0;
+        $qtyToProduce = $qty;
+
+        if ($freeBuffer > 0 && $qty > 0) {
+            if ($freeBuffer >= $qty) {
+                $fulfillmentType = 'FROM_STOCK';
+                $qtyFromStock = $qty;
+                $qtyToProduce = 0.0;
+            } else {
+                $fulfillmentType = 'PARTIAL_STOCK';
+                $qtyFromStock = $freeBuffer;
+                $qtyToProduce = $qty - $freeBuffer;
+            }
+        }
+
+        $bom = ($fg && $qtyToProduce > 0)
+            ? $this->getBomPreview((int) $fg->id, $qtyToProduce)
             : [];
 
         return [
             'order_confirmation_id'      => $oc->id,
             'order_confirmation_item_id' => $targetItem?->id,
             'order_type'                 => 'SPK',
+            'fulfillment_type'           => $fulfillmentType,
+            'qty_from_stock'             => $qtyFromStock,
+            'qty_to_produce'             => $qtyToProduce,
             'customer_id'                => $oc->customer_id,
             'item_source'                => $fg?->id,
             'itemable_id'                => $fg?->id,
@@ -143,32 +166,7 @@ class SalesOrderService
             $orderType = $data['order_type'] ?? 'SPK';
 
             if ($orderType === 'SPK') {
-                $finishGoodId = (int) ($data['itemable_id'] ?? 0);
-                $qty = (float) ($data['qty'] ?? 0);
-
-                if (! $finishGoodId) {
-                    throw ValidationException::withMessages([
-                        'item_source' => 'Item Finish Good wajib dipilih untuk pesanan SPK.',
-                    ]);
-                }
-
-                if ($qty <= 0) {
-                    throw ValidationException::withMessages([
-                        'qty' => 'Jumlah pesanan harus lebih besar dari 0.',
-                    ]);
-                }
-
-                // Validasi kekurangan bahan BOM
-                $shortages = $this->checkBomShortages($finishGoodId, $qty);
-                if (! empty($shortages)) {
-                    $first = $shortages[0];
-                    throw ValidationException::withMessages([
-                        'qty' => "Stock tidak cukup untuk material: {$first['nama_material']} | Butuh: {$first['kebutuhan']} | Sisa: {$first['tersedia']}",
-                    ]);
-                }
-
-                $data['itemable_type'] = FinishGoodItem::class;
-                $data['itemable_id'] = $finishGoodId;
+                $data = $this->prepareAndReserveSpkData($data);
             } else {
                 // MATERIAL mode
                 $data['itemable_type'] = null;
@@ -218,27 +216,33 @@ class SalesOrderService
             $orderType = $data['order_type'] ?? $salesOrder->order_type ?? 'SPK';
 
             if ($orderType === 'SPK') {
-                $finishGoodId = (int) ($data['itemable_id'] ?? $salesOrder->itemable_id);
-                $qty = (float) ($data['qty'] ?? $salesOrder->qty);
+                $data['itemable_id'] = (int) ($data['itemable_id'] ?? $salesOrder->itemable_id);
+                $data['qty'] = (float) ($data['qty'] ?? $salesOrder->qty);
+                $data['fulfillment_type'] = $data['fulfillment_type'] ?? $salesOrder->fulfillment_type ?? 'PRODUCTION';
+                $data['qty_from_stock'] = $data['qty_from_stock'] ?? $salesOrder->qty_from_stock ?? 0;
 
-                if (! empty($finishGoodId) && $qty > 0) {
-                    $shortages = $this->checkBomShortages($finishGoodId, $qty);
-                    if (! empty($shortages)) {
-                        $first = $shortages[0];
-                        throw ValidationException::withMessages([
-                            'qty' => "Stock tidak cukup untuk material: {$first['nama_material']} | Butuh: {$first['kebutuhan']} | Sisa: {$first['tersedia']}",
-                        ]);
+                $data = $this->prepareAndReserveSpkData($data, $salesOrder);
+            } else {
+                // Lepas sisa buffer stock jika berpindah dari SPK ke MATERIAL
+                if ($salesOrder->order_type === 'SPK' && $salesOrder->itemable_id && (float) ($salesOrder->qty_from_stock ?? 0) > 0) {
+                    $alreadyShipped = (float) $salesOrder->suratJalans()->sum('qty_pengiriman');
+                    $oldReserved = max(0.0, (float) $salesOrder->qty_from_stock - $alreadyShipped);
+                    if ($oldReserved > 0) {
+                        app(\App\Services\Inventory\FinishGoodStockService::class)->releaseReservedStock(
+                            (int) $salesOrder->itemable_id,
+                            $oldReserved
+                        );
                     }
                 }
 
-                $data['itemable_type'] = FinishGoodItem::class;
-                $data['itemable_id'] = $finishGoodId;
-            } else {
                 $data['itemable_type'] = null;
                 $data['itemable_id'] = null;
                 $data['qty'] = null;
                 $data['harga_pcs'] = null;
                 $data['kode_material'] = null;
+                $data['fulfillment_type'] = 'PRODUCTION';
+                $data['qty_from_stock'] = 0;
+                $data['qty_to_produce'] = 0;
             }
 
             $salesOrder->update($data);
@@ -261,6 +265,92 @@ class SalesOrderService
 
             return $salesOrder;
         });
+    }
+
+    /**
+     * Validasi alokasi buffer stock, BOM bahan baku, dan simpan reservasi stok Finish Good.
+     */
+    private function prepareAndReserveSpkData(array $data, ?SalesOrder $existing = null): array
+    {
+        $finishGoodId = (int) ($data['itemable_id'] ?? 0);
+        $qty = (float) ($data['qty'] ?? 0);
+        $fulfillmentType = $data['fulfillment_type'] ?? 'PRODUCTION';
+
+        if (! $finishGoodId) {
+            throw ValidationException::withMessages([
+                'item_source' => 'Item Finish Good wajib dipilih untuk pesanan SPK.',
+            ]);
+        }
+
+        if ($qty <= 0) {
+            throw ValidationException::withMessages([
+                'qty' => 'Jumlah pesanan harus lebih besar dari 0.',
+            ]);
+        }
+
+        $fgStockService = app(\App\Services\Inventory\FinishGoodStockService::class);
+        $alreadyShipped = 0.0;
+
+        // Jika update: lepas dulu sisa reserved lama agar perhitungan stok bebas akurat
+        if ($existing && $existing->order_type === 'SPK' && $existing->itemable_id) {
+            $alreadyShipped = (float) $existing->suratJalans()->sum('qty_pengiriman');
+            $oldUnshippedReserved = max(0.0, (float) ($existing->qty_from_stock ?? 0) - $alreadyShipped);
+            if ($oldUnshippedReserved > 0) {
+                $fgStockService->releaseReservedStock((int) $existing->itemable_id, $oldUnshippedReserved);
+            }
+        }
+
+        $freeBuffer = $fgStockService->getFreeBufferStock($finishGoodId);
+
+        if ($fulfillmentType === 'FROM_STOCK') {
+            $needExtraReserve = max(0.0, $qty - $alreadyShipped);
+            if ($freeBuffer < $needExtraReserve) {
+                throw ValidationException::withMessages([
+                    'fulfillment_type' => "Buffer stock bebas di gudang hanya tersedia " . number_format($freeBuffer, 0, ',', '.') . " pcs, tidak mencukupi untuk memenuhi {$qty} pcs secara penuh.",
+                ]);
+            }
+            $qtyFromStock = $qty;
+            $qtyToProduce = 0.0;
+        } elseif ($fulfillmentType === 'PARTIAL_STOCK') {
+            $qtyFromStock = min($qty, max(0.0, (float) ($data['qty_from_stock'] ?? $freeBuffer)));
+            $needExtraReserve = max(0.0, $qtyFromStock - $alreadyShipped);
+            if ($needExtraReserve > $freeBuffer) {
+                throw ValidationException::withMessages([
+                    'qty_from_stock' => "Alokasi dari gudang ({$qtyFromStock}) melebihi Buffer Stock bebas tersedia ({$freeBuffer}).",
+                ]);
+            }
+            $qtyToProduce = max(0.0, $qty - $qtyFromStock);
+        } else {
+            $fulfillmentType = 'PRODUCTION';
+            $qtyFromStock = 0.0;
+            $qtyToProduce = $qty;
+        }
+
+        $data['fulfillment_type'] = $fulfillmentType;
+        $data['qty_from_stock'] = $qtyFromStock;
+        $data['qty_to_produce'] = $qtyToProduce;
+
+        // Validasi kekurangan bahan BOM hanya untuk porsi yang memang perlu diproduksi
+        if ($qtyToProduce > 0) {
+            $shortages = $this->checkBomShortages($finishGoodId, $qtyToProduce);
+            if (! empty($shortages)) {
+                $first = $shortages[0];
+                throw ValidationException::withMessages([
+                    'qty' => "Stock tidak cukup untuk material: {$first['nama_material']} | Butuh: {$first['kebutuhan']} | Sisa: {$first['tersedia']}",
+                ]);
+            }
+        }
+
+        // Kunci buffer stock yang belum terkirim di gudang jika mengambil dari stok jadi
+        $toReserve = max(0.0, $qtyFromStock - $alreadyShipped);
+        if ($toReserve > 0) {
+            $fgStockService->reserveStock($finishGoodId, $toReserve);
+        }
+
+        $data['itemable_type'] = FinishGoodItem::class;
+        $data['itemable_id'] = $finishGoodId;
+
+        return $data;
     }
 
     /**

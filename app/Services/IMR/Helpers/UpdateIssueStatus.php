@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Services\IMR\Actions;
+namespace App\Services\IMR\Helpers;
 
 use App\Models\ImrPrinting;
 

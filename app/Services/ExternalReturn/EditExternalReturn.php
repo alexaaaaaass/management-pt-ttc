@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Filament\Admin\Resources\ExternalReturnResource\Pages;
+namespace App\Services\ExternalReturn;
 
 use App\Filament\Admin\Resources\ExternalReturnResource;
 use Filament\Resources\Pages\EditRecord;

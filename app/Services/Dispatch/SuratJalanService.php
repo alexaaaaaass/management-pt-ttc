@@ -78,10 +78,7 @@ class SuratJalanService
                     ]);
                 }
 
-                $fgId = $salesOrder->itemable_id;
-                $available = $fgId
-                    ? $this->finishGoodStockService->getAvailableStock((int) $fgId)
-                    : ($spk ? (float) $spk->on_hand_stock : 0.0);
+                $available = $this->getShippableFinishGoodStock($salesOrder, $spk);
 
                 if ($qtyKirim > $available) {
                     throw ValidationException::withMessages([
@@ -99,6 +96,8 @@ class SuratJalanService
                     $fgId = $salesOrder->itemable_id;
                     $qtyKirim = (float) ($data['qty_pengiriman'] ?? 0);
                     if ($fgId && $qtyKirim > 0) {
+                        $toRelease = $this->computeReservedDeltaForShipment($salesOrder, $qtyKirim, $suratJalan->id);
+
                         $this->finishGoodStockService->decreaseStock(
                             finishGoodItemId: (int) $fgId,
                             qty: $qtyKirim,
@@ -107,6 +106,10 @@ class SuratJalanService
                             spkId: $suratJalan->spk_id,
                             remarks: 'Pengiriman Surat Jalan - ' . $suratJalan->kode_surat_jalan
                         );
+
+                        if ($toRelease > 0) {
+                            $this->finishGoodStockService->releaseReservedStock((int) $fgId, $toRelease);
+                        }
                     }
                     break;
 
@@ -188,14 +191,22 @@ class SuratJalanService
 
             // 1a. Rollback pemotongan stok barang jadi lama jika mode SPK
             if ($suratJalan->salesOrder?->mode === 'SPK' && $suratJalan->salesOrder?->itemable_id && (float) $suratJalan->qty_pengiriman > 0) {
+                $oldFgId = (int) $suratJalan->salesOrder->itemable_id;
+                $oldQty = (float) $suratJalan->qty_pengiriman;
+                $toReReserve = $this->computeReservedDeltaForShipment($suratJalan->salesOrder, $oldQty, $suratJalan->id);
+
                 $this->finishGoodStockService->increaseStock(
-                    finishGoodItemId: (int) $suratJalan->salesOrder->itemable_id,
-                    qty: (float) $suratJalan->qty_pengiriman,
+                    finishGoodItemId: $oldFgId,
+                    qty: $oldQty,
                     reference: $suratJalan,
                     source: 'SURAT_JALAN',
                     spkId: $suratJalan->spk_id,
                     remarks: 'Rollback Update Surat Jalan - ' . $suratJalan->kode_surat_jalan
                 );
+
+                if ($toReReserve > 0) {
+                    $this->finishGoodStockService->reserveStock($oldFgId, $toReReserve);
+                }
             }
 
             // 1b. Rollback pemotongan stok material lama
@@ -234,10 +245,12 @@ class SuratJalanService
                     ]);
                 }
 
-                $fgId = $salesOrder->itemable_id;
-                $available = $fgId
-                    ? $this->finishGoodStockService->getAvailableStock((int) $fgId)
-                    : ($spk ? (float) ($spk->on_hand_stock + (float) $suratJalan->qty_pengiriman) : 0.0);
+                $available = $this->getShippableFinishGoodStock(
+                    $salesOrder,
+                    $spk,
+                    $suratJalan->id,
+                    (float) $suratJalan->qty_pengiriman
+                );
 
                 if ($qtyKirim > $available) {
                     throw ValidationException::withMessages([
@@ -254,6 +267,8 @@ class SuratJalanService
                     $fgId = $salesOrder->itemable_id;
                     $qtyKirim = (float) ($data['qty_pengiriman'] ?? $suratJalan->qty_pengiriman);
                     if ($fgId && $qtyKirim > 0) {
+                        $toRelease = $this->computeReservedDeltaForShipment($salesOrder, $qtyKirim, $suratJalan->id);
+
                         $this->finishGoodStockService->decreaseStock(
                             finishGoodItemId: (int) $fgId,
                             qty: $qtyKirim,
@@ -262,6 +277,10 @@ class SuratJalanService
                             spkId: $suratJalan->spk_id,
                             remarks: 'Pengiriman Surat Jalan (Update) - ' . $suratJalan->kode_surat_jalan
                         );
+
+                        if ($toRelease > 0) {
+                            $this->finishGoodStockService->releaseReservedStock((int) $fgId, $toRelease);
+                        }
                     }
                     break;
 
@@ -343,14 +362,22 @@ class SuratJalanService
 
             // Kembalikan stok barang jadi jika mode SPK
             if ($suratJalan->salesOrder?->mode === 'SPK' && $suratJalan->salesOrder?->itemable_id && (float) $suratJalan->qty_pengiriman > 0) {
+                $fgId = (int) $suratJalan->salesOrder->itemable_id;
+                $oldQty = (float) $suratJalan->qty_pengiriman;
+                $toReReserve = $this->computeReservedDeltaForShipment($suratJalan->salesOrder, $oldQty, $suratJalan->id);
+
                 $this->finishGoodStockService->increaseStock(
-                    finishGoodItemId: (int) $suratJalan->salesOrder->itemable_id,
-                    qty: (float) $suratJalan->qty_pengiriman,
+                    finishGoodItemId: $fgId,
+                    qty: $oldQty,
                     reference: $suratJalan,
                     source: 'SURAT_JALAN',
                     spkId: $suratJalan->spk_id,
                     remarks: 'Rollback Hapus Surat Jalan - ' . $suratJalan->kode_surat_jalan
                 );
+
+                if ($toReReserve > 0) {
+                    $this->finishGoodStockService->reserveStock($fgId, $toReReserve);
+                }
             }
 
             // Kembalikan seluruh stok material yang pernah terpotong
@@ -389,5 +416,57 @@ class SuratJalanService
         }
 
         return $count;
+    }
+
+    /**
+     * Hitung selisih qty buffer stock (reserved) yang terpakai / harus dikembalikan
+     * oleh sebuah pengiriman Surat Jalan pada Sales Order terkait.
+     */
+    private function computeReservedDeltaForShipment(
+        SalesOrder $salesOrder,
+        float $qtyKirim,
+        ?int $excludeSuratJalanId = null
+    ): float {
+        $qtyFromStock = (float) ($salesOrder->qty_from_stock ?? 0);
+        if ($qtyFromStock <= 0 || $qtyKirim <= 0) {
+            return 0.0;
+        }
+
+        $otherShipped = (float) SuratJalan::where('sales_order_id', $salesOrder->id)
+            ->when($excludeSuratJalanId, fn ($q) => $q->where('id', '!=', $excludeSuratJalanId))
+            ->sum('qty_pengiriman');
+
+        $consumedAfter = min($qtyFromStock, $otherShipped + $qtyKirim);
+        $consumedBefore = min($qtyFromStock, $otherShipped);
+
+        return max(0.0, $consumedAfter - $consumedBefore);
+    }
+
+    /**
+     * Hitung total stok Finish Good yang boleh dikirim untuk Sales Order ini:
+     * stok bebas (on_hand - reserved) ditambah sisa reserved milik SO ini sendiri.
+     */
+    private function getShippableFinishGoodStock(
+        SalesOrder $salesOrder,
+        ?MasterSpk $spk = null,
+        ?int $excludeSuratJalanId = null,
+        float $fallbackExtra = 0.0
+    ): float {
+        $fgId = $salesOrder->itemable_id;
+        if (! $fgId) {
+            return $spk ? (float) ($spk->on_hand_stock + $fallbackExtra) : 0.0;
+        }
+
+        $onHand = $this->finishGoodStockService->getAvailableStock((int) $fgId);
+        $freeStock = $this->finishGoodStockService->getFreeBufferStock((int) $fgId);
+        $qtyFromStock = (float) ($salesOrder->qty_from_stock ?? 0);
+
+        $otherShipped = (float) SuratJalan::where('sales_order_id', $salesOrder->id)
+            ->when($excludeSuratJalanId, fn ($q) => $q->where('id', '!=', $excludeSuratJalanId))
+            ->sum('qty_pengiriman');
+
+        $ownReservedRemaining = max(0.0, $qtyFromStock - $otherShipped);
+
+        return min($onHand, $freeStock + $ownReservedRemaining);
     }
 }

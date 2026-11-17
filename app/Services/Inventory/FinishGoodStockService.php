@@ -15,7 +15,7 @@ use InvalidArgumentException;
 class FinishGoodStockService
 {
     /**
-     * Ambil stok barang jadi yang siap dikirim (on_hand).
+     * Ambil stok fisik barang jadi di gudang (on_hand).
      */
     public function getAvailableStock(int $finishGoodItemId): float
     {
@@ -26,6 +26,79 @@ class FinishGoodStockService
         }
 
         return max(0.0, (float) $stock->on_hand);
+    }
+
+    /**
+     * Ambil sisa Buffer Stock bebas yang belum dikunci oleh Sales Order lain (on_hand - reserved).
+     */
+    public function getFreeBufferStock(int $finishGoodItemId): float
+    {
+        $stock = FinishGoodStock::where('finish_good_item_id', $finishGoodItemId)->first();
+
+        if (! $stock) {
+            return 0.0;
+        }
+
+        return max(0.0, (float) $stock->on_hand - (float) ($stock->reserved ?? 0));
+    }
+
+    /**
+     * Kunci / alokasikan Buffer Stock untuk Sales Order (Make-to-Stock) agar tidak terpakai oleh order lain.
+     */
+    public function reserveStock(int $finishGoodItemId, float $qty): FinishGoodStock
+    {
+        if ($qty <= 0) {
+            throw new InvalidArgumentException('Quantity alokasi/reservasi stok harus lebih besar dari 0.');
+        }
+
+        return DB::transaction(function () use ($finishGoodItemId, $qty) {
+            $stock = FinishGoodStock::firstOrCreate(
+                ['finish_good_item_id' => $finishGoodItemId],
+                ['on_hand' => 0, 'reserved' => 0, 'blocked' => 0]
+            );
+
+            $stock = FinishGoodStock::where('id', $stock->id)->lockForUpdate()->first();
+            $free = max(0.0, (float) $stock->on_hand - (float) ($stock->reserved ?? 0));
+
+            if ($qty > $free) {
+                $fg = FinishGoodItem::find($finishGoodItemId);
+                $nama = $fg?->nama_barang ?? "ID {$finishGoodItemId}";
+                throw new InvalidArgumentException("Buffer stock bebas '{$nama}' tidak mencukupi untuk dialokasikan. Tersedia bebas: " . number_format($free, 0, ',', '.') . " pcs, dibutuhkan: " . number_format($qty, 0, ',', '.') . " pcs.");
+            }
+
+            $stock->update([
+                'reserved' => round((float) ($stock->reserved ?? 0) + $qty, 2),
+            ]);
+
+            return $stock;
+        });
+    }
+
+    /**
+     * Lepaskan alokasi Buffer Stock (saat Surat Jalan dikirim atau Sales Order dibatalkan).
+     */
+    public function releaseReservedStock(int $finishGoodItemId, float $qty): FinishGoodStock
+    {
+        if ($qty <= 0) {
+            return FinishGoodStock::firstOrCreate(
+                ['finish_good_item_id' => $finishGoodItemId],
+                ['on_hand' => 0, 'reserved' => 0, 'blocked' => 0]
+            );
+        }
+
+        return DB::transaction(function () use ($finishGoodItemId, $qty) {
+            $stock = FinishGoodStock::firstOrCreate(
+                ['finish_good_item_id' => $finishGoodItemId],
+                ['on_hand' => 0, 'reserved' => 0, 'blocked' => 0]
+            );
+
+            $stock = FinishGoodStock::where('id', $stock->id)->lockForUpdate()->first();
+            $stock->update([
+                'reserved' => max(0.0, round((float) ($stock->reserved ?? 0) - $qty, 2)),
+            ]);
+
+            return $stock;
+        });
     }
 
     /**

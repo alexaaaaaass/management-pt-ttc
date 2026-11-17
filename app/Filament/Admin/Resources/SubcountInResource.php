@@ -303,6 +303,11 @@ class SubcountInResource extends Resource
         ];
     }
 
+    public static function getEloquentQuery(): \Illuminate\Database\Eloquent\Builder
+    {
+        return parent::getEloquentQuery()->with(['items']);
+    }
+
     public static function getPages(): array
     {
         return [

@@ -328,6 +328,7 @@ class ApprovalFormResource extends Resource
                         ->label('Set BOM Finish Good')
                         ->icon('heroicon-o-queue-list')
                         ->color('primary')
+                        ->visible(fn (ApprovalForm $record): bool => ! $record->hasAllFinishGoods())
                         ->tooltip('Rancang atau buka Bill of Materials di Finish Good berdasarkan Approval Form ini')
                         ->modalHeading(fn (ApprovalForm $record) => "Pilih Item untuk Mengatur BOM ({$record->form_no})")
                         ->modalDescription('Pilih item spesifikasi yang ingin disiapkan atau diatur resep bahan baku (BOM)-nya.')
@@ -402,6 +403,7 @@ class ApprovalFormResource extends Resource
                         ->icon('heroicon-o-arrow-right-circle')
                         ->color('success')
                         ->requiresConfirmation()
+                        ->visible(fn (ApprovalForm $record): bool => ! $record->hasOrderConfirmation())
                         ->modalHeading('Generate Order Confirmation')
                         ->modalDescription('Apakah Anda yakin ingin membuat Order Confirmation dari Approval Form ini? Seluruh data spesifikasi item akan otomatis di-copy.')
                         ->modalSubmitActionLabel('Ya, Terbitkan OC')
@@ -441,6 +443,7 @@ class ApprovalFormResource extends Resource
             ->with([
                 'customer',
                 'items.finishGoodItem.materials',
+                'orderConfirmation',
             ]);
     }
 
