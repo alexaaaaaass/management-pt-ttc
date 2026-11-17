@@ -76,7 +76,7 @@ class SalesOrderService
             'finish_good_item_id'        => $fg?->id,
             'kode_material'              => $fg?->kode_material_produk,
             'product_name'               => $targetItem?->item_name ?: $fg?->nama_barang,
-            'no_sales_order'             => $oc->order_id ?: $this->generateNoSalesOrder(),
+            'no_sales_order'             => $this->resolveUniqueSalesOrderNumber($oc, $targetItem),
             'tanggal_po'                 => $oc->tanggal ? $oc->tanggal->format('Y-m-d') : now()->format('Y-m-d'),
             'lead_time'                  => $oc->lead_time ?: '21 Hari Kerja',
             'qty'                        => $qty,
@@ -99,14 +99,84 @@ class SalesOrderService
     }
 
     /**
+     * Tentukan nomor Sales Order yang unik saat dibuat dari Order Confirmation.
+     * Untuk multi-item (1 SO = 1 SPK), otomatis menambahkan suffix berurutan (-01, -02, dst.)
+     */
+    public function resolveUniqueSalesOrderNumber(OrderConfirmation $oc, ?OrderConfirmationItem $targetItem = null): string
+    {
+        $base = trim($oc->order_id ?: '');
+        if ($base === '') {
+            return $this->generateNoSalesOrder();
+        }
+
+        $items = $oc->relationLoaded('items') ? $oc->items : $oc->items()->orderBy('id')->get();
+        $totalItems = $items->count();
+
+        if ($totalItems > 1 && $targetItem) {
+            $pos = $items->search(fn ($it) => $it->id === $targetItem->id);
+            $itemIndex = ($pos !== false) ? ($pos + 1) : 1;
+
+            if ($itemIndex === 1 && ! SalesOrder::withTrashed()->where('no_sales_order', $base)->exists()) {
+                return $base;
+            }
+
+            $candidate = sprintf('%s-%02d', $base, $itemIndex);
+            return $this->ensureUniqueNoSalesOrder($candidate);
+        }
+
+        return $this->ensureUniqueNoSalesOrder($base);
+    }
+
+    /**
+     * Memastikan nomor Sales Order tidak duplikat di database.
+     * Jika nomor sudah terdaftar, tambahkan atau naikkan sequential suffix (-01, -02, dst.)
+     */
+    public function ensureUniqueNoSalesOrder(string $noSalesOrder, ?int $excludeId = null): string
+    {
+        $noSalesOrder = trim($noSalesOrder);
+        if ($noSalesOrder === '') {
+            return $this->generateNoSalesOrder();
+        }
+
+        $query = SalesOrder::withTrashed();
+        if ($excludeId) {
+            $query->where('id', '!=', $excludeId);
+        }
+
+        if (! (clone $query)->where('no_sales_order', $noSalesOrder)->exists()) {
+            return $noSalesOrder;
+        }
+
+        if (preg_match('/^(.*)-(\d{2})$/', $noSalesOrder, $matches)) {
+            $prefix = $matches[1];
+            $counter = (int) $matches[2] + 1;
+        } else {
+            $prefix = $noSalesOrder;
+            $counter = 1;
+        }
+
+        do {
+            $candidate = sprintf('%s-%02d', $prefix, $counter);
+            $counter++;
+        } while ((clone $query)->where('no_sales_order', $candidate)->exists());
+
+        return $candidate;
+    }
+
+    /**
      * Generate format nomor Sales Order otomatis: 0001/IK-10/mY
      */
     public function generateNoSalesOrder(): string
     {
-        $nextId = (SalesOrder::withTrashed()->max('id') ?? 0) + 1;
         $bulanTahun = Carbon::now()->format('mY');
+        $nextId = (SalesOrder::withTrashed()->max('id') ?? 0) + 1;
 
-        return str_pad($nextId, 4, '0', STR_PAD_LEFT) . '/IK-10/' . $bulanTahun;
+        do {
+            $no = str_pad($nextId, 4, '0', STR_PAD_LEFT) . '/IK-10/' . $bulanTahun;
+            $nextId++;
+        } while (SalesOrder::withTrashed()->where('no_sales_order', $no)->exists());
+
+        return $no;
     }
 
     /**
@@ -184,6 +254,8 @@ class SalesOrderService
 
             if (empty($data['no_sales_order'])) {
                 $data['no_sales_order'] = $this->generateNoSalesOrder();
+            } else {
+                $data['no_sales_order'] = $this->ensureUniqueNoSalesOrder($data['no_sales_order']);
             }
 
             $salesOrder = SalesOrder::create($data);

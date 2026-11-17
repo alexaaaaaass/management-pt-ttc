@@ -266,6 +266,7 @@ class SalesOrderResource extends Resource
                             Forms\Components\TextInput::make('no_sales_order')
                                 ->disabled(fn (string $operation) => $operation === 'edit')
                                 ->dehydrated()
+                                ->unique(table: 'sales_orders', column: 'no_sales_order', ignoreRecord: true)
                                 ->placeholder('Otomatis jika dikosongkan'),
 
                             Forms\Components\TextInput::make('no_po_customer'),

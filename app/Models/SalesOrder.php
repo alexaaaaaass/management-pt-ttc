@@ -343,8 +343,11 @@ public function getCurrentStockAttribute()
     protected static function booted()
     {
         static::creating(function ($model) {
+            $service = app(\App\Services\Sales\SalesOrderService::class);
             if (empty($model->no_sales_order) || str_starts_with($model->no_sales_order, 'TEMP-')) {
-                $model->no_sales_order = app(\App\Services\Sales\SalesOrderService::class)->generateNoSalesOrder();
+                $model->no_sales_order = $service->generateNoSalesOrder();
+            } else {
+                $model->no_sales_order = $service->ensureUniqueNoSalesOrder($model->no_sales_order, $model->id);
             }
         });
 

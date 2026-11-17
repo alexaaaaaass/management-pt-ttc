@@ -232,7 +232,7 @@ class MarketingWorkflowService
 
             $salesOrder = SalesOrder::create([
                 'order_confirmation_id' => $oc->id,
-                'no_sales_order'        => $oc->order_id ?: ('SO-' . date('y') . '-' . str_pad($oc->id, 4, '0', STR_PAD_LEFT)),
+                'no_sales_order'        => app(\App\Services\Sales\SalesOrderService::class)->resolveUniqueSalesOrderNumber($oc, $targetItem),
                 'customer_id'           => $oc->customer_id,
                 'tanggal_po'            => $oc->tanggal ?: now(),
                 'lead_time'             => $oc->lead_time ?: '21 Hari Kerja',

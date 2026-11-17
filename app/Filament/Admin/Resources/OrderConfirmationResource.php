@@ -953,10 +953,13 @@ class OrderConfirmationResource extends Resource
                         ->modalSubmitActionLabel('Ya, Lanjut ke Form Sales Order')
                         ->visible(fn (OrderConfirmation $record) => !in_array($record->status, ['converted_to_so', 'rejected']))
                         ->action(function (OrderConfirmation $record) {
-                            if ($record->sales_order_id && $record->salesOrder) {
+                            $marketingService = app(\App\Services\Marketing\MarketingWorkflowService::class);
+                            $progress = $marketingService->getOrderConfirmationProgress($record);
+
+                            if ($progress['unconverted_count'] === 0 && $record->sales_order_id && $record->salesOrder) {
                                 Notification::make()
-                                    ->title('Sales Order Sudah Ada')
-                                    ->body("Order Confirmation ini sudah terhubung ke Sales Order No: {$record->salesOrder->no_sales_order}. Mengarahkan ke halaman edit...")
+                                    ->title('Semua Item Sales Order Sudah Dibuat')
+                                    ->body("Semua item dalam Order Confirmation ini sudah terhubung ke Sales Order. Mengarahkan ke halaman edit Sales Order terakhir ({$record->salesOrder->no_sales_order})...")
                                     ->warning()
                                     ->send();
 

@@ -36,10 +36,13 @@ class EditOrderConfirmation extends EditRecord
                 ->modalSubmitActionLabel('Ya, Lanjut ke Form Sales Order')
                 ->visible(fn () => !in_array($this->record->status, ['converted_to_so', 'rejected']))
                 ->action(function () {
-                    if ($this->record->sales_order_id && $this->record->salesOrder) {
+                    $marketingService = app(\App\Services\Marketing\MarketingWorkflowService::class);
+                    $progress = $marketingService->getOrderConfirmationProgress($this->record);
+
+                    if ($progress['unconverted_count'] === 0 && $this->record->sales_order_id && $this->record->salesOrder) {
                         \Filament\Notifications\Notification::make()
-                            ->title('Sales Order Sudah Ada')
-                            ->body("Order Confirmation ini sudah terhubung ke Sales Order No: {$this->record->salesOrder->no_sales_order}. Mengarahkan ke halaman edit...")
+                            ->title('Semua Item Sales Order Sudah Dibuat')
+                            ->body("Semua item dalam Order Confirmation ini sudah terhubung ke Sales Order. Mengarahkan ke halaman edit Sales Order ({$this->record->salesOrder->no_sales_order})...")
                             ->warning()
                             ->send();
 
