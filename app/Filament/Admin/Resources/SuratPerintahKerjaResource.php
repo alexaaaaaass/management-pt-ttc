@@ -42,9 +42,13 @@ public static function form(Form $form): Form
                             ->relationship(
                                 name: 'salesOrder',
                                 titleAttribute: 'no_sales_order',
-                                modifyQueryUsing: fn (Builder $query) => $query
-                                    ->where('order_type', 'SPK')
-                                    ->where(fn (Builder $q) => $q->whereNull('fulfillment_type')->orWhere('fulfillment_type', '!=', 'FROM_STOCK'))
+                                modifyQueryUsing: function (Builder $query) {
+                                    $query->where('order_type', 'SPK');
+                                    if (\Illuminate\Support\Facades\Schema::hasTable('sales_orders') && \Illuminate\Support\Facades\Schema::hasColumn('sales_orders', 'fulfillment_type')) {
+                                        $query->where(fn (Builder $q) => $q->whereNull('fulfillment_type')->orWhere('fulfillment_type', '!=', 'FROM_STOCK'));
+                                    }
+                                    return $query;
+                                }
                             )
                             ->searchable()
                             ->preload()

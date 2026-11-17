@@ -98,6 +98,31 @@ class AppServiceProvider extends ServiceProvider
                 });
             }
 
+            if (\Illuminate\Support\Facades\Schema::hasTable('sales_orders') && ! \Illuminate\Support\Facades\Schema::hasColumn('sales_orders', 'fulfillment_type')) {
+                $bufMig = base_path('database/migrations/2026_11_12_213000_add_buffer_stock_allocation_columns.php');
+                if (file_exists($bufMig)) {
+                    (require $bufMig)->up();
+                } else {
+                    \Illuminate\Support\Facades\Schema::table('sales_orders', function (\Illuminate\Database\Schema\Blueprint $table) {
+                        if (! \Illuminate\Support\Facades\Schema::hasColumn('sales_orders', 'fulfillment_type')) {
+                            $table->string('fulfillment_type', 30)->default('PRODUCTION')->after('order_type');
+                        }
+                        if (! \Illuminate\Support\Facades\Schema::hasColumn('sales_orders', 'qty_from_stock')) {
+                            $table->decimal('qty_from_stock', 18, 2)->default(0.00)->after('qty');
+                        }
+                        if (! \Illuminate\Support\Facades\Schema::hasColumn('sales_orders', 'qty_to_produce')) {
+                            $table->decimal('qty_to_produce', 18, 2)->default(0.00)->after('qty_from_stock');
+                        }
+                    });
+                }
+            }
+
+            if (\Illuminate\Support\Facades\Schema::hasTable('finish_good_stocks') && ! \Illuminate\Support\Facades\Schema::hasColumn('finish_good_stocks', 'reserved')) {
+                \Illuminate\Support\Facades\Schema::table('finish_good_stocks', function (\Illuminate\Database\Schema\Blueprint $table) {
+                    $table->decimal('reserved', 18, 2)->default(0.00)->after('on_hand');
+                });
+            }
+
 
             if (\Illuminate\Support\Facades\Schema::hasTable('coa_movements') && \Illuminate\Support\Facades\Schema::hasTable('master_coas')) {
                 $totalDebit = (float) \Illuminate\Support\Facades\DB::table('coa_movements')->sum('debit');
