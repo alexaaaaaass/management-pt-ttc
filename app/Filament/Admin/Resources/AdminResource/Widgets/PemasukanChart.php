@@ -11,7 +11,7 @@ class PemasukanChart extends ChartWidget
 {
     protected static ?string $heading = 'Grafik Arus Kas Masuk (Pemasukan)';
 
-    protected static ?int $sort = 2;
+    protected static ?int $sort = 5;
 
     protected static bool $isLazy = true;
 

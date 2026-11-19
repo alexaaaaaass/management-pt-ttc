@@ -14,7 +14,7 @@ class PiutangJatuhTempoWidget extends TableWidget
 {
     protected static ?string $heading = 'Piutang & Tagihan Jatuh Tempo (AR Aging)';
 
-    protected static ?int $sort = 4;
+    protected static ?int $sort = 7;
 
     protected static bool $isLazy = true;
 

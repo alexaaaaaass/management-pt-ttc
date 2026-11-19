@@ -13,7 +13,7 @@ class StockMinimumAlertWidget extends TableWidget
 {
     protected static ?string $heading = 'Peringatan Stok Minimum (Reorder Alert)';
 
-    protected static ?int $sort = 5;
+    protected static ?int $sort = 8;
 
     protected static bool $isLazy = true;
 

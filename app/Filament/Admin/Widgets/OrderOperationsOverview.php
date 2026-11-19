@@ -7,6 +7,8 @@ use App\Models\PurchaseRequest;
 use App\Models\SalesOrder;
 use Filament\Widgets\StatsOverviewWidget as BaseWidget;
 use Filament\Widgets\StatsOverviewWidget\Stat;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 class OrderOperationsOverview extends BaseWidget
 {
@@ -28,12 +30,23 @@ class OrderOperationsOverview extends BaseWidget
         $pendingPr = $this->safeCount(PurchaseRequest::class, ['status' => 'deotorisasi']);
         $totalPr = $this->safeCount(PurchaseRequest::class);
 
+        $soNominal = $this->calculateTotalSoNominal();
+        $poNominal = $this->calculateTotalPoNominal();
+
+        $soDesc = $soNominal > 0
+            ? 'Total Nilai: ' . $this->formatSingkatRupiah($soNominal)
+            : 'Semua sales order pelanggan';
+
+        $poDesc = $poNominal > 0
+            ? 'Total Belanja: ' . $this->formatSingkatRupiah($poNominal)
+            : 'Semua purchase order supplier';
+
         return [
             Stat::make(
                 'Total Sales Order',
                 number_format($totalSo, 0, ',', '.')
             )
-                ->description('Semua sales order pelanggan')
+                ->description($soDesc)
                 ->descriptionIcon('heroicon-m-arrow-trending-up')
                 ->chart([20, 28, 35, 42, 55, 68, 80])
                 ->color('success'),
@@ -42,7 +55,7 @@ class OrderOperationsOverview extends BaseWidget
                 'Total Purchase Order',
                 number_format($totalPo, 0, ',', '.')
             )
-                ->description('Semua purchase order supplier')
+                ->description($poDesc)
                 ->descriptionIcon('heroicon-m-shopping-cart')
                 ->chart([15, 22, 30, 45, 52, 60, 75])
                 ->color('primary'),
@@ -65,6 +78,42 @@ class OrderOperationsOverview extends BaseWidget
                 ->chart([10, 18, 25, 32, 40, 50, 65])
                 ->color('info'),
         ];
+    }
+
+    private function calculateTotalSoNominal(): float
+    {
+        try {
+            if (Schema::hasTable('sales_orders')) {
+                return (float) DB::table('sales_orders')
+                    ->whereNull('deleted_at')
+                    ->selectRaw('SUM(COALESCE(qty, 0) * COALESCE(harga_pcs, 0)) as total')
+                    ->value('total');
+            }
+        } catch (\Throwable $e) {}
+        return 0.0;
+    }
+
+    private function calculateTotalPoNominal(): float
+    {
+        try {
+            if (Schema::hasTable('purchase_order_items')) {
+                return (float) DB::table('purchase_order_items')
+                    ->selectRaw('SUM(COALESCE(total, COALESCE(qty_po, 0) * COALESCE(price, 0))) as total')
+                    ->value('total');
+            }
+        } catch (\Throwable $e) {}
+        return 0.0;
+    }
+
+    private function formatSingkatRupiah(float $val): string
+    {
+        if ($val >= 1000000000) {
+            return 'Rp ' . number_format($val / 1000000000, 1, ',', '.') . ' Milyar';
+        }
+        if ($val >= 1000000) {
+            return 'Rp ' . number_format($val / 1000000, 1, ',', '.') . ' Juta';
+        }
+        return 'Rp ' . number_format($val, 0, ',', '.');
     }
 
     /**

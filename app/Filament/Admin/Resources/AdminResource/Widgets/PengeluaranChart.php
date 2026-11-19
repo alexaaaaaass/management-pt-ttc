@@ -12,7 +12,7 @@ class PengeluaranChart extends ChartWidget
 {
     protected static ?string $heading = 'Grafik Arus Kas Keluar (Pengeluaran)';
 
-    protected static ?int $sort = 3;
+    protected static ?int $sort = 6;
 
     protected static bool $isLazy = true;
 

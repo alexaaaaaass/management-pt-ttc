@@ -15,7 +15,7 @@ class ProductionMonitoringWidget extends TableWidget
 {
     protected static ?string $heading = 'Production Monitoring Board';
 
-    protected static ?int $sort = 6;
+    protected static ?int $sort = 9;
 
     protected static bool $isLazy = true;
 
