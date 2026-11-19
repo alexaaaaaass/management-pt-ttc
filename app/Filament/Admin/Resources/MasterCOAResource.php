@@ -142,6 +142,7 @@ class MasterCOAResource extends Resource
     public static function table(Table $table): Table
     {
         return $table
+            ->defaultSort('kode_akun', 'asc')
             ->columns([
                 Tables\Columns\TextColumn::make('kode_akun')
                     ->label('Kode')
@@ -196,10 +197,9 @@ class MasterCOAResource extends Resource
                     ->badge(),
 
                 Tables\Columns\TextColumn::make('saldo_debit')
-                    ->label('Saldo Awal (D)')
+                    ->label('Saldo Awal')
                     ->money('IDR')
-                    ->alignRight()
-                    ->toggleable(isToggledHiddenByDefault: true),
+                    ->alignRight(),
 
                 Tables\Columns\TextColumn::make('saldo_kredit')
                     ->label('Saldo Awal (K)')

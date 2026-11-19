@@ -541,15 +541,13 @@
                 <table class="ttc-tb-table">
                     <thead>
                         <tr>
-                            <th class="ttc-nowrap" style="text-align: left; width: 95px;">Kode Akun</th>
-                            <th style="text-align: left; min-width: 230px;">Nama Akun (Chart of Accounts)</th>
-                            <th class="ttc-nowrap" style="text-align: center; width: 160px;">Kelompok Akun</th>
-                            <th class="ttc-nowrap" style="text-align: center; width: 100px;">Laporan</th>
-                            <th class="ttc-nowrap" style="text-align: center; width: 90px;">Jml. Jurnal</th>
-                            <th class="ttc-nowrap" style="text-align: right; min-width: 140px;">Mutasi Debit (Rp)</th>
-                            <th class="ttc-nowrap" style="text-align: right; min-width: 140px;">Mutasi Kredit (Rp)</th>
-                            <th class="ttc-nowrap" style="text-align: right; min-width: 145px;">Saldo Akhir Debit</th>
-                            <th class="ttc-nowrap" style="text-align: right; min-width: 145px;">Saldo Akhir Kredit</th>
+                            <th class="ttc-nowrap" style="text-align: left; width: 95px;">COA (Kode)</th>
+                            <th style="text-align: left; min-width: 230px;">COA Name (Nama Akun)</th>
+                            <th class="ttc-nowrap" style="text-align: center; width: 140px;">Kelompok</th>
+                            <th class="ttc-nowrap" style="text-align: right; min-width: 140px;">Saldo Awal (Rp)</th>
+                            <th class="ttc-nowrap" style="text-align: right; min-width: 130px;">Mutasi Debet (Rp)</th>
+                            <th class="ttc-nowrap" style="text-align: right; min-width: 130px;">Mutasi Kredit (Rp)</th>
+                            <th class="ttc-nowrap" style="text-align: right; min-width: 145px;">Saldo Akhir (Rp)</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -566,30 +564,22 @@
                                         {{ $row['group_label'] }}
                                     </span>
                                 </td>
-                                <td class="ttc-nowrap" style="text-align: center;">
-                                    <span style="padding: 3px 9px; border-radius: 6px; font-size: 10.5px; font-weight: 800; background: {{ $row['stmt'] === 'NERACA' ? '#e0f2fe' : '#fef3c7' }}; color: {{ $row['stmt'] === 'NERACA' ? '#0369a1' : '#b45309' }};">
-                                        {{ $row['stmt'] }}
-                                    </span>
-                                </td>
-                                <td class="ttc-nowrap" style="text-align: center; font-weight: 600; color: #475569;">
-                                    {{ $row['tx_count'] }}x
+                                <td class="ttc-tb-amount" style="font-weight: 600; color: {{ ($row['open_debit'] > 0 || $row['open_kredit'] > 0) ? '#0f172a' : '#94a3b8' }};">
+                                    {{ ($row['open_debit'] > 0 || $row['open_kredit'] > 0) ? $fmt($row['open_debit'] ?: $row['open_kredit'], 2) : '0,00' }}
                                 </td>
                                 <td class="ttc-tb-amount" style="font-weight: 600; color: {{ $row['mut_debit'] > 0 ? '#1d4ed8' : '#94a3b8' }};">
-                                    {{ $row['mut_debit'] > 0 ? $fmt($row['mut_debit'], 2) : '-' }}
+                                    {{ $row['mut_debit'] > 0 ? $fmt($row['mut_debit'], 2) : '0,00' }}
                                 </td>
                                 <td class="ttc-tb-amount" style="font-weight: 600; color: {{ $row['mut_kredit'] > 0 ? '#6d28d9' : '#94a3b8' }};">
-                                    {{ $row['mut_kredit'] > 0 ? $fmt($row['mut_kredit'], 2) : '-' }}
+                                    {{ $row['mut_kredit'] > 0 ? $fmt($row['mut_kredit'], 2) : '0,00' }}
                                 </td>
-                                <td class="ttc-tb-amount" style="font-weight: 800; color: {{ $row['end_debit'] > 0 ? '#059669' : '#94a3b8' }};">
-                                    {{ $row['end_debit'] > 0 ? $fmt($row['end_debit'], 2) : '-' }}
-                                </td>
-                                <td class="ttc-tb-amount" style="font-weight: 800; color: {{ $row['end_kredit'] > 0 ? '#dc2626' : '#94a3b8' }};">
-                                    {{ $row['end_kredit'] > 0 ? $fmt($row['end_kredit'], 2) : '-' }}
+                                <td class="ttc-tb-amount" style="font-weight: 800; color: {{ ($row['end_debit'] > 0 || $row['end_kredit'] > 0) ? '#059669' : '#94a3b8' }};">
+                                    {{ ($row['end_debit'] > 0 || $row['end_kredit'] > 0) ? $fmt($row['end_debit'] ?: $row['end_kredit'], 2) : '0,00' }}
                                 </td>
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="9" style="text-align: center; padding: 26px; color: #64748b;">
+                                <td colspan="7" style="text-align: center; padding: 26px; color: #64748b;">
                                     Tidak ada akun COA yang sesuai dengan filter.
                                 </td>
                             </tr>
@@ -597,11 +587,11 @@
                     </tbody>
                     <tfoot>
                         <tr>
-                            <td colspan="5" style="text-align: left;">TOTAL NERACA SALDO ({{ $data['shown_count'] }} AKUN)</td>
+                            <td colspan="3" style="text-align: left;">TOTAL SUMMARY ACCOUNT ({{ $data['shown_count'] }} AKUN)</td>
+                            <td class="ttc-tb-amount" style="color: #0f172a;">{{ $fmt($data['grand_open_debit'] ?: $data['grand_open_kredit'], 2) }}</td>
                             <td class="ttc-tb-amount" style="color: #1d4ed8;">{{ $fmt($data['grand_mut_debit'], 2) }}</td>
                             <td class="ttc-tb-amount" style="color: #6d28d9;">{{ $fmt($data['grand_mut_kredit'], 2) }}</td>
-                            <td class="ttc-tb-amount" style="color: #059669;">{{ $fmt($data['grand_end_debit'], 2) }}</td>
-                            <td class="ttc-tb-amount" style="color: #dc2626;">{{ $fmt($data['grand_end_kredit'], 2) }}</td>
+                            <td class="ttc-tb-amount" style="color: #059669;">{{ $fmt($data['grand_end_debit'] ?: $data['grand_end_kredit'], 2) }}</td>
                         </tr>
                     </tfoot>
                 </table>

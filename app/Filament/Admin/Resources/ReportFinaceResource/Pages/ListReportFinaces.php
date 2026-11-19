@@ -14,7 +14,7 @@ class ListReportFinaces extends Page
     protected static ?string $title = 'Report Finance — Trial Balance (Neraca Saldo)';
     protected static string $view = 'filament.admin.pages.trial-balance';
 
-    public bool $onlyActiveAccounts = true;
+    public bool $onlyActiveAccounts = false;
     public string $selectedGroup = '';
     public string $searchQuery = '';
 
