@@ -5,6 +5,7 @@ namespace App\Providers\Filament;
 use App\Filament\Admin\Resources\AdminResource\Widgets\PemasukanChart;
 use App\Filament\Admin\Resources\AdminResource\Widgets\PengeluaranChart;
 use App\Filament\Admin\Resources\AdminResource\Widgets\ProductionMonitoringWidget;
+use App\Filament\Admin\Widgets\ExecutivePerformanceDashboardWidget;
 use App\Filament\Admin\Widgets\OrderOperationsOverview;
 use App\Filament\Admin\Widgets\PiutangJatuhTempoWidget;
 use App\Filament\Admin\Widgets\StatsOverview;
@@ -107,6 +108,7 @@ class AdminPanelProvider extends PanelProvider
             ])
             ->discoverWidgets(in: app_path('Filament/Admin/Widgets'), for: 'App\\Filament\\Admin\\Widgets')
             ->widgets([
+                ExecutivePerformanceDashboardWidget::class,
                 StatsOverview::class,
                 OrderOperationsOverview::class,
                 PemasukanChart::class,
