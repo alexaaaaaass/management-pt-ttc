@@ -149,6 +149,7 @@ Tables\Columns\TextColumn::make('balance_after')
                 Tables\Filters\SelectFilter::make('coa_id')
                     ->label('Akun COA')
                     ->relationship('coa', 'nama_akun')
+                    ->getOptionLabelFromRecordUsing(fn ($record) => trim($record->kode_akun) . ' - ' . $record->nama_akun)
                     ->searchable()
                     ->preload(),
 

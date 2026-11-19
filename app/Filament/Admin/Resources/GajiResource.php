@@ -120,7 +120,8 @@ class GajiResource extends Resource
                                 Select::make('account_kas_id')
                                     ->label('Akun Kas / Bank Pembayar')
                                     ->relationship('accountKas', 'nama_akun')
-                                    ->searchable()
+                                    ->getOptionLabelFromRecordUsing(fn ($record) => trim($record->kode_akun) . ' - ' . $record->nama_akun)
+                                    ->searchable(['kode_akun', 'nama_akun'])
                                     ->preload()
                                     ->placeholder('Pilih Akun Kas/Bank jika dibayarkan'),
                             ]),
@@ -372,7 +373,9 @@ class GajiResource extends Resource
                     ->form([
                         Select::make('account_kas_id')
                             ->label('Pilih Akun Kas / Bank untuk Pembayaran')
-                            ->options(MasterCOA::pluck('nama_akun', 'id'))
+                            ->options(MasterCOA::orderBy('kode_akun')->get()->mapWithKeys(
+                                fn ($coa) => [$coa->id => trim($coa->kode_akun) . ' - ' . $coa->nama_akun]
+                            ))
                             ->searchable()
                             ->required(),
 

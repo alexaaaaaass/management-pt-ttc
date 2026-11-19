@@ -108,11 +108,10 @@ class InvPaymentResource extends Resource
                                         ->required(),
 
                                     Select::make('coa_id')
-                                        ->relationship(
-                                            'coa',
-                                            'nama_akun'
-                                        )
-                                        ->searchable()
+                                        ->label('Akun COA (Kas / Bank Penerima)')
+                                        ->relationship('coa', 'nama_akun')
+                                        ->getOptionLabelFromRecordUsing(fn ($record) => trim($record->kode_akun) . ' - ' . $record->nama_akun)
+                                        ->searchable(['kode_akun', 'nama_akun'])
                                         ->preload()
                                         ->required(),
 

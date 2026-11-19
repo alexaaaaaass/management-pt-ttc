@@ -189,35 +189,27 @@ protected static ?int $navigationSort = 12;
                                 Select::make(
                                     'coa_debit_id'
                                 )
-
                                     ->label(
                                         'Akun Debit'
                                     )
-
                                     ->options(
-                                        MasterCOA::pluck(
-                                            'nama_akun',
-                                            'id'
+                                        MasterCOA::orderBy('kode_akun')->get()->mapWithKeys(
+                                            fn ($coa) => [$coa->id => trim($coa->kode_akun) . ' - ' . $coa->nama_akun]
                                         )
                                     )
-
                                     ->searchable(),
 
                                 Select::make(
                                     'coa_kredit_id'
                                 )
-
                                     ->label(
                                         'Akun Kredit'
                                     )
-
                                     ->options(
-                                        MasterCOA::pluck(
-                                            'nama_akun',
-                                            'id'
+                                        MasterCOA::orderBy('kode_akun')->get()->mapWithKeys(
+                                            fn ($coa) => [$coa->id => trim($coa->kode_akun) . ' - ' . $coa->nama_akun]
                                         )
                                     )
-
                                     ->searchable(),
                             ]),
 
