@@ -23,8 +23,8 @@ class StatsOverview extends BaseWidget
     protected int | string | array $columns = [
         'default' => 1,
         'sm' => 2,
-        'md' => 3,
-        'xl' => 5,
+        'lg' => 4,
+        'xl' => 4,
     ];
 
     protected function getStats(): array
@@ -33,7 +33,6 @@ class StatsOverview extends BaseWidget
         $penjualan = $this->calculatePenjualanBulanIni();
         $piutang = $this->calculatePiutang();
         $hutang = $this->calculateHutang();
-        $pesanan = $this->calculatePesananAktif();
 
         return [
             Stat::make('Kas & Bank', 'Rp ' . number_format($kasBank, 0, ',', '.'))
@@ -61,12 +60,6 @@ class StatsOverview extends BaseWidget
                 ->descriptionIcon('heroicon-m-credit-card')
                 ->chart([60, 55, 50, 42, 38, 35, 28])
                 ->color('danger'),
-
-            Stat::make('Pesanan Aktif (SO)', number_format($pesanan['count'], 0, ',', '.'))
-                ->description('Dari ' . number_format($pesanan['total'], 0, ',', '.') . ' total pesanan')
-                ->descriptionIcon('heroicon-m-clipboard-document-check')
-                ->chart([20, 28, 35, 42, 50, 58, 70])
-                ->color('info'),
         ];
     }
 
