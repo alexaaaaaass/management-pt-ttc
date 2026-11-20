@@ -450,41 +450,50 @@ class BismillahMacroSalesSeeder extends Seeder
         | 5. SIAPKAN MASTER COA & SALDO AWAL NERACA (100% SEIMBANG: DEBIT == KREDIT)
         |--------------------------------------------------------------------------
         */
-        $coaByCode = fn (string $code): ?MasterCOA => MasterCOA::where('kode_akun', $code)
-            ->orWhere('kode_akun', 'like', $code . '%')
-            ->orderByRaw('CASE WHEN kode_akun = ? THEN 0 ELSE 1 END', [$code])
-            ->first();
+        $coaByCode = function (string ...$codes): ?MasterCOA {
+            foreach ($codes as $code) {
+                $found = MasterCOA::where('kode_akun', $code)
+                    ->orWhere('kode_akun', 'like', $code . '%')
+                    ->orderByRaw('CASE WHEN kode_akun = ? THEN 0 ELSE 1 END', [$code])
+                    ->first();
+                if ($found) {
+                    return $found;
+                }
+            }
 
-        $coaBri         = $coaByCode('1111'); // Bank BRI - Operasional (BRI TTC)
-        $coaBca         = $coaByCode('1112'); // Bank BCA - Operasional (BCA TTC)
-        $coaPetty       = $coaByCode('1116'); // Petty Cash (Cash on Hand)
-        $coaPiutang     = $coaByCode('1121'); // Piutang - Barang Jadi IDR
-        $coaPersBaku    = $coaByCode('1141'); // Persediaan Bahan Baku
-        $coaPersWip     = $coaByCode('1142'); // Persediaan Barang Setengah Jadi
-        $coaPersJadi    = $coaByCode('1143'); // Persediaan Barang Jadi
-        $coaPersSpare   = $coaByCode('1144'); // Persediaan Alat & Sparepart
-        $coaPpnMasuk    = $coaByCode('1171'); // PPN Masukan
-        $coaTanah       = $coaByCode('1211');
-        $coaAkumBangun  = $coaByCode('1212');
-        $coaMesin       = $coaByCode('1221');
-        $coaAkumMesin   = $coaByCode('1222');
-        $coaKendaraan   = $coaByCode('1231');
-        $coaAkumKend    = $coaByCode('1232');
-        $coaFurniture   = $coaByCode('1241');
-        $coaAkumFurn    = $coaByCode('1242');
-        $coaUtangBaku   = $coaByCode('2111');
-        $coaUtangPpn    = $coaByCode('2121');
-        $coaUtangPph21  = $coaByCode('2122');
-        $coaUtangGaji   = $coaByCode('2131');
-        $coaUtangUtil   = $coaByCode('2132');
-        $coaUangMuka    = $coaByCode('2151');
-        $coaUtangBankJp = $coaByCode('2210');
-        $coaUtangLease  = $coaByCode('2220');
-        $coaModal       = $coaByCode('3100');
-        $coaLabaDitahan = $coaByCode('3200');
-        $coaPenjJadi    = $coaByCode('4101');
-        $coaHppBahan    = $coaByCode('5101');
-        $coaBebanSales  = $coaByCode('6101');
+            return null;
+        };
+
+        $coaBri         = $coaByCode('1111', '101.003'); // Bank BRI - Operasional (BRI TTC)
+        $coaBca         = $coaByCode('1112', '101.002'); // Bank BCA - Operasional (BCA TTC)
+        $coaPetty       = $coaByCode('1116', '101.001'); // Petty Cash (Cash on Hand)
+        $coaPiutang     = $coaByCode('1121', '101.201'); // Piutang - Barang Jadi IDR
+        $coaPersBaku    = $coaByCode('1141', '101.301'); // Persediaan Bahan Baku
+        $coaPersWip     = $coaByCode('1142', '101.303'); // Persediaan Barang Setengah Jadi
+        $coaPersJadi    = $coaByCode('1143', '101.304'); // Persediaan Barang Jadi
+        $coaPersSpare   = $coaByCode('1144', '101.302'); // Persediaan Alat & Sparepart
+        $coaPpnMasuk    = $coaByCode('1171', '101.501'); // PPN Masukan
+        $coaTanah       = $coaByCode('1211', '102.201');
+        $coaAkumBangun  = $coaByCode('1212', '102.203');
+        $coaMesin       = $coaByCode('1221', '102.301');
+        $coaAkumMesin   = $coaByCode('1222', '102.303');
+        $coaKendaraan   = $coaByCode('1231', '102.401');
+        $coaAkumKend    = $coaByCode('1232', '102.402');
+        $coaFurniture   = $coaByCode('1241', '102.302');
+        $coaAkumFurn    = $coaByCode('1242', '102.304');
+        $coaUtangBaku   = $coaByCode('2111', '201.103');
+        $coaUtangPpn    = $coaByCode('2121', '201.202');
+        $coaUtangPph21  = $coaByCode('2122', '201.301');
+        $coaUtangGaji   = $coaByCode('2131', '201.401');
+        $coaUtangUtil   = $coaByCode('2132', '201.403');
+        $coaUangMuka    = $coaByCode('2151', '201.501');
+        $coaUtangBankJp = $coaByCode('2210', '202.101');
+        $coaUtangLease  = $coaByCode('2220', '202.201');
+        $coaModal       = $coaByCode('3100', '301.001');
+        $coaLabaDitahan = $coaByCode('3200', '301.103');
+        $coaPenjJadi    = $coaByCode('4101', '401.001');
+        $coaHppBahan    = $coaByCode('5101', '502.001');
+        $coaBebanSales  = $coaByCode('6101', '601.002');
 
         DB::transaction(function () use (
             $treasury,

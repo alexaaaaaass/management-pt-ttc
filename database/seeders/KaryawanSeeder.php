@@ -4,18 +4,37 @@ namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
 use App\Models\Karyawan;
+use App\Models\MasterDepartemen;
 
 class KaryawanSeeder extends Seeder
 {
     public function run(): void
     {
+        $deptManajemen = MasterDepartemen::firstOrCreate(
+            ['kode' => 'DEPT-MGT'],
+            [
+                'nama_departemen' => 'Manajemen',
+                'deskripsi' => 'Departemen Manajemen & Operasional',
+                'status' => true,
+            ]
+        );
+
+        $deptHrd = MasterDepartemen::firstOrCreate(
+            ['kode' => 'DEPT-HRD'],
+            [
+                'nama_departemen' => 'HRD & GA',
+                'deskripsi' => 'Departemen Human Resource & General Affairs',
+                'status' => true,
+            ]
+        );
+
         $data = [
             [
                 'nama' => 'Budi Santoso',
                 'nip' => 'KRY001',
                 'tempat_lahir' => 'Surabaya',
                 'tanggal_lahir' => '1990-05-10',
-                'departemen_id' => 1,
+                'departemen_id' => $deptManajemen->id,
                 'jabatan' => 'Manager',
                 'kantor' => 'Pusat',
                 'tanggal_masuk_kerja' => '2020-01-01',
@@ -50,7 +69,7 @@ class KaryawanSeeder extends Seeder
                 'nip' => 'KRY002',
                 'tempat_lahir' => 'Malang',
                 'tanggal_lahir' => '1995-08-15',
-                'departemen_id' => 2,
+                'departemen_id' => $deptHrd->id,
                 'jabatan' => 'Staff HR',
                 'kantor' => 'Cabang',
                 'tanggal_masuk_kerja' => '2021-03-01',
@@ -83,7 +102,10 @@ class KaryawanSeeder extends Seeder
         ];
 
         foreach ($data as $item) {
-            Karyawan::create($item);
+            Karyawan::updateOrCreate(
+                ['nip' => $item['nip']],
+                $item
+            );
         }
     }
 }
