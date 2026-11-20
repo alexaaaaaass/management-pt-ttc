@@ -19,6 +19,25 @@ class PracetakProcess extends Model
         'tgl_entry',
         'operator_id',
         'mesin_id',
+        // A. Trial Design
+        'status_file',
+        'status_kesiapan_file',
+        'toleransi_hasil',
+        'catatan_design',
+        // B. Prove Print
+        'is_prove_print',
+        'bahan_prove_print',
+        'status_prove_print',
+        'arsip_proses_prove',
+        // C. Plate Making
+        'jumlah_warna_plate',
+        'detail_warna_plate',
+        'kerusakan_plate',
+        'catatan_kerusakan_plate',
+        // D. Penyimpanan Material & Finishing
+        'lokasi_simpan_plate',
+        'material_pendukung',
+        'toleransi_rusak_hilang',
     ];
 
     // 🔥 RELASI

@@ -3,8 +3,11 @@
 namespace App\Filament\Admin\Resources\PracetakProcessResource\Pages;
 
 use App\Filament\Admin\Resources\PracetakProcessResource;
+use App\Models\PracetakProcess;
 use Filament\Actions;
+use Filament\Resources\Components\Tab;
 use Filament\Resources\Pages\ListRecords;
+use Illuminate\Database\Eloquent\Builder;
 
 class ListPracetakProcesses extends ListRecords
 {
@@ -13,7 +16,36 @@ class ListPracetakProcesses extends ListRecords
     protected function getHeaderActions(): array
     {
         return [
-            Actions\CreateAction::make(),
+            Actions\CreateAction::make()
+                ->label('Buat Proses Pra Cetak'),
+        ];
+    }
+
+    public function getTabs(): array
+    {
+        return [
+            'all' => Tab::make('Semua')
+                ->badge(PracetakProcess::count()),
+
+            'design' => Tab::make('A. Trial Design')
+                ->badge(PracetakProcess::whereIn('status', ['design', 'trial_design'])->count())
+                ->badgeColor('warning')
+                ->modifyQueryUsing(fn (Builder $query) => $query->whereIn('status', ['design', 'trial_design'])),
+
+            'prove' => Tab::make('B. Prove Print')
+                ->badge(PracetakProcess::where('status', 'prove_print')->count())
+                ->badgeColor('info')
+                ->modifyQueryUsing(fn (Builder $query) => $query->where('status', 'prove_print')),
+
+            'plat' => Tab::make('C. Plate Making')
+                ->badge(PracetakProcess::where('status', 'plat_making')->count())
+                ->badgeColor('primary')
+                ->modifyQueryUsing(fn (Builder $query) => $query->where('status', 'plat_making')),
+
+            'selesai' => Tab::make('D. Selesai & Simpan Rak')
+                ->badge(PracetakProcess::where('status', 'selesai')->count())
+                ->badgeColor('success')
+                ->modifyQueryUsing(fn (Builder $query) => $query->where('status', 'selesai')),
         ];
     }
 }
