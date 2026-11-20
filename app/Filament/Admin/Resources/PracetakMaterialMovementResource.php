@@ -85,21 +85,21 @@ class PracetakMaterialMovementResource extends Resource
 
                 Tables\Columns\TextColumn::make('qty_masuk')
                     ->label('Masuk (IN)')
-                    ->formatStateUsing(fn ($state) => (float) $state > 0 ? '+' . number_format((float) $state, 0, '.', ',') : '-')
+                    ->formatStateUsing(fn ($state) => (float) $state > 0 ? '+' . rtrim(rtrim(number_format((float) $state, 4, '.', ','), '0'), '.') : '-')
                     ->color('success')
                     ->alignEnd()
                     ->sortable(),
 
                 Tables\Columns\TextColumn::make('qty_keluar')
                     ->label('Keluar (OUT)')
-                    ->formatStateUsing(fn ($state) => (float) $state > 0 ? '-' . number_format((float) $state, 0, '.', ',') : '-')
+                    ->formatStateUsing(fn ($state) => (float) $state > 0 ? '-' . rtrim(rtrim(number_format((float) $state, 4, '.', ','), '0'), '.') : '-')
                     ->color('danger')
                     ->alignEnd()
                     ->sortable(),
 
                 Tables\Columns\TextColumn::make('saldo_setelah')
                     ->label('Saldo Akhir')
-                    ->formatStateUsing(fn ($state) => number_format((float) $state, 0, '.', ',') . ' Sheet')
+                    ->formatStateUsing(fn ($state) => rtrim(rtrim(number_format((float) $state, 4, '.', ','), '0'), '.') . ' Sheet')
                     ->weight('bold')
                     ->alignEnd()
                     ->sortable(),
@@ -187,16 +187,16 @@ class PracetakMaterialMovementResource extends Resource
 
                     Infolists\Components\TextEntry::make('saldo_sebelum')
                         ->label('Saldo Sebelum')
-                        ->formatStateUsing(fn ($state) => number_format((float) $state, 0, '.', ',') . ' Sheet'),
+                        ->formatStateUsing(fn ($state) => rtrim(rtrim(number_format((float) $state, 4, '.', ','), '0'), '.') . ' Sheet'),
                     Infolists\Components\TextEntry::make('qty_masuk')
                         ->label('Qty Masuk')
-                        ->formatStateUsing(fn ($state) => (float) $state > 0 ? '+' . number_format((float) $state, 0, '.', ',') . ' Sheet' : '-'),
+                        ->formatStateUsing(fn ($state) => (float) $state > 0 ? '+' . rtrim(rtrim(number_format((float) $state, 4, '.', ','), '0'), '.') . ' Sheet' : '-'),
                     Infolists\Components\TextEntry::make('qty_keluar')
                         ->label('Qty Keluar')
-                        ->formatStateUsing(fn ($state) => (float) $state > 0 ? '-' . number_format((float) $state, 0, '.', ',') . ' Sheet' : '-'),
+                        ->formatStateUsing(fn ($state) => (float) $state > 0 ? '-' . rtrim(rtrim(number_format((float) $state, 4, '.', ','), '0'), '.') . ' Sheet' : '-'),
                     Infolists\Components\TextEntry::make('saldo_setelah')
                         ->label('Saldo Akhir Setelah Mutasi')
-                        ->formatStateUsing(fn ($state) => number_format((float) $state, 0, '.', ',') . ' Sheet')
+                        ->formatStateUsing(fn ($state) => rtrim(rtrim(number_format((float) $state, 4, '.', ','), '0'), '.') . ' Sheet')
                         ->weight('bold'),
 
                     Infolists\Components\TextEntry::make('harga_satuan')->label('Harga Satuan Transaksi')->money('IDR'),

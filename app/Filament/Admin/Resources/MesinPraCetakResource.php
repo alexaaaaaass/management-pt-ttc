@@ -51,6 +51,19 @@ class MesinPraCetakResource extends Resource
                 ])
                 ->default('aktif')
                 ->required(),
+
+            Forms\Components\TextInput::make('tarif_per_plate')
+                ->label('Tarif Proses per Plate (Rp)')
+                ->prefix('Rp')
+                ->numeric()
+                ->default(0)
+                ->helperText('Biaya standar CTP/exposure/solvent per 1 lembar plate (dipakai otomatis di Actual Costing)'),
+
+            Forms\Components\TextInput::make('tarif_per_jam')
+                ->label('Tarif Mesin per Jam (Rp)')
+                ->prefix('Rp')
+                ->numeric()
+                ->default(0),
         ]);
     }
 
@@ -62,6 +75,10 @@ class MesinPraCetakResource extends Resource
                 Tables\Columns\TextColumn::make('jenis_mesin')->searchable(),
                 Tables\Columns\TextColumn::make('kapasitas'),
                 Tables\Columns\TextColumn::make('proses'),
+                Tables\Columns\TextColumn::make('tarif_per_plate')
+                    ->label('Tarif / Plate')
+                    ->money('IDR')
+                    ->alignEnd(),
                 Tables\Columns\BadgeColumn::make('status')
                     ->colors([
                         'success' => 'aktif',

@@ -76,8 +76,8 @@ class PracetakMaterialStockResource extends Resource
                     ->label('Ukuran Sheet (P × L)'),
 
                 Tables\Columns\TextColumn::make('stok_sheet_utuh')
-                    ->label('Stok Sheet Utuh')
-                    ->formatStateUsing(fn ($state) => number_format((float) $state, 0, '.', ',') . ' Sheet')
+                    ->label('Stok Sheet Tersedia')
+                    ->formatStateUsing(fn ($state) => rtrim(rtrim(number_format((float) $state, 4, '.', ','), '0'), '.') . ' Sheet')
                     ->alignEnd()
                     ->weight('bold')
                     ->sortable(),
@@ -150,15 +150,15 @@ class PracetakMaterialStockResource extends Resource
                 ->columns(4)
                 ->schema([
                     Infolists\Components\TextEntry::make('stok_sheet_utuh')
-                        ->label('Stok Sheet Utuh Saat Ini')
-                        ->formatStateUsing(fn ($state) => number_format((float) $state, 0, '.', ',') . ' Sheet')
+                        ->label('Stok Sheet Tersedia Saat Ini')
+                        ->formatStateUsing(fn ($state) => rtrim(rtrim(number_format((float) $state, 4, '.', ','), '0'), '.') . ' Sheet')
                         ->weight('bold'),
                     Infolists\Components\TextEntry::make('total_masuk')
                         ->label('Akumulasi Masuk (IN)')
-                        ->formatStateUsing(fn ($state) => number_format((float) $state, 0, '.', ',') . ' Sheet'),
+                        ->formatStateUsing(fn ($state) => rtrim(rtrim(number_format((float) $state, 4, '.', ','), '0'), '.') . ' Sheet'),
                     Infolists\Components\TextEntry::make('total_keluar')
                         ->label('Akumulasi Keluar (OUT)')
-                        ->formatStateUsing(fn ($state) => number_format((float) $state, 0, '.', ',') . ' Sheet'),
+                        ->formatStateUsing(fn ($state) => rtrim(rtrim(number_format((float) $state, 4, '.', ','), '0'), '.') . ' Sheet'),
                     Infolists\Components\TextEntry::make('harga_terakhir')->label('Harga Terakhir')->money('IDR'),
                     Infolists\Components\TextEntry::make('total_nilai_stok')->label('Total Nilai Stok Persediaan')->money('IDR'),
                     Infolists\Components\TextEntry::make('harga_rata_rata')->label('Estimasi Rata-rata / Sheet')->money('IDR'),

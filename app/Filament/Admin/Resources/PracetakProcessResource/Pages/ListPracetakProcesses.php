@@ -3,6 +3,7 @@
 namespace App\Filament\Admin\Resources\PracetakProcessResource\Pages;
 
 use App\Filament\Admin\Resources\PracetakProcessResource;
+use App\Filament\Admin\Widgets\PracetakOverviewWidget;
 use App\Models\PracetakProcess;
 use Filament\Actions;
 use Filament\Resources\Components\Tab;
@@ -18,6 +19,13 @@ class ListPracetakProcesses extends ListRecords
         return [
             Actions\CreateAction::make()
                 ->label('Buat Proses Pra Cetak'),
+        ];
+    }
+
+    protected function getHeaderWidgets(): array
+    {
+        return [
+            PracetakOverviewWidget::class,
         ];
     }
 
@@ -42,10 +50,15 @@ class ListPracetakProcesses extends ListRecords
                 ->badgeColor('primary')
                 ->modifyQueryUsing(fn (Builder $query) => $query->where('status', 'plat_making')),
 
-            'selesai' => Tab::make('D. Selesai & Simpan Rak')
+            'selesai' => Tab::make('D. Tersimpan di Rak')
                 ->badge(PracetakProcess::where('status', 'selesai')->count())
                 ->badgeColor('success')
                 ->modifyQueryUsing(fn (Builder $query) => $query->where('status', 'selesai')),
+
+            'handed_over' => Tab::make('Diserahkan Printing')
+                ->badge(PracetakProcess::where('status', 'handed_over')->count())
+                ->badgeColor('gray')
+                ->modifyQueryUsing(fn (Builder $query) => $query->where('status', 'handed_over')),
         ];
     }
 }

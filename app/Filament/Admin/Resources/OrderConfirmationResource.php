@@ -48,14 +48,20 @@ class OrderConfirmationResource extends Resource
         $prefix = $isInsideRow ? '../../' : '';
         $items = $get($prefix . 'items') ?? [];
         $subtotal = 0;
+        $biayaPlateTotal = 0;
         foreach ($items as $item) {
             $qty = static::cleanNumeric($item['qty'] ?? 0);
             $harga = static::cleanNumeric($item['harga'] ?? 0);
             $subtotal += ($qty * $harga);
+
+            if (($item['plate_charge_mode'] ?? 'include_in_hpp') === 'separate_charge') {
+                $biayaPlateTotal += static::cleanNumeric($item['biaya_plate_terpisah'] ?? 0);
+            }
         }
         $diskon = static::cleanNumeric($get($prefix . 'diskon'));
         $set($prefix . 'subtotal', \App\Support\MoneyHelper::format($subtotal, 2) ?? '0');
-        $set($prefix . 'grand_total', \App\Support\MoneyHelper::format(max(0, $subtotal - $diskon), 2) ?? '0');
+        $set($prefix . 'biaya_plate_total', \App\Support\MoneyHelper::format($biayaPlateTotal, 2) ?? '0');
+        $set($prefix . 'grand_total', \App\Support\MoneyHelper::format(max(0, $subtotal + $biayaPlateTotal - $diskon), 2) ?? '0');
     }
 
     public static function form(Form $form): Form
@@ -309,6 +315,9 @@ class OrderConfirmationResource extends Resource
                                     Forms\Components\Hidden::make('total_biaya_order'),
                                     Forms\Components\Hidden::make('biaya_bahan'),
                                     Forms\Components\Hidden::make('biaya_proses'),
+                                    Forms\Components\Hidden::make('plate_charge_mode')->default('include_in_hpp'),
+                                    Forms\Components\Hidden::make('biaya_plate_terpisah')->default(0),
+                                    Forms\Components\Hidden::make('plate_archive_id'),
                                     Forms\Components\Hidden::make('kebutuhan_kertas_kg'),
                                     Forms\Components\Hidden::make('kebutuhan_kertas_meter'),
                                     Forms\Components\Hidden::make('kalkulasi_hpp_data'),
@@ -502,6 +511,21 @@ class OrderConfirmationResource extends Resource
                                                 if ($lebar > 50) $lebar /= 10.0;
                                                 $gramatur = $fg?->gramasi ? (float) $fg->gramasi : FlexoHppCalculatorService::DEFAULT_GRAMATUR;
 
+                                                $warnaCount = 4;
+                                                $rawWarna = $get('warna') ?: $fg?->warna;
+                                                if ($rawWarna && preg_match('/\d+/', (string) $rawWarna, $m)) {
+                                                    $warnaCount = max(1, (int) $m[0]);
+                                                }
+
+                                                $activeArchive = $fgId
+                                                    ? \App\Models\PracetakPlateArchive::where('finish_good_item_id', $fgId)
+                                                        ->whereIn('status_kondisi', ['tersimpan', 'dipakai_printing'])
+                                                        ->latest('id')
+                                                        ->first()
+                                                    : null;
+
+                                                $defaultPlate = \App\Models\MasterMaterialPlate::where('status', 'aktif')->orderBy('id')->first();
+
                                                 $calculator = app(FlexoHppCalculatorService::class);
                                                 $initialCalc = $calculator->calculate([
                                                     'panjang_etiket_jadi' => $panjang,
@@ -521,6 +545,11 @@ class OrderConfirmationResource extends Resource
                                                     'tarif_mesin_per_jam' => 0,
                                                     'biaya_tinta_total' => 0,
                                                     'biaya_plate' => 0,
+                                                    'plate_mode' => $activeArchive ? 'repeat' : ($defaultPlate ? 'new' : 'manual'),
+                                                    'plate_archive_id' => $activeArchive?->id,
+                                                    'master_material_plate_id' => $defaultPlate?->id,
+                                                    'plate_jumlah_warna' => $warnaCount,
+                                                    'plate_charge_mode' => 'include_in_hpp',
                                                     'biaya_tenaga_kerja' => 0,
                                                     'biaya_overhead' => 0,
                                                     'margin_persen' => 0,
@@ -563,6 +592,9 @@ class OrderConfirmationResource extends Resource
                                                 $set('total_biaya_order', $calc['total_biaya_order']);
                                                 $set('biaya_bahan', $calc['biaya_bahan']);
                                                 $set('biaya_proses', $calc['biaya_proses_cetak_total']);
+                                                $set('plate_charge_mode', $calc['plate_charge_mode']);
+                                                $set('biaya_plate_terpisah', $calc['biaya_plate_terpisah']);
+                                                $set('plate_archive_id', $calc['plate_archive_id']);
                                                 $set('kebutuhan_kertas_kg', $calc['berat_bahan_teoritis']);
                                                 $set('kebutuhan_kertas_meter', $calc['total_panjang_bahan']);
 
@@ -572,13 +604,19 @@ class OrderConfirmationResource extends Resource
                                                     $qty = static::cleanNumeric($get('qty'));
                                                     $rowTotal = $qty * $priceToApply;
                                                     $set('total', \App\Support\MoneyHelper::format($rowTotal, 2) ?? '0');
-
-                                                    static::updateTotals($get, $set, isInsideRow: true);
                                                 }
 
+                                                static::updateTotals($get, $set, isInsideRow: true);
+
+                                                $plateInfo = $calc['plate_mode'] === 'repeat'
+                                                    ? ' | Plate: Repeat Order (Rp 0)'
+                                                    : ($calc['plate_charge_mode'] === 'separate_charge'
+                                                        ? ' | Plate Terpisah: Rp ' . (\App\Support\MoneyHelper::format($calc['biaya_plate_terpisah'], 0) ?? '0')
+                                                        : ((float) $calc['biaya_plate'] > 0 ? ' | Plate Masuk HPP: Rp ' . (\App\Support\MoneyHelper::format($calc['biaya_plate'], 0) ?? '0') : ''));
+
                                                 Notification::make()
-                                                    ->title('Kalkulasi HPP & Kertas Berhasil Disimpan')
-                                                    ->body("HPP: Rp " . (\App\Support\MoneyHelper::format($calc['hpp_per_etiket'], 2) ?? '0') . " / pcs | Harga: Rp " . (\App\Support\MoneyHelper::format($priceToApply, 2) ?? '0') . " | Kertas: " . number_format($calc['berat_bahan_teoritis'], 2) . " kg")
+                                                    ->title('Kalkulasi HPP, Kertas & Plate Berhasil Disimpan')
+                                                    ->body("HPP: Rp " . (\App\Support\MoneyHelper::format($calc['hpp_per_etiket'], 2) ?? '0') . " / pcs | Harga: Rp " . (\App\Support\MoneyHelper::format($priceToApply, 2) ?? '0') . $plateInfo)
                                                     ->success()
                                                     ->send();
                                             }),
@@ -666,6 +704,21 @@ class OrderConfirmationResource extends Resource
                                                 ');
                                             }
 
+                                            $hppData = is_array($get('kalkulasi_hpp_data')) ? $get('kalkulasi_hpp_data') : [];
+                                            $plateMode = $hppData['plate_mode'] ?? 'manual';
+                                            $plateChargeMode = $get('plate_charge_mode') ?: ($hppData['plate_charge_mode'] ?? 'include_in_hpp');
+                                            $plateSep = (float) ($get('biaya_plate_terpisah') ?? $hppData['biaya_plate_terpisah'] ?? 0);
+                                            $plateHpp = (float) ($hppData['biaya_plate'] ?? 0);
+
+                                            $plateSnippet = '';
+                                            if ($plateMode === 'repeat') {
+                                                $plateSnippet = '<span style="font-weight: 600; color: #8b5cf6;">Plate: <strong>Repeat Order (Rp 0)</strong></span>';
+                                            } elseif ($plateChargeMode === 'separate_charge' && $plateSep > 0) {
+                                                $plateSnippet = '<span style="font-weight: 600; color: #8b5cf6;">Plate Terpisah: <strong>Rp ' . number_format($plateSep, 0, ',', '.') . '</strong></span>';
+                                            } elseif ($plateHpp > 0) {
+                                                $plateSnippet = '<span style="font-weight: 600; color: #8b5cf6;">Plate (Include HPP): <strong>Rp ' . number_format($plateHpp, 0, ',', '.') . '</strong></span>';
+                                            }
+
                                             return new \Illuminate\Support\HtmlString('
                                                 <div style="margin-top: 4px; padding: 8px 14px; background: rgba(16, 185, 129, 0.06); border: 1px solid rgba(16, 185, 129, 0.25); border-left: 3px solid #10b981; border-radius: 6px; font-size: 12px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px;">
                                                     <div style="display: flex; align-items: center; gap: 16px; flex-wrap: wrap;">
@@ -678,6 +731,7 @@ class OrderConfirmationResource extends Resource
                                                         <span style="font-weight: 600; color: #3b82f6;">
                                                             Rekomendasi Jual: <strong>Rp ' . number_format($hargaIndikatif, 2) . ' / pcs</strong>
                                                         </span>
+                                                        ' . $plateSnippet . '
                                                     </div>
                                                     <span style="font-size: 10px; color: #10b981; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em;">
                                                         Terkalkulasi Flexo
@@ -779,17 +833,26 @@ class OrderConfirmationResource extends Resource
                                 ->columnSpanFull()
                                 ->defaultItems(0),
 
-                            // RINGKASAN BIAYA (SUBTOTAL, DISKON, GRAND TOTAL)
+                            // RINGKASAN BIAYA (SUBTOTAL, BIAYA PLATE TERPISAH, DISKON, GRAND TOTAL)
                             Forms\Components\Section::make('Ringkasan Biaya')
                                 ->schema([
-                                    Forms\Components\Grid::make(3)->schema([
+                                    Forms\Components\Grid::make(4)->schema([
                                         Forms\Components\TextInput::make('subtotal')
-                                            ->label('Subtotal (Rp)')
+                                            ->label('Subtotal Produk (Rp)')
                                             ->prefix('Rp')
                                             ->currencyMask(2)
                                             ->readOnly()
                                             ->dehydrated()
                                             ->default(0),
+
+                                        Forms\Components\TextInput::make('biaya_plate_total')
+                                            ->label('Biaya Plate Terpisah (Rp)')
+                                            ->prefix('Rp')
+                                            ->currencyMask(2)
+                                            ->readOnly()
+                                            ->dehydrated()
+                                            ->default(0)
+                                            ->helperText('Otomatis dari item mode Tagih Terpisah'),
 
                                         Forms\Components\TextInput::make('diskon')
                                             ->label('Diskon (Rp)')

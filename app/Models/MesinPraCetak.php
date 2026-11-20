@@ -14,5 +14,12 @@ class MesinPraCetak extends Model
         'kapasitas',
         'proses',
         'status',
+        'tarif_per_plate',
+        'tarif_per_jam',
+    ];
+
+    protected $casts = [
+        'tarif_per_plate' => 'decimal:2',
+        'tarif_per_jam'   => 'decimal:2',
     ];
 }

@@ -19,6 +19,7 @@ class OrderConfirmation extends Model
         'tanggal',
         'lead_time',
         'subtotal',
+        'biaya_plate_total',
         'diskon',
         'grand_total',
         'terms_conditions',
@@ -33,6 +34,7 @@ class OrderConfirmation extends Model
     protected $casts = [
         'tanggal' => 'date',
         'subtotal' => 'decimal:2',
+        'biaya_plate_total' => 'decimal:2',
         'diskon' => 'decimal:2',
         'grand_total' => 'decimal:2',
     ];
@@ -103,11 +105,15 @@ class OrderConfirmation extends Model
      */
     public function recalculateTotals(): void
     {
-        $subtotal = $this->items()->sum('total');
-        $grandTotal = max(0, $subtotal - ($this->diskon ?? 0));
+        $subtotal = (float) $this->items()->sum('total');
+        $biayaPlateTotal = (float) $this->items()
+            ->where('plate_charge_mode', 'separate_charge')
+            ->sum('biaya_plate_terpisah');
+        $grandTotal = max(0, $subtotal + $biayaPlateTotal - (float) ($this->diskon ?? 0));
 
         $this->updateQuietly([
             'subtotal' => $subtotal,
+            'biaya_plate_total' => $biayaPlateTotal,
             'grand_total' => $grandTotal,
         ]);
     }

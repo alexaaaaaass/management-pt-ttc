@@ -20,9 +20,9 @@ class PracetakMaterialStock extends Model
     ];
 
     protected $casts = [
-        'stok_sheet_utuh'  => 'decimal:2',
-        'total_masuk'      => 'decimal:2',
-        'total_keluar'     => 'decimal:2',
+        'stok_sheet_utuh'  => 'decimal:4',
+        'total_masuk'      => 'decimal:4',
+        'total_keluar'     => 'decimal:4',
         'total_nilai_stok' => 'decimal:2',
         'harga_terakhir'   => 'decimal:2',
         'last_movement_at' => 'datetime',

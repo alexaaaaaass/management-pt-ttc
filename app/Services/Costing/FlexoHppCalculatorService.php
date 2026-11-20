@@ -2,6 +2,7 @@
 
 namespace App\Services\Costing;
 
+use App\Services\Pracetak\PracetakCostingService;
 use App\Support\MoneyHelper;
 
 class FlexoHppCalculatorService
@@ -24,7 +25,7 @@ class FlexoHppCalculatorService
     public const DEFAULT_HARGA_BAHAN_PER_METER = 0.0; // Rp/m
 
     /**
-     * Hitung kalkulasi layout, kebutuhan bahan kertas, biaya proses flexo, dan HPP lengkap.
+     * Hitung kalkulasi layout, kebutuhan bahan kertas, biaya proses flexo, biaya plate prepress, dan HPP lengkap.
      * Satuan dimensi menggunakan centimeter (cm).
      *
      * @param array $data Input parameter kalkulasi
@@ -84,7 +85,6 @@ class FlexoHppCalculatorService
         // =====================================================================
         $etiketPerRepeat = $etiketSepanjangRepeat * $jalurMelintang;
         $repeatDibutuhkan = (int) ceil($targetOrder / max(1, $etiketPerRepeat));
-        // Panjang produksi teoritis (meter) = repeat * repeatCylinder (cm) / 100
         $panjangProduksiTeoritis = ($repeatDibutuhkan * $repeatCylinder) / 100.0; // meter
 
         $wasteSetting = isset($data['waste_setting']) ? (float) $data['waste_setting'] : self::DEFAULT_WASTE_SETTING;
@@ -95,11 +95,7 @@ class FlexoHppCalculatorService
         $totalPanjangBahan = $panjangProduksiTeoritis + $wasteSetting + $wasteTambahanMeter; // meter
         $gramatur = isset($data['gramatur_kertas']) ? (float) $data['gramatur_kertas'] : self::DEFAULT_GRAMATUR;
 
-        // Berat bahan = panjang (m) * lebar (m) * gsm / 1000
-        // Karena $lebarBahan dalam cm, diubah ke meter: $lebarBahan / 100.0
         $beratBahanTeoritis = $totalPanjangBahan * ($lebarBahan / 100.0) * ($gramatur / 1000.0); // kg
-
-        // Konversi Berat per Meter Linear (kg/meter):
         $kgPerMeter = ($lebarBahan / 100.0) * ($gramatur / 1000.0); // kg/meter
 
         $hargaBahanPerKg = isset($data['harga_bahan_per_kg']) ? (float) $data['harga_bahan_per_kg'] : 0;
@@ -125,7 +121,7 @@ class FlexoHppCalculatorService
         $biayaBahanPerEtiket = $targetOrder > 0 ? ($biayaBahan / $targetOrder) : 0;
 
         // =====================================================================
-        // C. BIAYA PROSES CETAK FLEXO
+        // C. BIAYA PROSES CETAK FLEXO & ESTIMASI PLATE PREPRESS
         // =====================================================================
         $kecepatanCetak = (float) ($data['kecepatan_cetak'] ?? self::DEFAULT_KECEPATAN_CETAK);
         if ($kecepatanCetak <= 0) {
@@ -138,10 +134,43 @@ class FlexoHppCalculatorService
         $tarifMesinPerJam = (float) ($data['tarif_mesin_per_jam'] ?? 0);
         $biayaMesin = ($totalWaktuMesin / 60.0) * $tarifMesinPerJam;
         $biayaTintaTotal = (float) ($data['biaya_tinta_total'] ?? 0);
-        $biayaPlate = (float) ($data['biaya_plate'] ?? 0);
         $biayaTenagaKerja = (float) ($data['biaya_tenaga_kerja'] ?? 0);
 
-        $biayaProsesCetakTotal = $biayaMesin + $biayaTintaTotal + $biayaPlate + $biayaTenagaKerja;
+        // Integrasi Estimasi Plate Prepress (Plate Baru / Repeat Order / Manual)
+        $plateMode = $data['plate_mode'] ?? 'manual';
+        $plateChargeMode = $data['plate_charge_mode'] ?? 'include_in_hpp';
+        $plateMarginPersen = max(0, (float) ($data['plate_margin_persen'] ?? 0));
+
+        $plateCalc = app(PracetakCostingService::class)->estimatePlateCost([
+            'plate_mode'               => $plateMode,
+            'master_material_plate_id' => $data['master_material_plate_id'] ?? null,
+            'lebar_bahan'              => $lebarBahan,
+            'repeat_cylinder'          => $repeatCylinder,
+            'plate_margin_potong_cm'   => $data['plate_margin_potong_cm'] ?? PracetakCostingService::DEFAULT_MARGIN_PLATE_CM,
+            'plate_jumlah_warna'       => $data['plate_jumlah_warna'] ?? 4,
+            'plate_toleransi_persen'   => $data['plate_toleransi_persen'] ?? PracetakCostingService::DEFAULT_TOLERANSI_RUSAK_PERSEN,
+            'plate_biaya_design'       => $data['plate_biaya_design'] ?? 0,
+            'plate_biaya_prove'        => $data['plate_biaya_prove'] ?? 0,
+            'plate_tarif_proses'       => $data['plate_tarif_proses'] ?? 0,
+            'plate_margin_persen'      => $plateMarginPersen,
+            'biaya_plate'              => (float) ($data['biaya_plate'] ?? 0),
+        ]);
+
+        $biayaPlateHpp = (float) $plateCalc['plate_estimasi_hpp'];
+        $biayaPlateJual = (float) $plateCalc['plate_estimasi_harga_jual'];
+
+        // Strategi Pembebanan Biaya Plate ke Harga Jual:
+        // 1) 'include_in_hpp': biaya plate masuk komponen HPP/pcs (diamortisasi ke Qty Order)
+        // 2) 'separate_charge': biaya plate TIDAK dilebur ke HPP/pcs, melainkan ditagih terpisah di OC
+        if ($plateChargeMode === 'separate_charge') {
+            $biayaPlateMasukHpp = 0.0;
+            $biayaPlateTerpisah = $biayaPlateJual;
+        } else {
+            $biayaPlateMasukHpp = $biayaPlateHpp;
+            $biayaPlateTerpisah = 0.0;
+        }
+
+        $biayaProsesCetakTotal = $biayaMesin + $biayaTintaTotal + $biayaPlateMasukHpp + $biayaTenagaKerja;
         $biayaProsesPerEtiket = $targetOrder > 0 ? ($biayaProsesCetakTotal / $targetOrder) : 0;
 
         // =====================================================================
@@ -155,6 +184,7 @@ class FlexoHppCalculatorService
         $marginRatio = ($marginPersenRaw > 1) ? ($marginPersenRaw / 100.0) : $marginPersenRaw;
         // Sistem Markup: HPP * (1 + margin%)
         $hargaJualIndikatif = $hppPerEtiket * (1 + $marginRatio);
+        $totalPenjualanDenganPlate = ($hargaJualIndikatif * $targetOrder) + $biayaPlateTerpisah;
 
         return [
             // Section A: Layout (Satuan CM)
@@ -190,7 +220,7 @@ class FlexoHppCalculatorService
             'biaya_bahan' => round($biayaBahan, 2),
             'biaya_bahan_per_etiket' => round($biayaBahanPerEtiket, 4),
 
-            // Section C: Proses Cetak Flexo
+            // Section C: Proses Cetak Flexo & Prepress Plate
             'kecepatan_cetak' => round($kecepatanCetak, 2),
             'waktu_setup' => round($waktuSetup, 2),
             'waktu_cetak' => round($waktuCetak, 2),
@@ -198,7 +228,29 @@ class FlexoHppCalculatorService
             'tarif_mesin_per_jam' => round($tarifMesinPerJam, 2),
             'biaya_mesin' => round($biayaMesin, 2),
             'biaya_tinta_total' => round($biayaTintaTotal, 2),
-            'biaya_plate' => round($biayaPlate, 2),
+            'biaya_plate' => round($biayaPlateHpp, 2),
+            'biaya_plate_masuk_hpp' => round($biayaPlateMasukHpp, 2),
+            'biaya_plate_terpisah' => round($biayaPlateTerpisah, 2),
+            'plate_mode' => $plateMode,
+            'plate_charge_mode' => $plateChargeMode,
+            'plate_margin_persen' => round($plateMarginPersen, 2),
+            'master_material_plate_id' => $data['master_material_plate_id'] ?? null,
+            'plate_archive_id' => $data['plate_archive_id'] ?? null,
+            'plate_jumlah_warna' => (int) ($data['plate_jumlah_warna'] ?? 4),
+            'plate_margin_potong_cm' => (float) ($data['plate_margin_potong_cm'] ?? PracetakCostingService::DEFAULT_MARGIN_PLATE_CM),
+            'plate_toleransi_persen' => (float) ($data['plate_toleransi_persen'] ?? PracetakCostingService::DEFAULT_TOLERANSI_RUSAK_PERSEN),
+            'plate_biaya_design' => (float) ($data['plate_biaya_design'] ?? 0),
+            'plate_biaya_prove' => (float) ($data['plate_biaya_prove'] ?? 0),
+            'plate_tarif_proses' => (float) ($data['plate_tarif_proses'] ?? 0),
+            'plate_panjang_mm' => $plateCalc['plate_panjang_mm'],
+            'plate_lebar_mm' => $plateCalc['plate_lebar_mm'],
+            'plate_luas_total_cm2' => $plateCalc['plate_luas_total_cm2'],
+            'plate_estimasi_sheet' => $plateCalc['plate_estimasi_sheet'],
+            'plate_harga_per_sheet' => $plateCalc['plate_harga_per_sheet'],
+            'plate_estimasi_material' => $plateCalc['plate_estimasi_material'],
+            'plate_estimasi_proses' => $plateCalc['plate_estimasi_proses'],
+            'plate_estimasi_hpp' => $plateCalc['plate_estimasi_hpp'],
+            'plate_estimasi_harga_jual' => $plateCalc['plate_estimasi_harga_jual'],
             'biaya_tenaga_kerja' => round($biayaTenagaKerja, 2),
             'biaya_proses_cetak_total' => round($biayaProsesCetakTotal, 2),
             'biaya_proses_per_etiket' => round($biayaProsesPerEtiket, 4),
@@ -206,7 +258,8 @@ class FlexoHppCalculatorService
             // Section D: Ringkasan HPP & Margin
             'biaya_overhead' => round($biayaOverhead, 2),
             'total_biaya_order' => round($totalBiayaOrder, 2),
-            'terbilang_total_biaya' => MoneyHelper::terbilang($totalBiayaOrder),
+            'total_tagihan_order_estimasi' => round($totalPenjualanDenganPlate, 2),
+            'terbilang_total_biaya' => MoneyHelper::terbilang($totalBiayaOrder + $biayaPlateTerpisah),
             'hpp_per_etiket' => round($hppPerEtiket, 2),
             'margin_persen' => round($marginPersenRaw, 2),
             'harga_jual_indikatif' => round($hargaJualIndikatif, 2),

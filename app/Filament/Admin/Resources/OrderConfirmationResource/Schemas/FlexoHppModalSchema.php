@@ -2,13 +2,17 @@
 
 namespace App\Filament\Admin\Resources\OrderConfirmationResource\Schemas;
 
+use App\Models\MasterMaterialPlate;
+use App\Models\PracetakPlateArchive;
 use App\Services\Costing\FlexoHppCalculatorService;
+use App\Services\Pracetak\PracetakCostingService;
 use Filament\Forms\Components\Checkbox;
 use Filament\Forms\Components\Grid;
 use Filament\Forms\Components\Hidden;
 use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Components\Radio;
 use Filament\Forms\Components\Section;
+use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Tabs;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Get;
@@ -48,6 +52,17 @@ class FlexoHppModalSchema
             'tarif_mesin_per_jam' => (float) ($get('tarif_mesin_per_jam') ?? 0),
             'biaya_tinta_total' => (float) ($get('biaya_tinta_total') ?? 0),
             'biaya_plate' => (float) ($get('biaya_plate') ?? 0),
+            'plate_mode' => $get('plate_mode') ?? 'manual',
+            'plate_charge_mode' => $get('plate_charge_mode') ?? 'include_in_hpp',
+            'plate_margin_persen' => (float) ($get('plate_margin_persen') ?? 0),
+            'master_material_plate_id' => $get('master_material_plate_id'),
+            'plate_archive_id' => $get('plate_archive_id'),
+            'plate_jumlah_warna' => (int) ($get('plate_jumlah_warna') ?? 4),
+            'plate_margin_potong_cm' => (float) ($get('plate_margin_potong_cm') ?? PracetakCostingService::DEFAULT_MARGIN_PLATE_CM),
+            'plate_toleransi_persen' => (float) ($get('plate_toleransi_persen') ?? PracetakCostingService::DEFAULT_TOLERANSI_RUSAK_PERSEN),
+            'plate_biaya_design' => (float) ($get('plate_biaya_design') ?? 0),
+            'plate_biaya_prove' => (float) ($get('plate_biaya_prove') ?? 0),
+            'plate_tarif_proses' => (float) ($get('plate_tarif_proses') ?? 0),
             'biaya_tenaga_kerja' => (float) ($get('biaya_tenaga_kerja') ?? 0),
             'biaya_overhead' => (float) ($get('biaya_overhead') ?? 0),
             'margin_persen' => (float) ($get('margin_persen') ?? 0),
@@ -75,6 +90,16 @@ class FlexoHppModalSchema
 
         $set('biaya_bahan', $result['biaya_bahan']);
         $set('biaya_bahan_per_etiket', $result['biaya_bahan_per_etiket']);
+
+        // Update hasil kalkulasi Plate Prepress
+        $set('plate_estimasi_sheet', $result['plate_estimasi_sheet']);
+        $set('plate_harga_per_sheet', $result['plate_harga_per_sheet']);
+        $set('plate_estimasi_material', $result['plate_estimasi_material']);
+        $set('plate_estimasi_proses', $result['plate_estimasi_proses']);
+        if (($get('plate_mode') ?? 'manual') !== 'manual') {
+            $set('biaya_plate', $result['biaya_plate']);
+        }
+        $set('biaya_plate_terpisah', $result['biaya_plate_terpisah']);
 
         $set('waktu_cetak', $result['waktu_cetak']);
         $set('total_waktu_mesin', $result['total_waktu_mesin']);
@@ -399,7 +424,7 @@ class FlexoHppModalSchema
                                             ->afterStateUpdated(fn (Get $get, Set $set) => self::triggerLiveRecalculate($get, $set)),
                                     ]),
 
-                                    Grid::make(2)->schema([
+                                    Grid::make(1)->schema([
                                         TextInput::make('biaya_tinta_total')
                                             ->label('Biaya Tinta Total (Rp)')
                                             ->prefix('Rp')
@@ -408,16 +433,182 @@ class FlexoHppModalSchema
                                             ->helperText('Total estimasi pemakaian tinta seluruh warna')
                                             ->live(debounce: 500)
                                             ->afterStateUpdated(fn (Get $get, Set $set) => self::triggerLiveRecalculate($get, $set)),
-
-                                        TextInput::make('biaya_plate')
-                                            ->label('Biaya Plate / Cliché (Rp)')
-                                            ->prefix('Rp')
-                                            ->numeric()
-                                            ->default(0)
-                                            ->helperText('Alokasi biaya pembuatan plate flexo')
-                                            ->live(debounce: 500)
-                                            ->afterStateUpdated(fn (Get $get, Set $set) => self::triggerLiveRecalculate($get, $set)),
                                     ]),
+                                ]),
+
+                            Section::make('Estimasi Biaya Plate & Prepress (Terintegrasi Stok Plate)')
+                                ->description('Hitung kebutuhan plate dari luas layout cylinder & harga rata-rata stok prepress, atau pilih Repeat Order (Rp 0)')
+                                ->schema([
+                                    Radio::make('plate_mode')
+                                        ->label('Status Plate untuk Order Ini')
+                                        ->options([
+                                            'new'    => 'Plate Baru — Hitung otomatis dari Master Material Plate & Layout Cylinder',
+                                            'repeat' => 'Repeat Order — Pakai Arsip Plate di Rak (Biaya Plate = Rp 0)',
+                                            'manual' => 'Input Manual — Masukkan langsung nominal Biaya Plate',
+                                        ])
+                                        ->default('manual')
+                                        ->live()
+                                        ->afterStateUpdated(fn (Get $get, Set $set) => self::triggerLiveRecalculate($get, $set)),
+
+                                    Select::make('plate_archive_id')
+                                        ->label('Pilih Arsip Plate Jadi dari Rak Penyimpanan')
+                                        ->options(function () {
+                                            return PracetakPlateArchive::with('customer')
+                                                ->whereIn('status_kondisi', ['tersimpan', 'dipakai_printing'])
+                                                ->orderByDesc('id')
+                                                ->get()
+                                                ->mapWithKeys(fn (PracetakPlateArchive $a) => [$a->id => $a->display_label]);
+                                        })
+                                        ->searchable()
+                                        ->preload()
+                                        ->visible(fn (Get $get) => $get('plate_mode') === 'repeat')
+                                        ->helperText('Plate arsip tidak memerlukan pembelian/pemotongan bahan plate baru.'),
+
+                                    Grid::make(1)
+                                        ->visible(fn (Get $get) => $get('plate_mode') === 'new')
+                                        ->schema([
+                                            Select::make('master_material_plate_id')
+                                                ->label('Master Material Plate Mentah')
+                                                ->options(function () {
+                                                    return MasterMaterialPlate::with('stock')
+                                                        ->where('status', 'aktif')
+                                                        ->orderBy('nama_material')
+                                                        ->get()
+                                                        ->mapWithKeys(function (MasterMaterialPlate $p) {
+                                                            $stok = number_format((float) ($p->stock?->stok_sheet_utuh ?? 0), 2, '.', ',');
+                                                            $avg = (float) ($p->stock?->harga_rata_rata ?? 0) > 0
+                                                                ? (float) $p->stock->harga_rata_rata
+                                                                : (float) $p->harga_beli;
+
+                                                            return [
+                                                                $p->id => "{$p->kode_material} · {$p->nama_material} ({$p->ukuran_sheet} | Stok: {$stok} sh | Rp " . number_format($avg, 0, ',', '.') . '/sh)',
+                                                            ];
+                                                        });
+                                                })
+                                                ->searchable()
+                                                ->preload()
+                                                ->live()
+                                                ->afterStateUpdated(fn (Get $get, Set $set) => self::triggerLiveRecalculate($get, $set)),
+
+                                            Grid::make(3)->schema([
+                                                TextInput::make('plate_jumlah_warna')
+                                                    ->label('Jumlah Warna Plate')
+                                                    ->numeric()
+                                                    ->default(4)
+                                                    ->minValue(1)
+                                                    ->live(debounce: 400)
+                                                    ->afterStateUpdated(fn (Get $get, Set $set) => self::triggerLiveRecalculate($get, $set)),
+
+                                                TextInput::make('plate_margin_potong_cm')
+                                                    ->label('Margin Potong Plate (cm)')
+                                                    ->numeric()
+                                                    ->default(PracetakCostingService::DEFAULT_MARGIN_PLATE_CM)
+                                                    ->helperText('Tambahan margin keliling plate (default 2 cm)')
+                                                    ->live(debounce: 400)
+                                                    ->afterStateUpdated(fn (Get $get, Set $set) => self::triggerLiveRecalculate($get, $set)),
+
+                                                TextInput::make('plate_toleransi_persen')
+                                                    ->label('Toleransi Afkir / Remake (%)')
+                                                    ->numeric()
+                                                    ->suffix('%')
+                                                    ->default(PracetakCostingService::DEFAULT_TOLERANSI_RUSAK_PERSEN)
+                                                    ->helperText('Cadangan kerusakan plate (default 10%)')
+                                                    ->live(debounce: 400)
+                                                    ->afterStateUpdated(fn (Get $get, Set $set) => self::triggerLiveRecalculate($get, $set)),
+                                            ]),
+
+                                            Grid::make(3)->schema([
+                                                TextInput::make('plate_biaya_design')
+                                                    ->label('Biaya Trial Design / Layout (Rp)')
+                                                    ->prefix('Rp')
+                                                    ->numeric()
+                                                    ->default(0)
+                                                    ->live(debounce: 400)
+                                                    ->afterStateUpdated(fn (Get $get, Set $set) => self::triggerLiveRecalculate($get, $set)),
+
+                                                TextInput::make('plate_biaya_prove')
+                                                    ->label('Biaya Prove Print Sampel (Rp)')
+                                                    ->prefix('Rp')
+                                                    ->numeric()
+                                                    ->default(0)
+                                                    ->live(debounce: 400)
+                                                    ->afterStateUpdated(fn (Get $get, Set $set) => self::triggerLiveRecalculate($get, $set)),
+
+                                                TextInput::make('plate_tarif_proses')
+                                                    ->label('Tarif Proses CTP / Plate (Rp)')
+                                                    ->prefix('Rp')
+                                                    ->numeric()
+                                                    ->default(0)
+                                                    ->helperText('Dikalikan jumlah warna plate')
+                                                    ->live(debounce: 400)
+                                                    ->afterStateUpdated(fn (Get $get, Set $set) => self::triggerLiveRecalculate($get, $set)),
+                                            ]),
+
+                                            Grid::make(4)->schema([
+                                                TextInput::make('plate_estimasi_sheet')
+                                                    ->label('Est. Kebutuhan (Sheet)')
+                                                    ->readOnly()
+                                                    ->extraInputAttributes(['style' => 'background-color: rgba(16, 185, 129, 0.1); font-weight: bold; color: #10b981;']),
+
+                                                TextInput::make('plate_harga_per_sheet')
+                                                    ->label('Harga Rata-rata / Sheet')
+                                                    ->prefix('Rp')
+                                                    ->readOnly()
+                                                    ->extraInputAttributes(['style' => 'background-color: rgba(16, 185, 129, 0.1); font-weight: bold; color: #10b981;']),
+
+                                                TextInput::make('plate_estimasi_material')
+                                                    ->label('Est. Material Plate (Rp)')
+                                                    ->prefix('Rp')
+                                                    ->readOnly()
+                                                    ->extraInputAttributes(['style' => 'background-color: rgba(16, 185, 129, 0.1); font-weight: bold; color: #10b981;']),
+
+                                                TextInput::make('plate_estimasi_proses')
+                                                    ->label('Est. Proses Prepress (Rp)')
+                                                    ->prefix('Rp')
+                                                    ->readOnly()
+                                                    ->extraInputAttributes(['style' => 'background-color: rgba(16, 185, 129, 0.1); font-weight: bold; color: #10b981;']),
+                                            ]),
+                                        ]),
+
+                                    TextInput::make('biaya_plate')
+                                        ->label(fn (Get $get) => $get('plate_mode') === 'new' ? 'Total Estimasi HPP Plate (Otomatis) (Rp)' : 'Biaya Plate / Cliché (Rp)')
+                                        ->prefix('Rp')
+                                        ->numeric()
+                                        ->default(0)
+                                        ->readOnly(fn (Get $get) => ($get('plate_mode') ?? 'manual') !== 'manual')
+                                        ->helperText('Total HPP pembuatan plate (material + proses prepress)')
+                                        ->live(debounce: 500)
+                                        ->afterStateUpdated(fn (Get $get, Set $set) => self::triggerLiveRecalculate($get, $set)),
+
+                                    Radio::make('plate_charge_mode')
+                                        ->label('Strategi Pembebanan Biaya Plate ke Harga Jual')
+                                        ->options([
+                                            'include_in_hpp'  => 'Lebur ke HPP Produk / Pcs (Diamortisasi ke Qty Order, menaikkan harga jual per pcs)',
+                                            'separate_charge' => 'Tagih Terpisah sebagai Biaya Plate Baru (HPP/pcs murni cetak; Biaya Plate ditambahkan di Ringkasan OC & PDF)',
+                                        ])
+                                        ->default('include_in_hpp')
+                                        ->visible(fn (Get $get) => ($get('plate_mode') ?? 'manual') !== 'repeat')
+                                        ->live()
+                                        ->afterStateUpdated(fn (Get $get, Set $set) => self::triggerLiveRecalculate($get, $set)),
+
+                                    Grid::make(2)
+                                        ->visible(fn (Get $get) => ($get('plate_mode') ?? 'manual') !== 'repeat' && $get('plate_charge_mode') === 'separate_charge')
+                                        ->schema([
+                                            TextInput::make('plate_margin_persen')
+                                                ->label('Margin Khusus Biaya Plate Terpisah (%)')
+                                                ->suffix('%')
+                                                ->numeric()
+                                                ->default(0)
+                                                ->helperText('Isi 0 jika ditagihkan pas sesuai HPP plate, atau isi markup misal 15%')
+                                                ->live(debounce: 400)
+                                                ->afterStateUpdated(fn (Get $get, Set $set) => self::triggerLiveRecalculate($get, $set)),
+
+                                            TextInput::make('biaya_plate_terpisah')
+                                                ->label('Tagihan Biaya Plate Terpisah di OC (Rp)')
+                                                ->prefix('Rp')
+                                                ->readOnly()
+                                                ->extraInputAttributes(['style' => 'background-color: rgba(59, 130, 246, 0.15); font-weight: 700; color: #3b82f6;']),
+                                        ]),
                                 ]),
 
                             Section::make('Hasil Waktu & Biaya Proses Cetak (Otomatis)')
@@ -512,6 +703,29 @@ class FlexoHppModalSchema
                                             ->formatStateUsing(fn ($state) => \App\Support\MoneyHelper::format($state, 2))
                                             ->extraInputAttributes(['style' => 'background-color: rgba(16, 185, 129, 0.25); font-weight: 800; color: #10b981; font-size: 16px;']),
                                     ]),
+
+                                    Placeholder::make('plate_charge_summary_box')
+                                        ->hiddenLabel()
+                                        ->visible(fn (Get $get) => ($get('plate_charge_mode') ?? 'include_in_hpp') === 'separate_charge' && (float) \App\Support\MoneyHelper::clean($get('biaya_plate_terpisah')) > 0)
+                                        ->content(function (Get $get) {
+                                            $plateSep = (float) (\App\Support\MoneyHelper::clean($get('biaya_plate_terpisah')) ?? 0);
+                                            $totalBiaya = (float) (\App\Support\MoneyHelper::clean($get('total_biaya_order')) ?? 0);
+                                            $grandWithPlate = $totalBiaya + $plateSep;
+
+                                            return new HtmlString('
+                                                <div style="background: rgba(139, 92, 246, 0.08); border: 1px solid rgba(139, 92, 246, 0.3); border-left: 3px solid #8b5cf6; border-radius: 6px; padding: 10px 14px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+                                                    <div>
+                                                        <div style="font-size: 10px; font-weight: 700; color: #8b5cf6; text-transform: uppercase;">Mode Biaya Plate Terpisah (Cliché Charge)</div>
+                                                        <div style="font-size: 12px; margin-top: 2px;">Biaya Plate tidak dimasukkan ke HPP/pcs, melainkan ditambahkan di Ringkasan OC & PDF.</div>
+                                                    </div>
+                                                    <div style="text-align: right;">
+                                                        <div style="font-size: 11px; color: #6b7280;">Tagihan Plate Terpisah: <strong style="color: #8b5cf6;">Rp ' . number_format($plateSep, 0, ',', '.') . '</strong></div>
+                                                        <div style="font-size: 12px; font-weight: 700;">Total Biaya + Plate: Rp ' . number_format($grandWithPlate, 0, ',', '.') . '</div>
+                                                    </div>
+                                                </div>
+                                            ');
+                                        })
+                                        ->columnSpanFull(),
 
                                     Placeholder::make('terbilang_total_biaya_box')
                                         ->label('')

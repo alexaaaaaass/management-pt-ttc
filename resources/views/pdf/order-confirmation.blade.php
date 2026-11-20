@@ -341,6 +341,12 @@ body {
                 <td width="50%" align="right">Subtotal</td>
                 <td width="50%" align="right">{{ number_format($orderConfirmation->subtotal, 0, ',', '.') }}</td>
             </tr>
+            @if(($orderConfirmation->biaya_plate_total ?? 0) > 0)
+            <tr>
+                <td align="right">Biaya Pembuatan Plate</td>
+                <td align="right">{{ number_format($orderConfirmation->biaya_plate_total, 0, ',', '.') }}</td>
+            </tr>
+            @endif
             @if($orderConfirmation->diskon > 0)
             <tr>
                 <td align="right">Diskon</td>

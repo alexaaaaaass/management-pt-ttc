@@ -135,6 +135,38 @@ class ApprovalFormResource extends Resource
                                             ->columnSpan(2),
                                     ]),
 
+                                    Forms\Components\Placeholder::make('plate_archive_hint')
+                                        ->hiddenLabel()
+                                        ->visible(function (callable $get): bool {
+                                            $fgId = $get('finish_good_item_id');
+                                            if (! $fgId) {
+                                                return false;
+                                            }
+
+                                            return \App\Models\PracetakPlateArchive::where('finish_good_item_id', $fgId)
+                                                ->whereIn('status_kondisi', ['tersimpan', 'dipakai_printing'])
+                                                ->exists();
+                                        })
+                                        ->content(function (callable $get) {
+                                            $archive = \App\Models\PracetakPlateArchive::where('finish_good_item_id', $get('finish_good_item_id'))
+                                                ->whereIn('status_kondisi', ['tersimpan', 'dipakai_printing'])
+                                                ->latest('id')
+                                                ->first();
+
+                                            if (! $archive) {
+                                                return '';
+                                            }
+
+                                            return new \Illuminate\Support\HtmlString(
+                                                '<div style="padding: 8px 12px; border-radius: 8px; border: 1px solid rgba(16,185,129,0.35); background: rgba(16,185,129,0.08); font-size: 12px; color: #10b981; font-weight: 600;">'
+                                                . 'Arsip Plate Repeat Order Tersedia: <strong>' . e($archive->kode_arsip) . '</strong>'
+                                                . ' · Lokasi: <strong>' . e($archive->lokasi_rak ?: '-') . '</strong>'
+                                                . ' (' . (int) $archive->jumlah_warna . ' Warna, dipakai ' . (int) $archive->jumlah_dipakai . '×) — Biaya plate di Order Confirmation otomatis disarankan Rp 0.'
+                                                . '</div>'
+                                            );
+                                        })
+                                        ->columnSpanFull(),
+
                                     Forms\Components\Grid::make(4)->schema([
                                         Forms\Components\TextInput::make('jenis')
                                             ->label('Jenis')
@@ -396,6 +428,19 @@ class ApprovalFormResource extends Resource
                                 ->send();
 
                             return redirect(FinishGoodItemResource::getUrl('edit', ['record' => $fg]));
+                        }),
+
+                    Tables\Actions\Action::make('preorder_pracetak')
+                        ->label('Pre-Order Pra Cetak (Trial/Prove)')
+                        ->icon('heroicon-o-paint-brush')
+                        ->color('info')
+                        ->action(function (ApprovalForm $record) {
+                            $existing = \App\Models\PracetakProcess::where('approval_form_id', $record->id)->latest('id')->first();
+                            if ($existing) {
+                                return redirect(PracetakProcessResource::getUrl('edit', ['record' => $existing]));
+                            }
+
+                            return redirect(PracetakProcessResource::getUrl('create', ['approval_form_id' => $record->id]));
                         }),
 
                     Tables\Actions\Action::make('generate_oc')

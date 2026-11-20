@@ -26,8 +26,50 @@ class PrintingResource extends Resource
                 Forms\Components\Select::make('spk_id')
                     ->label('Surat Perintah Kerja')
                     ->relationship('spk', 'no_spk')
+                    ->searchable()
                     ->preload()
+                    ->live()
                     ->required(),
+
+                Forms\Components\Placeholder::make('plate_readiness_info')
+                    ->label('Status Kesiapan Plate Pra Cetak & Lokasi Rak')
+                    ->visible(fn (Forms\Get $get) => filled($get('spk_id')))
+                    ->content(function (Forms\Get $get) {
+                        $spkId = $get('spk_id');
+                        if (! $spkId) {
+                            return '-';
+                        }
+                        $pracetak = \App\Models\PracetakProcess::with('plateArchive')
+                            ->where('spk_id', $spkId)
+                            ->latest('id')
+                            ->first();
+
+                        if (! $pracetak) {
+                            return new \Illuminate\Support\HtmlString(
+                                '<div style="padding: 8px 12px; border-radius: 8px; border: 1px solid rgba(245,158,11,0.35); background: rgba(245,158,11,0.08); font-size: 12px; color: #f59e0b; font-weight: 600;">'
+                                . 'Belum ada catatan proses Pra Cetak untuk SPK ini. Pastikan plate sudah siap sebelum naik cetak.'
+                                . '</div>'
+                            );
+                        }
+
+                        $isReady = in_array($pracetak->status, ['selesai', 'handed_over'], true);
+                        $color = $isReady ? '#10b981' : '#3b82f6';
+                        $bg = $isReady ? 'rgba(16,185,129,0.08)' : 'rgba(59,130,246,0.08)';
+                        $border = $isReady ? 'rgba(16,185,129,0.35)' : 'rgba(59,130,246,0.35)';
+                        $rak = $pracetak->lokasi_simpan_plate ?: ($pracetak->plateArchive?->lokasi_rak ?: 'Belum ditentukan');
+                        $arsip = $pracetak->plateArchive?->kode_arsip ? " · Arsip: {$pracetak->plateArchive->kode_arsip}" : '';
+                        $handover = $pracetak->handed_over_to ? " · Penerima: {$pracetak->handed_over_to}" : '';
+
+                        return new \Illuminate\Support\HtmlString(
+                            '<div style="padding: 8px 12px; border-radius: 8px; border: 1px solid ' . $border . '; background: ' . $bg . '; font-size: 12px; color: ' . $color . '; font-weight: 600;">'
+                            . 'Status Plate: <strong>' . e($pracetak->status_label) . '</strong>'
+                            . ' · Lokasi Rak: <strong>' . e($rak) . '</strong>'
+                            . ' · ' . (int) ($pracetak->jumlah_warna_plate ?: $pracetak->qty) . ' Warna'
+                            . e($arsip . $handover)
+                            . '</div>'
+                        );
+                    })
+                    ->columnSpanFull(),
 
                 Forms\Components\Select::make('mesin_id')
                     ->label('Mesin')

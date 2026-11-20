@@ -30,10 +30,10 @@ class PracetakMaterialMovement extends Model
 
     protected $casts = [
         'tanggal'       => 'date',
-        'qty_masuk'     => 'decimal:2',
-        'qty_keluar'    => 'decimal:2',
-        'saldo_sebelum' => 'decimal:2',
-        'saldo_setelah' => 'decimal:2',
+        'qty_masuk'     => 'decimal:4',
+        'qty_keluar'    => 'decimal:4',
+        'saldo_sebelum' => 'decimal:4',
+        'saldo_setelah' => 'decimal:4',
         'harga_satuan'  => 'decimal:2',
         'total_nominal' => 'decimal:2',
     ];

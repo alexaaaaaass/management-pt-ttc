@@ -351,6 +351,39 @@ public static function getNavigationLabel(): string
                 ->color(fn ($state) => $state >= 100 ? 'success' : ($state > 0 ? 'warning' : 'danger'))
                 ->sortable(),
 
+            Tables\Columns\TextColumn::make('pracetak_status_label')
+                ->label('Pra Cetak')
+                ->badge()
+                ->getStateUsing(function (MasterSpk $record): string {
+                    $latest = $record->pracetaks->sortByDesc('id')->first();
+                    if (! $latest) {
+                        return 'Belum Proses';
+                    }
+
+                    return match ($latest->status) {
+                        'design', 'trial_design' => 'A. Trial Design',
+                        'prove_print'            => 'B. Prove Print',
+                        'plat_making'            => 'C. Plate Making',
+                        'selesai'                => 'Siap (' . ($latest->lokasi_simpan_plate ?: 'Rak') . ')',
+                        'handed_over'            => 'Di Printing',
+                        default                  => ucfirst((string) $latest->status),
+                    };
+                })
+                ->color(function (MasterSpk $record): string {
+                    $latest = $record->pracetaks->sortByDesc('id')->first();
+                    if (! $latest) {
+                        return 'gray';
+                    }
+
+                    return match ($latest->status) {
+                        'design', 'trial_design' => 'warning',
+                        'prove_print'            => 'info',
+                        'plat_making'            => 'primary',
+                        'selesai', 'handed_over' => 'success',
+                        default                  => 'gray',
+                    };
+                }),
+
             Tables\Columns\BadgeColumn::make('status')
                 ->colors([
                     'warning' => 'ON PROCESS',
@@ -398,6 +431,45 @@ public static function getNavigationLabel(): string
 
                 Tables\Actions\EditAction::make()
                     ->visible(fn ($record) => $record->status !== 'FINISH'),
+
+                Tables\Actions\Action::make('open_pracetak')
+                    ->label(fn (MasterSpk $record) => $record->pracetaks->isNotEmpty() ? 'Buka Proses Pra Cetak' : 'Buat Tugas Pra Cetak')
+                    ->icon('heroicon-o-cpu-chip')
+                    ->color('info')
+                    ->action(function (MasterSpk $record) {
+                        $existing = $record->pracetaks()->latest('id')->first();
+                        if ($existing) {
+                            return redirect(PracetakProcessResource::getUrl('edit', ['record' => $existing]));
+                        }
+
+                        // Cek jika ada Pre-Order Pra Cetak dari Approval Form terkait yang belum dihubungkan ke SPK
+                        $afId = $record->salesOrder?->orderConfirmation?->approval_form_id;
+                        if ($afId) {
+                            $preOrder = \App\Models\PracetakProcess::where('approval_form_id', $afId)
+                                ->whereNull('spk_id')
+                                ->latest('id')
+                                ->first();
+
+                            if ($preOrder) {
+                                $resolved = app(\App\Services\Pracetak\PracetakCostingService::class)->resolveEstimatedPlateFromSpk($record);
+                                $preOrder->update([
+                                    'spk_id'                => $record->id,
+                                    'order_confirmation_id' => $resolved['order_confirmation_id'],
+                                    'estimasi_biaya_plate'  => $resolved['estimasi_biaya_plate'],
+                                ]);
+
+                                \Filament\Notifications\Notification::make()
+                                    ->title('Pre-Order Pra Cetak Terhubung ke SPK')
+                                    ->body("Proses Trial/Prove sebelumnya otomatis disambungkan ke SPK {$record->no_spk}. Siap lanjut ke Tahap C (Plate Making).")
+                                    ->success()
+                                    ->send();
+
+                                return redirect(PracetakProcessResource::getUrl('edit', ['record' => $preOrder]));
+                            }
+                        }
+
+                        return redirect(PracetakProcessResource::getUrl('create', ['spk_id' => $record->id]));
+                    }),
 
                 Tables\Actions\Action::make('finish')
                     ->label('Selesaikan SPK (FINISH)')
