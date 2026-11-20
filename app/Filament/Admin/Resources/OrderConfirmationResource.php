@@ -43,6 +43,18 @@ class OrderConfirmationResource extends Resource
         return \App\Support\MoneyHelper::format($num, $precision) ?? '0';
     }
 
+    public static function parseHppData(mixed $value): ?array
+    {
+        if (is_array($value)) {
+            return $value;
+        }
+        if (is_string($value) && trim($value) !== '') {
+            $decoded = json_decode($value, true);
+            return is_array($decoded) ? $decoded : null;
+        }
+        return null;
+    }
+
     public static function updateTotals(Get $get, Set $set, bool $isInsideRow = false): void
     {
         $prefix = $isInsideRow ? '../../' : '';
@@ -153,7 +165,7 @@ class OrderConfirmationResource extends Resource
                                                         'biaya_proses'          => $calc['biaya_proses_cetak_total'],
                                                         'kebutuhan_kertas_kg'   => $calc['berat_bahan_teoritis'],
                                                         'kebutuhan_kertas_meter'=> $calc['total_panjang_bahan'],
-                                                        'kalkulasi_hpp_data'    => $calc,
+                                                        'kalkulasi_hpp_data'    => json_encode($calc),
                                                     ];
                                                 }
                                                 $set('items', $newItems);
@@ -303,7 +315,6 @@ class OrderConfirmationResource extends Resource
                                         ->requiresConfirmation(false)
                                         ->tooltip('Hapus item penawaran')
                                 )
-                                ->live()
                                 ->afterStateUpdated(function (Get $get, Set $set) {
                                     static::updateTotals($get, $set);
                                 })
@@ -320,7 +331,9 @@ class OrderConfirmationResource extends Resource
                                     Forms\Components\Hidden::make('plate_archive_id'),
                                     Forms\Components\Hidden::make('kebutuhan_kertas_kg'),
                                     Forms\Components\Hidden::make('kebutuhan_kertas_meter'),
-                                    Forms\Components\Hidden::make('kalkulasi_hpp_data'),
+                                    Forms\Components\Hidden::make('kalkulasi_hpp_data')
+                                        ->formatStateUsing(fn ($state) => is_array($state) ? json_encode($state) : $state)
+                                        ->dehydrateStateUsing(fn ($state) => static::parseHppData($state)),
 
                                     Forms\Components\Grid::make(3)->schema([
                                         Forms\Components\Select::make('finish_good_item_id')
@@ -384,7 +397,7 @@ class OrderConfirmationResource extends Resource
                                                     ], $targetQty);
 
                                                     $calc['target_order'] = $targetQty;
-                                                    $set('kalkulasi_hpp_data', $calc);
+                                                    $set('kalkulasi_hpp_data', json_encode($calc));
                                                     $set('hpp_per_pcs', $calc['hpp_per_etiket']);
                                                     $set('harga_jual_indikatif', $calc['harga_jual_indikatif']);
                                                     $set('total_biaya_order', $calc['total_biaya_order']);
@@ -447,7 +460,7 @@ class OrderConfirmationResource extends Resource
                                             ->modalWidth('7xl')
                                             ->modalSubmitActionLabel('Simpan & Terapkan')
                                             ->fillForm(function (Get $get): array {
-                                                $existing = $get('kalkulasi_hpp_data');
+                                                $existing = static::parseHppData($get('kalkulasi_hpp_data'));
                                                 $targetOrder = (float) static::cleanNumeric($get('qty') ?? 100000);
                                                 if ($targetOrder <= 0) $targetOrder = 100000;
 
@@ -586,7 +599,7 @@ class OrderConfirmationResource extends Resource
 
                                                 $fullData = array_merge($data, $calc);
 
-                                                $set('kalkulasi_hpp_data', $fullData);
+                                                $set('kalkulasi_hpp_data', json_encode($fullData));
                                                 $set('hpp_per_pcs', $calc['hpp_per_etiket']);
                                                 $set('harga_jual_indikatif', $calc['harga_jual_indikatif']);
                                                 $set('total_biaya_order', $calc['total_biaya_order']);
@@ -671,13 +684,13 @@ class OrderConfirmationResource extends Resource
 
                                                 $set('hpp_per_pcs', $harga);
                                                 $set('harga_jual_indikatif', $harga);
-                                                $hppData = $get('kalkulasi_hpp_data');
+                                                $hppData = static::parseHppData($get('kalkulasi_hpp_data'));
                                                 if (is_array($hppData)) {
                                                     $hppData['harga_mode'] = 'custom';
                                                     $hppData['fix_hpp_manual'] = $harga;
                                                     $hppData['hpp_per_etiket'] = $harga;
                                                     $hppData['harga_jual_indikatif'] = $harga;
-                                                    $set('kalkulasi_hpp_data', $hppData);
+                                                    $set('kalkulasi_hpp_data', json_encode($hppData));
                                                 }
 
                                                 Notification::make()
@@ -704,7 +717,7 @@ class OrderConfirmationResource extends Resource
                                                 ');
                                             }
 
-                                            $hppData = is_array($get('kalkulasi_hpp_data')) ? $get('kalkulasi_hpp_data') : [];
+                                            $hppData = static::parseHppData($get('kalkulasi_hpp_data')) ?? [];
                                             $plateMode = $hppData['plate_mode'] ?? 'manual';
                                             $plateChargeMode = $get('plate_charge_mode') ?: ($hppData['plate_charge_mode'] ?? 'include_in_hpp');
                                             $plateSep = (float) ($get('biaya_plate_terpisah') ?? $hppData['biaya_plate_terpisah'] ?? 0);
@@ -781,14 +794,14 @@ class OrderConfirmationResource extends Resource
                                                 $set('total', \App\Support\MoneyHelper::format($rowTotal, 2) ?? '0');
 
                                                 // Update HPP jika sudah pernah dikalkulasi dan bukan mode custom fix
-                                                $hppData = $get('kalkulasi_hpp_data');
+                                                $hppData = static::parseHppData($get('kalkulasi_hpp_data'));
                                                 if (!empty($hppData) && is_array($hppData) && $qty > 0) {
                                                     if (($hppData['harga_mode'] ?? 'indikatif') !== 'custom') {
                                                         $calculator = app(FlexoHppCalculatorService::class);
                                                         $recalc = $calculator->calculate($hppData, $qty);
                                                         $full = array_merge($hppData, $recalc);
                                                         $full['target_order'] = $qty;
-                                                        $set('kalkulasi_hpp_data', $full);
+                                                        $set('kalkulasi_hpp_data', json_encode($full));
                                                         $set('hpp_per_pcs', $recalc['hpp_per_etiket']);
                                                         $set('harga_jual_indikatif', $recalc['harga_jual_indikatif']);
                                                         $set('total_biaya_order', $recalc['total_biaya_order']);

@@ -43,7 +43,7 @@ class MoneyHelper
     public static function applyMask(TextInput $input, int $precision = 2): TextInput
     {
         return $input
-            ->mask(RawJs::make('$money($input || "", ".", ",", ' . $precision . ')'))
+            ->mask(RawJs::make("\$money(\$input || '', '.', ',', {$precision})"))
             ->stripCharacters(',')
             ->extraInputAttributes(['inputmode' => 'decimal'])
             ->formatStateUsing(fn ($state) => static::format($state, $precision) ?? '')
@@ -58,7 +58,7 @@ class MoneyHelper
     public static function applyQuantityMask(TextInput $input, int $precision = 0): TextInput
     {
         return $input
-            ->mask(RawJs::make('$money($input || "", ".", ",", ' . $precision . ')'))
+            ->mask(RawJs::make("\$money(\$input || '', '.', ',', {$precision})"))
             ->stripCharacters(',')
             ->extraInputAttributes(['inputmode' => $precision > 0 ? 'decimal' : 'numeric'])
             ->formatStateUsing(fn ($state) => static::format($state, $precision) ?? '')

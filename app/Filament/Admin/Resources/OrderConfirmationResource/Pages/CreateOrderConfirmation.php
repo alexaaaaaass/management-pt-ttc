@@ -71,7 +71,7 @@ class CreateOrderConfirmation extends CreateRecord
                         'biaya_proses'          => $calc['biaya_proses_cetak_total'],
                         'kebutuhan_kertas_kg'   => $calc['berat_bahan_teoritis'],
                         'kebutuhan_kertas_meter'=> $calc['total_panjang_bahan'],
-                        'kalkulasi_hpp_data'    => $calc,
+                        'kalkulasi_hpp_data'    => json_encode($calc),
                     ];
                 }
 
