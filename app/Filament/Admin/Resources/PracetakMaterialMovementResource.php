@@ -26,6 +26,8 @@ class PracetakMaterialMovementResource extends Resource
 
     protected static ?int $navigationSort = 7;
 
+    protected static bool $shouldRegisterNavigation = false;
+
     public static function canCreate(): bool
     {
         // Mutasi ledger hanya dicatat oleh transaksi sistem

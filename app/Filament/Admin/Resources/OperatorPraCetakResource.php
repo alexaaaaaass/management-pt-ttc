@@ -17,6 +17,7 @@ class OperatorPraCetakResource extends Resource
     protected static ?string $navigationLabel = 'Operator Pra Cetak';
     protected static ?string $navigationGroup = 'Pra Cetak';
     protected static ?int $navigationSort = 3;
+    protected static bool $shouldRegisterNavigation = false;
     public static function form(Form $form): Form
     {
         return $form->schema([

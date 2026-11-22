@@ -3,6 +3,7 @@
 namespace App\Filament\Admin\Resources;
 
 use App\Filament\Admin\Resources\MasterMaterialPlateResource\Pages;
+use App\Filament\Admin\Resources\MasterMaterialPlateResource\RelationManagers\MovementsRelationManager;
 use App\Models\MasterMaterialPlate;
 use App\Support\MoneyHelper;
 use Filament\Forms;
@@ -13,6 +14,7 @@ use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Validation\Rules\Unique;
 
@@ -21,11 +23,11 @@ class MasterMaterialPlateResource extends Resource
     protected static ?string $model = MasterMaterialPlate::class;
 
     protected static ?string $navigationGroup = 'Pra Cetak';
-    protected static ?string $navigationLabel = 'Master Material Plate';
+    protected static ?string $navigationLabel = 'Material & Stok Plate';
     protected static ?string $navigationIcon = 'heroicon-o-square-3-stack-3d';
-    protected static ?int $navigationSort = 4;
+    protected static ?int $navigationSort = 2;
     protected static ?string $modelLabel = 'Material Plate';
-    protected static ?string $pluralLabel = 'Master Material Plate';
+    protected static ?string $pluralLabel = 'Material & Stok Plate';
     protected static ?string $slug = 'master-material-plates';
 
     /** Saran awal tipe plate (user tetap bebas mengetik tipe lain). */
@@ -197,10 +199,33 @@ class MasterMaterialPlateResource extends Resource
                 Tables\Columns\TextColumn::make('ukuran_sheet')
                     ->label('Ukuran Sheet (P × L)'),
 
-                Tables\Columns\TextColumn::make('harga_beli')
-                    ->label('Harga Beli')
+                Tables\Columns\TextColumn::make('stock.stok_sheet_utuh')
+                    ->label('Saldo Stok')
+                    ->formatStateUsing(fn ($state) => rtrim(rtrim(number_format((float) ($state ?? 0), 4, '.', ','), '0'), '.') . ' Sheet')
+                    ->badge()
+                    ->color(fn ($state) => (float) ($state ?? 0) <= 0 ? 'danger' : ((float) $state <= 5 ? 'warning' : 'success'))
+                    ->alignEnd(),
+
+                Tables\Columns\TextColumn::make('harga_rata_rata_display')
+                    ->label('Harga Rata-rata / Sheet')
+                    ->getStateUsing(fn (MasterMaterialPlate $record) => (float) ($record->stock?->harga_rata_rata ?? 0) > 0
+                        ? (float) $record->stock->harga_rata_rata
+                        : (float) $record->harga_beli)
                     ->money('IDR')
-                    ->sortable(),
+                    ->alignEnd(),
+
+                Tables\Columns\TextColumn::make('stock.total_nilai_stok')
+                    ->label('Nilai Persediaan')
+                    ->default(0)
+                    ->money('IDR')
+                    ->alignEnd()
+                    ->toggleable(),
+
+                Tables\Columns\TextColumn::make('harga_beli')
+                    ->label('Harga Acuan')
+                    ->money('IDR')
+                    ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true),
 
                 Tables\Columns\TextColumn::make('satuan.nama_satuan')
                     ->label('Satuan')
@@ -244,6 +269,14 @@ class MasterMaterialPlateResource extends Resource
                         'aktif'    => 'Aktif',
                         'nonaktif' => 'Non Aktif',
                     ]),
+
+                Tables\Filters\Filter::make('ada_stok')
+                    ->label('Hanya Yang Ada Stok (> 0)')
+                    ->query(fn (Builder $query) => $query->whereHas('stock', fn ($q) => $q->where('stok_sheet_utuh', '>', 0))),
+
+                Tables\Filters\Filter::make('stok_kritis')
+                    ->label('Stok Kritis (≤ 5 Sheet)')
+                    ->query(fn (Builder $query) => $query->whereDoesntHave('stock')->orWhereHas('stock', fn ($q) => $q->where('stok_sheet_utuh', '<=', 5))),
             ])
             ->actions([
                 Tables\Actions\ViewAction::make(),
@@ -295,6 +328,25 @@ class MasterMaterialPlateResource extends Resource
                     Infolists\Components\TextEntry::make('lebar_sheet_mm')
                         ->label('Lebar Sheet')
                         ->formatStateUsing(fn ($state) => number_format((float) $state, 2, '.', ',') . ' mm'),
+                ]),
+
+            Infolists\Components\Section::make('Posisi Saldo Stok Realtime')
+                ->columns(4)
+                ->schema([
+                    Infolists\Components\TextEntry::make('stock.stok_sheet_utuh')
+                        ->label('Stok Tersedia')
+                        ->formatStateUsing(fn ($state) => rtrim(rtrim(number_format((float) ($state ?? 0), 4, '.', ','), '0'), '.') . ' Sheet')
+                        ->weight('bold'),
+                    Infolists\Components\TextEntry::make('stock.total_masuk')
+                        ->label('Total Masuk (IN)')
+                        ->formatStateUsing(fn ($state) => rtrim(rtrim(number_format((float) ($state ?? 0), 4, '.', ','), '0'), '.') . ' Sheet'),
+                    Infolists\Components\TextEntry::make('stock.total_keluar')
+                        ->label('Total Keluar (OUT)')
+                        ->formatStateUsing(fn ($state) => rtrim(rtrim(number_format((float) ($state ?? 0), 4, '.', ','), '0'), '.') . ' Sheet'),
+                    Infolists\Components\TextEntry::make('stock.total_nilai_stok')
+                        ->label('Total Nilai Stok')
+                        ->default(0)
+                        ->money('IDR'),
                 ]),
 
             Infolists\Components\Section::make('Pembelian & Status')
@@ -353,9 +405,16 @@ class MasterMaterialPlateResource extends Resource
         return array_values(array_unique(array_merge(self::SARAN_TIPE_PLATE, $existing)));
     }
 
+    public static function getEloquentQuery(): Builder
+    {
+        return parent::getEloquentQuery()->with(['stock', 'satuan', 'supplier']);
+    }
+
     public static function getRelations(): array
     {
-        return [];
+        return [
+            MovementsRelationManager::class,
+        ];
     }
 
     public static function getPages(): array

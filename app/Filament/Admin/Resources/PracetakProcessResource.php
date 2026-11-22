@@ -27,7 +27,7 @@ class PracetakProcessResource extends Resource
 {
     protected static ?string $model = PracetakProcess::class;
     protected static ?string $navigationGroup = 'Pra Cetak';
-    protected static ?string $navigationLabel = 'Pra Cetak';
+    protected static ?string $navigationLabel = 'Proses Pra Cetak';
     protected static ?int $navigationSort = 1;
     protected static ?string $pluralLabel = 'Proses Pra Cetak';
     protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
@@ -422,7 +422,13 @@ class PracetakProcessResource extends Resource
                                     ->label('Operator Pra Cetak')
                                     ->relationship('operator', 'nama_operator')
                                     ->searchable()
-                                    ->preload(),
+                                    ->preload()
+                                    ->createOptionForm([
+                                        Forms\Components\TextInput::make('nama_operator')
+                                            ->label('Nama Operator Pra Cetak')
+                                            ->required()
+                                            ->maxLength(255),
+                                    ]),
 
                                 Forms\Components\Select::make('mesin_id')
                                     ->label('Mesin Pra Cetak / Output CTP')
@@ -430,6 +436,25 @@ class PracetakProcessResource extends Resource
                                     ->searchable()
                                     ->preload()
                                     ->live()
+                                    ->createOptionForm([
+                                        Forms\Components\TextInput::make('nama_mesin')->required()->maxLength(255),
+                                        Forms\Components\TextInput::make('jenis_mesin')->required()->maxLength(255),
+                                        Forms\Components\TextInput::make('kapasitas')->maxLength(100),
+                                        Forms\Components\Select::make('proses')
+                                            ->options([
+                                                'ctp'          => 'CTP',
+                                                'setting_film' => 'Setting Film',
+                                                'plate_making' => 'Plate Making',
+                                            ])
+                                            ->default('ctp')
+                                            ->required(),
+                                        Forms\Components\TextInput::make('tarif_per_plate')
+                                            ->label('Tarif Proses / Plate (Rp)')
+                                            ->prefix('Rp')
+                                            ->numeric()
+                                            ->default(0),
+                                        Forms\Components\Hidden::make('status')->default('aktif'),
+                                    ])
                                     ->afterStateUpdated(function ($state, Set $set, Get $get) {
                                         if (! $state) {
                                             return;

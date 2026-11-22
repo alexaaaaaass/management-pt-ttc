@@ -2,6 +2,8 @@
 
 namespace App\Filament\Admin\Resources\PracetakProcessResource\Pages;
 
+use App\Filament\Admin\Resources\MesinPraCetakResource;
+use App\Filament\Admin\Resources\OperatorPraCetakResource;
 use App\Filament\Admin\Resources\PracetakProcessResource;
 use App\Filament\Admin\Widgets\PracetakOverviewWidget;
 use App\Filament\Admin\Widgets\PracetakStageChart;
@@ -19,6 +21,22 @@ class ListPracetakProcesses extends ListRecords
     protected function getHeaderActions(): array
     {
         return [
+            Actions\ActionGroup::make([
+                Actions\Action::make('kelola_mesin')
+                    ->label('Master Mesin Pra Cetak')
+                    ->icon('heroicon-o-cog-6-tooth')
+                    ->url(MesinPraCetakResource::getUrl('index')),
+
+                Actions\Action::make('kelola_operator')
+                    ->label('Master Operator Pra Cetak')
+                    ->icon('heroicon-o-user')
+                    ->url(OperatorPraCetakResource::getUrl('index')),
+            ])
+                ->label('Master Mesin & Operator')
+                ->icon('heroicon-o-wrench-screwdriver')
+                ->color('gray')
+                ->button(),
+
             Actions\CreateAction::make()
                 ->label('Buat Proses Pra Cetak'),
         ];

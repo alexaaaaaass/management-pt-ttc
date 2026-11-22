@@ -22,6 +22,8 @@ class MesinPraCetakResource extends Resource
 
     protected static ?string $navigationGroup = 'Pra Cetak';
 
+    protected static bool $shouldRegisterNavigation = false;
+
     public static function form(Form $form): Form
     {
         return $form->schema([
