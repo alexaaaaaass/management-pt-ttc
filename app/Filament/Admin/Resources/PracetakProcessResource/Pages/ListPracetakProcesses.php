@@ -2,8 +2,8 @@
 
 namespace App\Filament\Admin\Resources\PracetakProcessResource\Pages;
 
+use App\Filament\Admin\Pages\DashboardPraCetak;
 use App\Filament\Admin\Resources\PracetakProcessResource;
-use App\Filament\Admin\Widgets\PracetakOverviewWidget;
 use App\Models\PracetakProcess;
 use Filament\Actions;
 use Filament\Resources\Components\Tab;
@@ -17,15 +17,14 @@ class ListPracetakProcesses extends ListRecords
     protected function getHeaderActions(): array
     {
         return [
+            Actions\Action::make('dashboard_pracetak')
+                ->label('Dashboard Pra Cetak')
+                ->icon('heroicon-o-presentation-chart-bar')
+                ->color('gray')
+                ->url(DashboardPraCetak::getUrl()),
+
             Actions\CreateAction::make()
                 ->label('Buat Proses Pra Cetak'),
-        ];
-    }
-
-    protected function getHeaderWidgets(): array
-    {
-        return [
-            PracetakOverviewWidget::class,
         ];
     }
 

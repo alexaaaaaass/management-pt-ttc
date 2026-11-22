@@ -3,6 +3,7 @@
 namespace App\Filament\Admin\Resources\InvPaymentResource\Pages;
 
 use App\Filament\Admin\Resources\InvPaymentResource;
+use App\Filament\Admin\Widgets\PiutangJatuhTempoWidget;
 use Filament\Actions;
 use Filament\Resources\Pages\ListRecords;
 
@@ -14,6 +15,13 @@ class ListInvPayments extends ListRecords
     {
         return [
             Actions\CreateAction::make(),
+        ];
+    }
+
+    protected function getHeaderWidgets(): array
+    {
+        return [
+            PiutangJatuhTempoWidget::class,
         ];
     }
 }

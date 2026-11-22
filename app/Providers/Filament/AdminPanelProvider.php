@@ -2,15 +2,10 @@
 
 namespace App\Providers\Filament;
 
-use App\Filament\Admin\Resources\AdminResource\Widgets\PemasukanChart;
-use App\Filament\Admin\Resources\AdminResource\Widgets\PengeluaranChart;
 use App\Filament\Admin\Resources\AdminResource\Widgets\ProductionMonitoringWidget;
 use App\Filament\Admin\Widgets\OrderOperationsOverview;
-use App\Filament\Admin\Widgets\PiutangJatuhTempoWidget;
 use App\Filament\Admin\Widgets\StatistikPembelianChart;
 use App\Filament\Admin\Widgets\StatistikPenjualanChart;
-use App\Filament\Admin\Widgets\StatsOverview;
-use App\Filament\Admin\Widgets\StockMinimumAlertWidget;
 use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\DisableBladeIconComponents;
 use Filament\Http\Middleware\DispatchServingFilamentEvent;
@@ -107,16 +102,14 @@ class AdminPanelProvider extends PanelProvider
             ->plugins([
                 \BezhanSalleh\FilamentShield\FilamentShieldPlugin::make(),
             ])
-            ->discoverWidgets(in: app_path('Filament/Admin/Widgets'), for: 'App\\Filament\\Admin\\Widgets')
+            // Daftarkan semua widget sebagai Livewire component (untuk Header Widgets di masing-masing modul)
+            // tanpa menumpuk semuanya ke Dashboard Utama
+            ->discoverLivewireComponents(in: app_path('Filament/Admin/Widgets'), for: 'App\\Filament\\Admin\\Widgets')
+            ->discoverLivewireComponents(in: app_path('Filament/Admin/Resources/AdminResource/Widgets'), for: 'App\\Filament\\Admin\\Resources\\AdminResource\\Widgets')
             ->widgets([
-                StatsOverview::class,
                 OrderOperationsOverview::class,
                 StatistikPenjualanChart::class,
                 StatistikPembelianChart::class,
-                PemasukanChart::class,
-                PengeluaranChart::class,
-                PiutangJatuhTempoWidget::class,
-                StockMinimumAlertWidget::class,
                 ProductionMonitoringWidget::class,
             ])
             ->middleware([

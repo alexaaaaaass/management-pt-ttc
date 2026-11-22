@@ -67,20 +67,32 @@ class StatsOverview extends BaseWidget
     {
         try {
             if (Schema::hasTable('master_coas')) {
-                $total = (float) MasterCOA::query()
+                $cashCoaIds = MasterCOA::query()
                     ->where(function ($q) {
-                        $q->where('kode_akun', 'like', '111%')
+                        $q->where('kode_akun', 'like', '101.00%')
+                            ->orWhere('kode_akun', 'like', '101.10%')
+                            ->orWhere('kode_akun', 'like', '111%')
                             ->orWhere('kode_akun', 'like', '110%')
-                            ->orWhere('nama_akun', 'like', '%Kas%')
-                            ->orWhere('nama_akun', 'like', '%Bank%')
-                            ->orWhere('account_type', 'like', '%Cash%')
+                            ->orWhere('account_class', 'like', '%Cash%')
                             ->orWhere('account_class', 'like', '%Bank%');
                     })
                     ->where('status', 'aktif')
-                    ->sum(DB::raw('COALESCE(saldo_debit, 0) - COALESCE(saldo_kredit, 0)'));
+                    ->pluck('id');
 
-                if ($total > 0) {
-                    return (float) $total;
+                if ($cashCoaIds->isNotEmpty()) {
+                    $opening = (float) MasterCOA::whereIn('id', $cashCoaIds)
+                        ->sum(DB::raw('COALESCE(saldo_debit, 0) - COALESCE(saldo_kredit, 0)'));
+
+                    $movements = Schema::hasTable('coa_movements')
+                        ? (float) DB::table('coa_movements')
+                            ->whereIn('coa_id', $cashCoaIds)
+                            ->sum(DB::raw('COALESCE(debit, 0) - COALESCE(kredit, 0)'))
+                        : 0.0;
+
+                    $total = $opening + $movements;
+                    if ($total > 0) {
+                        return round($total, 2);
+                    }
                 }
             }
 
