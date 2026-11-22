@@ -14,6 +14,15 @@ class PracetakOverviewWidget extends BaseWidget
 
     protected static ?string $pollingInterval = null;
 
+    protected int | string | array $columnSpan = 'full';
+
+    protected int | string | array $columns = [
+        'default' => 1,
+        'sm' => 2,
+        'lg' => 4,
+        'xl' => 4,
+    ];
+
     protected function getStats(): array
     {
         $counts = PracetakProcess::query()
