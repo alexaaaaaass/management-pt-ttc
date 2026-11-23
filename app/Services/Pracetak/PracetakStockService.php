@@ -147,6 +147,147 @@ class PracetakStockService
     }
 
     /**
+     * Terima stok Material Plate Mentah secara otomatis dari alur baku PR -> PO -> Penerimaan Barang (LPB).
+     * Menambah saldo PracetakMaterialStock, memperbarui Weighted Average Cost berdasarkan harga PO, dan mencatat Ledger IN.
+     */
+    public function receiveFromLpb(
+        MasterMaterialPlate $plate,
+        \Illuminate\Database\Eloquent\Model $reference,
+        float $qty,
+        float $unitPrice,
+        ?int $supplierId = null,
+        ?int $userId = null,
+        ?string $nomorTransaksi = null,
+        ?string $tanggal = null,
+        ?string $catatan = null
+    ): PracetakMaterialStock {
+        return DB::transaction(function () use ($plate, $reference, $qty, $unitPrice, $supplierId, $userId, $nomorTransaksi, $tanggal, $catatan) {
+            $qty = round(max(0, $qty), 4);
+            if ($qty <= 0) {
+                throw new \DomainException('Kuantitas penerimaan plate harus lebih dari 0.');
+            }
+
+            $harga = $unitPrice > 0 ? round($unitPrice, 2) : round((float) $plate->harga_beli, 2);
+            $subtotal = round($qty * $harga, 2);
+
+            $stock = PracetakMaterialStock::firstOrCreate(
+                ['master_material_plate_id' => $plate->id],
+                [
+                    'stok_sheet_utuh'  => 0,
+                    'total_masuk'      => 0,
+                    'total_keluar'     => 0,
+                    'total_nilai_stok' => 0,
+                    'harga_terakhir'   => $harga,
+                ]
+            );
+
+            $stock = PracetakMaterialStock::where('id', $stock->id)->lockForUpdate()->first();
+
+            $saldoSebelum = (float) $stock->stok_sheet_utuh;
+            $saldoSetelah = round($saldoSebelum + $qty, 4);
+
+            $stock->stok_sheet_utuh = $saldoSetelah;
+            $stock->total_masuk = round((float) $stock->total_masuk + $qty, 4);
+            $stock->total_nilai_stok = round((float) $stock->total_nilai_stok + $subtotal, 2);
+            $stock->harga_terakhir = $harga;
+            $stock->last_movement_at = now();
+            $stock->save();
+
+            PracetakMaterialMovement::create([
+                'master_material_plate_id' => $plate->id,
+                'tanggal'                  => $tanggal ?: now()->toDateString(),
+                'nomor_transaksi'          => $nomorTransaksi ?: ('LPB-' . $reference->getKey()),
+                'jenis_transaksi'          => 'IN',
+                'referensi_type'           => get_class($reference),
+                'referensi_id'             => $reference->getKey(),
+                'qty_masuk'                => $qty,
+                'qty_keluar'               => 0,
+                'saldo_sebelum'            => $saldoSebelum,
+                'saldo_setelah'            => $saldoSetelah,
+                'harga_satuan'             => $harga,
+                'total_nominal'            => $subtotal,
+                'supplier_id'              => $supplierId ?: $plate->supplier_id,
+                'user_id'                  => $userId ?: auth()->id(),
+                'catatan'                  => $catatan ?: 'Penerimaan Material Plate via LPB',
+            ]);
+
+            return $stock->fresh();
+        });
+    }
+
+    /**
+     * Rollback / pengurangan stok Material Plate Mentah saat edit/hapus LPB atau Retur Eksternal ke supplier.
+     */
+    public function rollbackFromLpb(
+        MasterMaterialPlate $plate,
+        \Illuminate\Database\Eloquent\Model $reference,
+        float $qty,
+        float $unitPrice = 0.0,
+        ?int $supplierId = null,
+        ?int $userId = null,
+        ?string $nomorTransaksi = null,
+        ?string $catatan = null,
+        string $jenisTransaksi = 'ADJUSTMENT'
+    ): PracetakMaterialStock {
+        return DB::transaction(function () use ($plate, $reference, $qty, $unitPrice, $supplierId, $userId, $nomorTransaksi, $catatan, $jenisTransaksi) {
+            $qty = round(max(0, $qty), 4);
+            if ($qty <= 0) {
+                throw new \DomainException('Kuantitas pengurangan plate harus lebih dari 0.');
+            }
+
+            $stock = PracetakMaterialStock::where('master_material_plate_id', $plate->id)
+                ->lockForUpdate()
+                ->first();
+
+            if (! $stock || (float) $stock->stok_sheet_utuh < $qty) {
+                $avail = $stock ? number_format((float) $stock->stok_sheet_utuh, 4, '.', ',') : '0';
+                throw new \DomainException("Saldo stok plate '{$plate->nama_material}' ({$avail} sheet) tidak mencukupi untuk dikurangi {$qty} sheet.");
+            }
+
+            $harga = $unitPrice > 0
+                ? round($unitPrice, 2)
+                : ((float) $stock->harga_rata_rata > 0 ? round((float) $stock->harga_rata_rata, 2) : round((float) $plate->harga_beli, 2));
+            $subtotal = round($qty * $harga, 2);
+
+            $saldoSebelum = (float) $stock->stok_sheet_utuh;
+            $saldoSetelah = max(0, round($saldoSebelum - $qty, 4));
+            $nilaiSetelah = $saldoSetelah <= 0.0001
+                ? 0.0
+                : max(0, round((float) $stock->total_nilai_stok - $subtotal, 2));
+
+            $stock->stok_sheet_utuh = $saldoSetelah;
+            if ($jenisTransaksi === 'ADJUSTMENT') {
+                $stock->total_masuk = max(0, round((float) $stock->total_masuk - $qty, 4));
+            } else {
+                $stock->total_keluar = round((float) $stock->total_keluar + $qty, 4);
+            }
+            $stock->total_nilai_stok = $nilaiSetelah;
+            $stock->last_movement_at = now();
+            $stock->save();
+
+            PracetakMaterialMovement::create([
+                'master_material_plate_id' => $plate->id,
+                'tanggal'                  => now()->toDateString(),
+                'nomor_transaksi'          => $nomorTransaksi ?: ('REV-LPB-' . $reference->getKey()),
+                'jenis_transaksi'          => $jenisTransaksi,
+                'referensi_type'           => get_class($reference),
+                'referensi_id'             => $reference->getKey(),
+                'qty_masuk'                => 0,
+                'qty_keluar'               => $qty,
+                'saldo_sebelum'            => $saldoSebelum,
+                'saldo_setelah'            => $saldoSetelah,
+                'harga_satuan'             => $harga,
+                'total_nominal'            => $subtotal,
+                'supplier_id'              => $supplierId ?: $plate->supplier_id,
+                'user_id'                  => $userId ?: auth()->id(),
+                'catatan'                  => $catatan ?: 'Rollback Penerimaan Plate via LPB',
+            ]);
+
+            return $stock->fresh();
+        });
+    }
+
+    /**
      * Posting pemakaian bahan plate (Tahap C Plate Making / Remake Rusak / Prove) — Mutasi OUT.
      * Mendukung pemotongan fraksi sheet desimal (misal 0.4500 sheet) maupun sheet utuh (1.0000 sheet).
      *

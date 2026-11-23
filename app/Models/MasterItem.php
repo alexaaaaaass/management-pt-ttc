@@ -63,4 +63,12 @@ class MasterItem extends Model
             'item_id'
         );
     }
+
+    public function materialPlate()
+    {
+        return $this->hasOne(
+            MasterMaterialPlate::class,
+            'master_item_id'
+        );
+    }
 }

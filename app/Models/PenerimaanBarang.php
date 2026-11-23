@@ -70,15 +70,14 @@ class PenerimaanBarang extends Model
             }
 
             $pb->loadMissing(['items.purchaseOrderItem', 'purchaseOrder']);
-            $stockService = app(\App\Services\Inventory\StockService::class);
 
             foreach ($pb->items as $item) {
                 $poItem = $item->purchaseOrderItem;
                 if ($poItem && (float) $item->qty_terima > 0) {
-                    $stockService->decreaseStock(
-                        itemId: $poItem->item_id,
+                    $pb->applyStockMovement(
+                        poItem: $poItem,
                         qty: (float) $item->qty_terima,
-                        reference: $pb,
+                        isIncrease: false,
                         remarks: 'Rollback Hapus Penerimaan Barang - ' . $pb->no_penerimaan
                     );
                     $poItem->decrement('qty_received', $item->qty_terima);
@@ -91,22 +90,92 @@ class PenerimaanBarang extends Model
         });
     }
 
+    /**
+     * Auto-routing stok dari LPB:
+     * - Jika item terhubung ke MasterMaterialPlate -> masuk/rollback ke Gudang Plate Prepress (PracetakMaterialStock).
+     * - Selain itu -> masuk/rollback ke Gudang Umum (MaterialStock).
+     */
+    public function applyStockMovement(
+        PurchaseOrderItem $poItem,
+        float $qty,
+        bool $isIncrease,
+        string $remarks
+    ): void {
+        if ($qty <= 0) {
+            return;
+        }
+
+        $plate = MasterMaterialPlate::where('master_item_id', $poItem->item_id)->first();
+
+        if ($plate) {
+            $pracetakStock = app(\App\Services\Pracetak\PracetakStockService::class);
+            $unitPrice = (float) ($poItem->price ?? 0) > 0
+                ? (float) $poItem->price
+                : (float) $plate->harga_beli;
+            $supplierId = $this->purchaseOrder?->supplier_id ?: $plate->supplier_id;
+            $noRef = $this->no_penerimaan ?: ($this->no_surat_jalan ?: ('LPB-' . $this->id));
+
+            if ($isIncrease) {
+                $pracetakStock->receiveFromLpb(
+                    plate: $plate,
+                    reference: $this,
+                    qty: $qty,
+                    unitPrice: $unitPrice,
+                    supplierId: $supplierId,
+                    userId: auth()->id(),
+                    nomorTransaksi: $noRef,
+                    tanggal: $this->tanggal_terima ? Carbon::parse($this->tanggal_terima)->toDateString() : now()->toDateString(),
+                    catatan: $remarks
+                );
+            } else {
+                $pracetakStock->rollbackFromLpb(
+                    plate: $plate,
+                    reference: $this,
+                    qty: $qty,
+                    unitPrice: $unitPrice,
+                    supplierId: $supplierId,
+                    userId: auth()->id(),
+                    nomorTransaksi: 'REV-' . $noRef,
+                    catatan: $remarks
+                );
+            }
+
+            return;
+        }
+
+        $stockService = app(\App\Services\Inventory\StockService::class);
+        if ($isIncrease) {
+            $stockService->increaseStock(
+                itemId: $poItem->item_id,
+                qty: $qty,
+                reference: $this,
+                remarks: $remarks
+            );
+        } else {
+            $stockService->decreaseStock(
+                itemId: $poItem->item_id,
+                qty: $qty,
+                reference: $this,
+                remarks: $remarks
+            );
+        }
+    }
+
     public function processReceiving(): void
     {
-        $this->loadMissing('items.purchaseOrderItem');
-        $stockService = app(\App\Services\Inventory\StockService::class);
+        $this->loadMissing(['items.purchaseOrderItem', 'purchaseOrder']);
 
         foreach ($this->items as $item) {
             $poItem = $item->purchaseOrderItem;
 
-            if (! $poItem) {
+            if (! $poItem || (float) $item->qty_terima <= 0) {
                 continue;
             }
 
-            $stockService->increaseStock(
-                itemId: $poItem->item_id,
+            $this->applyStockMovement(
+                poItem: $poItem,
                 qty: (float) $item->qty_terima,
-                reference: $this,
+                isIncrease: true,
                 remarks: 'Penerimaan Barang PO - ' . ($this->no_penerimaan ?: $this->no_surat_jalan)
             );
 

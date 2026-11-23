@@ -66,7 +66,7 @@ class PurchaseRequestResource extends Resource
                           Forms\Components\Select::make('item_id')
     ->label('Item')
     ->relationship('item', 'nama_master_item')
-
+    ->searchable()
     ->preload()
     ->reactive()
     ->required()

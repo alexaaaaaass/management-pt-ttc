@@ -36,7 +36,12 @@ class PenerimaanBarangResource extends Resource
 
                       Forms\Components\Select::make('purchase_order_id')
     ->label('ID Purchase Order')
-    ->relationship('purchaseOrder', 'no_po')
+    ->relationship(
+        name: 'purchaseOrder',
+        titleAttribute: 'no_po',
+        modifyQueryUsing: fn (\Illuminate\Database\Eloquent\Builder $query) => $query->orderByDesc('created_at')->orderByDesc('id')
+    )
+    ->searchable()
     ->preload()
     ->live()
     ->afterStateUpdated(function ($state, callable $set) {
@@ -48,34 +53,35 @@ class PenerimaanBarangResource extends Resource
 
     $po = \App\Models\PurchaseOrder::with([
         'items.item.satuan',
+        'items.item.materialPlate',
     ])->find($state);
 
     if (!$po) return;
 
     $items = $po->items->map(function ($item) {
+        $routeTag = $item->item?->materialPlate ? ' [STOK PLATE PREPRESS]' : '';
 
-       return [
+        return [
+            'purchase_order_item_id' => $item->id,
 
-    'purchase_order_item_id'=>$item->id,
+            'nama_item_display' =>
+                ($item->item?->kode_master_item ?? '-')
+                . ' - ' .
+                ($item->item?->nama_master_item ?? '-')
+                . $routeTag,
 
-    'nama_item_display'=>
-        ($item->item->kode_material ?? '-')
-        .' - '.
-        ($item->item->nama_master_item ?? '-'),
+            'qty_po_display' =>
+                $item->qty_po . ' | ' . ($item->item?->satuan?->nama_satuan ?? '-'),
 
-    'qty_po_display'=>
-        $item->qty_po.' | '.$item->item->satuan->nama_satuan,
+            'qty_received' => $item->qty_received,
 
-    'qty_received'=>$item->qty_received,
+            'qty_sebelumnya_display' =>
+                $item->qty_received . ' | ' . ($item->item?->satuan?->nama_satuan ?? '-'),
 
-    'qty_sebelumnya_display'=>
-        $item->qty_received.' | '.$item->item->satuan->nama_satuan,
+            'qty_terima' => 0,
 
-    'qty_terima'=>0,
-
-    'catatan_po_display'=>$item->catatan,
-
-];
+            'catatan_po_display' => $item->catatan,
+        ];
     })->toArray();
 
     $set('items', $items);
@@ -207,6 +213,7 @@ class PenerimaanBarangResource extends Resource
     public static function table(Table $table): Table
     {
         return $table
+            ->defaultSort('created_at', 'desc')
             ->columns([
 
                 Tables\Columns\TextColumn::make('no_penerimaan')
@@ -223,6 +230,36 @@ class PenerimaanBarangResource extends Resource
 
                 Tables\Columns\TextColumn::make('nama_pengirim')
                     ->label('Pengirim'),
+
+                Tables\Columns\TextColumn::make('tujuan_stok')
+                    ->label('Tujuan Stok')
+                    ->badge()
+                    ->getStateUsing(function (PenerimaanBarang $record): string {
+                        $record->loadMissing('items.purchaseOrderItem.item.materialPlate');
+                        $hasPlate = false;
+                        $hasGeneral = false;
+                        foreach ($record->items as $it) {
+                            if ($it->purchaseOrderItem?->item?->materialPlate) {
+                                $hasPlate = true;
+                            } else {
+                                $hasGeneral = true;
+                            }
+                        }
+
+                        if ($hasPlate && $hasGeneral) {
+                            return 'Gudang Umum + Plate Prepress';
+                        }
+                        if ($hasPlate) {
+                            return 'Stok Plate Prepress';
+                        }
+
+                        return 'Gudang Umum';
+                    })
+                    ->color(fn (string $state): string => match ($state) {
+                        'Stok Plate Prepress'         => 'warning',
+                        'Gudang Umum + Plate Prepress' => 'info',
+                        default                        => 'success',
+                    }),
 
             ])
           ->actions([

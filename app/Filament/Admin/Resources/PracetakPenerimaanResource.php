@@ -23,9 +23,11 @@ class PracetakPenerimaanResource extends Resource
 {
     protected static ?string $model = PracetakPenerimaan::class;
 
+    protected static bool $shouldRegisterNavigation = false;
+
     protected static ?string $navigationGroup = 'Pra Cetak';
 
-    protected static ?string $navigationLabel = 'Penerimaan Plate';
+    protected static ?string $navigationLabel = 'Penerimaan Plate (Manual / Saldo Awal)';
 
     protected static ?string $navigationIcon = 'heroicon-o-arrow-down-tray';
 

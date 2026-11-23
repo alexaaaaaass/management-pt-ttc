@@ -16,7 +16,7 @@ class EditPenerimaanBarang extends EditRecord
 
     // 🔥 ambil dari penerimaan (bukan PO)
     $items = $this->record->items()
-        ->with(['purchaseOrderItem.item.satuan'])
+        ->with(['purchaseOrderItem.item.satuan', 'purchaseOrderItem.item.materialPlate'])
         ->get();
 
     // 🔥 kalau BELUM ADA (misal data lama)
@@ -24,60 +24,54 @@ class EditPenerimaanBarang extends EditRecord
 
         $po = PurchaseOrder::with([
             'items.item.satuan',
+            'items.item.materialPlate',
         ])->find($this->record->purchase_order_id);
 
         if (!$po) return;
 
-       $items = $items->map(function ($item) {
-    return [
-        'purchase_order_item_id' => $item->purchase_order_item_id,
+        $items = $po->items->map(function ($poItem) {
+            $routeTag = $poItem->item?->materialPlate ? ' [STOK PLATE PREPRESS]' : '';
 
-        'nama_item_display' =>
-            ($item->purchaseOrderItem->item->kode_material ?? '-') . ' - ' .
-            ($item->purchaseOrderItem->item->nama_master_item ?? '-'),
-
-        'qty_po_display' =>
-            number_format($item->purchaseOrderItem->qty_po ?? 0, 2) . ' | ' .
-            ($item->purchaseOrderItem->item->satuan->nama_satuan ?? '-'),
-
-        'qty_sebelumnya_display' =>
-            number_format($item->qty_terima ?? 0, 2) . ' | ' .
-            ($item->purchaseOrderItem->item->satuan->nama_satuan ?? '-'),
-
-        'qty_terima' => $item->qty_terima,
-        'catatan_item' => $item->catatan_item,
-        'tgl_exp' => $item->tgl_exp,
-        'no_lot' => $item->no_lot,
-
-        'catatan_po_display' => $item->purchaseOrderItem->catatan ?? '-',
-    ];
-});
+            return [
+                'purchase_order_item_id' => $poItem->id,
+                'nama_item_display'      => ($poItem->item?->kode_master_item ?? '-') . ' - ' . ($poItem->item?->nama_master_item ?? '-') . $routeTag,
+                'qty_po_display'         => number_format((float) ($poItem->qty_po ?? 0), 2) . ' | ' . ($poItem->item?->satuan?->nama_satuan ?? '-'),
+                'qty_sebelumnya_display' => number_format((float) ($poItem->qty_received ?? 0), 2) . ' | ' . ($poItem->item?->satuan?->nama_satuan ?? '-'),
+                'qty_terima'             => 0,
+                'catatan_item'           => null,
+                'tgl_exp'                => null,
+                'no_lot'                 => null,
+                'catatan_po_display'     => $poItem->catatan ?? '-',
+            ];
+        });
 
     } else {
 
         // 🔥 mapping dari DB (INI YANG BENAR)
         $items = $items->map(function ($item) {
+            $routeTag = $item->purchaseOrderItem?->item?->materialPlate ? ' [STOK PLATE PREPRESS]' : '';
+
             return [
                 'purchase_order_item_id' => $item->purchase_order_item_id,
 
                 'nama_item_display' =>
-                    ($item->purchaseOrderItem->item->kode_material ?? '-') . ' - ' .
-                    ($item->purchaseOrderItem->item->nama_master_item ?? '-'),
+                    ($item->purchaseOrderItem?->item?->kode_master_item ?? '-') . ' - ' .
+                    ($item->purchaseOrderItem?->item?->nama_master_item ?? '-') . $routeTag,
 
                 'qty_po_display' =>
-                    number_format($item->purchaseOrderItem->qty_po ?? 0, 2) . ' | ' .
-                    ($item->purchaseOrderItem->item->satuan->nama_satuan ?? '-'),
+                    number_format($item->purchaseOrderItem?->qty_po ?? 0, 2) . ' | ' .
+                    ($item->purchaseOrderItem?->item?->satuan?->nama_satuan ?? '-'),
 
                 'qty_sebelumnya_display' =>
                     number_format($item->qty_terima ?? 0, 2) . ' | ' .
-                    ($item->purchaseOrderItem->item->satuan->nama_satuan ?? '-'),
+                    ($item->purchaseOrderItem?->item?->satuan?->nama_satuan ?? '-'),
 
                 'qty_terima' => $item->qty_terima,
                 'catatan_item' => $item->catatan_item,
                 'tgl_exp' => $item->tgl_exp,
                 'no_lot' => $item->no_lot,
 
-                'catatan_po_display' => $item->purchaseOrderItem->catatan ?? '-',
+                'catatan_po_display' => $item->purchaseOrderItem?->catatan ?? '-',
             ];
         });
     }
@@ -106,21 +100,21 @@ class EditPenerimaanBarang extends EditRecord
 
     protected function beforeSave(): void
     {
-        $stockService = app(\App\Services\Inventory\StockService::class);
+        $this->record->loadMissing(['items.purchaseOrderItem', 'purchaseOrder']);
 
-        // Rollback stock lama & decrement qty_received PO
+        // Rollback stock lama (auto-route: Material Umum / Material Plate Prepress) & decrement qty_received PO
         foreach ($this->record->items as $oldItem) {
-            $poItem = \App\Models\PurchaseOrderItem::find($oldItem->purchase_order_item_id);
+            $poItem = $oldItem->purchaseOrderItem;
 
             if (! $poItem) {
                 continue;
             }
 
             if ((float) $oldItem->qty_terima > 0) {
-                $stockService->decreaseStock(
-                    itemId: $poItem->item_id,
+                $this->record->applyStockMovement(
+                    poItem: $poItem,
                     qty: (float) $oldItem->qty_terima,
-                    reference: $this->record,
+                    isIncrease: false,
                     remarks: 'Rollback Penerimaan Barang Edit - ' . ($this->record->no_penerimaan ?: $this->record->no_surat_jalan)
                 );
 

@@ -300,7 +300,11 @@ public static function form(Form $form): Form
                                 Grid::make(3)->schema([
                                     Select::make('master_item_id')
                                         ->label('Material')
-                                        ->relationship('item', 'nama_master_item')
+                                        ->relationship(
+                                            name: 'item',
+                                            titleAttribute: 'nama_master_item',
+                                            modifyQueryUsing: fn (Builder $query) => $query->whereDoesntHave('materialPlate')
+                                        )
                                         ->searchable()
                                         ->preload()
                                         ->required(),

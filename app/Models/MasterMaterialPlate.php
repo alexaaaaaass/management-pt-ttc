@@ -12,6 +12,7 @@ class MasterMaterialPlate extends Model
     protected $table = 'master_material_plates';
 
     protected $fillable = [
+        'master_item_id',
         'kode_material',
         'nama_material',
         'brand',
@@ -46,6 +47,11 @@ class MasterMaterialPlate extends Model
     public function supplier(): BelongsTo
     {
         return $this->belongsTo(MasterSupplier::class, 'supplier_id');
+    }
+
+    public function masterItem(): BelongsTo
+    {
+        return $this->belongsTo(MasterItem::class, 'master_item_id');
     }
 
     public function satuan(): BelongsTo
@@ -107,5 +113,78 @@ class MasterMaterialPlate extends Model
         $next = $last ? ((int) substr($last, 4)) + 1 : 1;
 
         return 'MPL-' . str_pad((string) $next, 4, '0', STR_PAD_LEFT);
+    }
+
+    /**
+     * Sinkronkan entri pasangan di master_items agar plate mentah dapat dibeli melalui alur baku PR -> PO -> LPB -> PO Billing.
+     */
+    public function syncLinkedMasterItem(): ?MasterItem
+    {
+        if (! \Illuminate\Support\Facades\Schema::hasColumn('master_material_plates', 'master_item_id')) {
+            return null;
+        }
+
+        $category = CategoryItem::firstOrCreate(
+            ['kode_item_category' => 'PLT'],
+            ['nama_category' => 'Material Plate (Pra Cetak)']
+        );
+
+        $type = TypeItem::firstOrCreate(
+            ['kode_type_item' => 'PLT-RAW'],
+            [
+                'nama_type_item'   => 'Material Plate Mentah',
+                'category_item_id' => $category->id,
+            ]
+        );
+
+        $satuanId = $this->satuan_id
+            ?: MasterSatuan::where('nama_satuan', 'like', '%Sheet%')
+                ->orWhere('nama_satuan', 'like', '%Lembar%')
+                ->value('id')
+            ?: MasterSatuan::query()->value('id');
+
+        if (! $satuanId) {
+            return null;
+        }
+
+        $displayName = "[PLATE] {$this->nama_material} ({$this->ukuran_sheet})";
+        $payload = [
+            'kode_master_item' => $this->kode_material,
+            'nama_master_item' => $displayName,
+            'satuan_id'        => $satuanId,
+            'category_item_id' => $category->id,
+            'type_item_id'     => $type->id,
+            'panjang'          => $this->panjang_sheet_mm,
+            'lebar'            => $this->lebar_sheet_mm,
+            'tinggi'           => $this->ketebalan_mm,
+        ];
+
+        $masterItem = $this->master_item_id ? MasterItem::find($this->master_item_id) : null;
+        if (! $masterItem) {
+            $masterItem = MasterItem::where('kode_master_item', $this->kode_material)->first();
+        }
+
+        if ($masterItem) {
+            $masterItem->update($payload);
+        } else {
+            $masterItem = MasterItem::create($payload);
+        }
+
+        if ((int) $this->master_item_id !== (int) $masterItem->id) {
+            $this->updateQuietly(['master_item_id' => $masterItem->id]);
+        }
+
+        return $masterItem;
+    }
+
+    protected static function booted(): void
+    {
+        static::saved(function (MasterMaterialPlate $plate) {
+            try {
+                $plate->syncLinkedMasterItem();
+            } catch (\Throwable $e) {
+                // Abaikan jika tabel referensi belum siap saat migrasi awal
+            }
+        });
     }
 }

@@ -40,7 +40,7 @@ class PurchaseOrderResource extends Resource
                             ->relationship(
                                 'purchaseRequest',
                                 'nomor_pr',
-                                modifyQueryUsing: fn ($query) => $query->where('status', 'otorisasi')
+                                modifyQueryUsing: fn ($query) => $query->where('status', 'otorisasi')->orderByDesc('created_at')->orderByDesc('id')
                             )
                             ->searchable()
                             ->preload()
@@ -178,14 +178,18 @@ class PurchaseOrderResource extends Resource
                                 $pr = \App\Models\PurchaseRequest::with('items.item')->find($prId);
                                 if (!$pr) return;
 
+                                $pr->loadMissing('items.item.materialPlate');
+
                                 $items = $pr->items->map(function ($item) {
+                                    $refPrice = (float) ($item->item?->materialPlate?->harga_beli ?? 0);
+
                                     return [
                                         'item_id' => $item->item_id,
                                         'nama_item' => $item->item->nama_master_item,
                                         'qty_pr' => $item->qty,
                                         'qty_po' => 0,
                                         'qty_konversi' => 0,
-                                        'price' => 0,
+                                        'price' => $refPrice > 0 ? (\App\Support\MoneyHelper::format($refPrice, 2) ?? '0') : 0,
                                         'discount' => 0,
                                         'total' => 0,
                                         'satuan' => $item->satuan,

@@ -108,11 +108,11 @@ class PenerimaanBarangService
                     'catatan_item'           => $row['catatan_item'] ?? null,
                 ]);
 
-                // Tambah stok fisik & catat audit mutasi masuk
-                $this->stockService->increaseStock(
-                    itemId: $poItem->item_id,
+                // Auto-route: Material Umum -> MaterialStock, Material Plate -> PracetakMaterialStock
+                $pb->applyStockMovement(
+                    poItem: $poItem,
                     qty: $qtyTerima,
-                    reference: $pb,
+                    isIncrease: true,
                     remarks: 'Penerimaan Barang PO - ' . ($pb->no_penerimaan ?: $pb->no_surat_jalan)
                 );
 
@@ -143,10 +143,10 @@ class PenerimaanBarangService
             foreach ($pb->items as $oldItem) {
                 $poItem = $oldItem->purchaseOrderItem;
                 if ($poItem && (float) $oldItem->qty_terima > 0) {
-                    $this->stockService->decreaseStock(
-                        itemId: $poItem->item_id,
+                    $pb->applyStockMovement(
+                        poItem: $poItem,
                         qty: (float) $oldItem->qty_terima,
-                        reference: $pb,
+                        isIncrease: false,
                         remarks: 'Rollback Edit Penerimaan Barang - ' . $pb->no_penerimaan
                     );
                     $poItem->decrement('qty_received', $oldItem->qty_terima);
@@ -182,10 +182,10 @@ class PenerimaanBarangService
                     'catatan_item'           => $row['catatan_item'] ?? null,
                 ]);
 
-                $this->stockService->increaseStock(
-                    itemId: $poItem->item_id,
+                $pb->applyStockMovement(
+                    poItem: $poItem,
                     qty: $qtyTerima,
-                    reference: $pb,
+                    isIncrease: true,
                     remarks: 'Penerimaan Barang (Update) - ' . $pb->no_penerimaan
                 );
 
@@ -214,10 +214,10 @@ class PenerimaanBarangService
             foreach ($pb->items as $item) {
                 $poItem = $item->purchaseOrderItem;
                 if ($poItem && (float) $item->qty_terima > 0) {
-                    $this->stockService->decreaseStock(
-                        itemId: $poItem->item_id,
+                    $pb->applyStockMovement(
+                        poItem: $poItem,
                         qty: (float) $item->qty_terima,
-                        reference: $pb,
+                        isIncrease: false,
                         remarks: 'Rollback Hapus Penerimaan Barang - ' . $pb->no_penerimaan
                     );
                     $poItem->decrement('qty_received', $item->qty_terima);
@@ -226,6 +226,8 @@ class PenerimaanBarangService
 
             $purchaseOrder = $pb->purchaseOrder;
             $pb->items()->delete();
+            // Clear relasi items agar model hook deleting pada PenerimaanBarang tidak melakukan rollback stok 2 kali
+            $pb->unsetRelation('items');
             $result = (bool) $pb->delete();
 
             if ($purchaseOrder) {

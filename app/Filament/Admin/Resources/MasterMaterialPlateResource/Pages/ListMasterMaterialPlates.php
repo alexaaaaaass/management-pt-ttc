@@ -22,10 +22,11 @@ class ListMasterMaterialPlates extends ListRecords
                 ->url(PracetakMaterialMovementResource::getUrl('index')),
 
             Actions\Action::make('penerimaan_baru')
-                ->label('Penerimaan Plate (IN)')
+                ->label('Saldo Awal / Terima Manual')
                 ->icon('heroicon-o-arrow-down-tray')
-                ->color('success')
-                ->url(PracetakPenerimaanResource::getUrl('create')),
+                ->color('gray')
+                ->tooltip('Untuk input saldo awal / terima tanpa PO. Pembelian rutin gunakan alur PR → PO → Penerimaan Barang (LPB).')
+                ->url(PracetakPenerimaanResource::getUrl('index')),
 
             Actions\CreateAction::make()
                 ->label('Tambah Material Plate'),

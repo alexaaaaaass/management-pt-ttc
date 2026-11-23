@@ -8,16 +8,16 @@ Dokumen ini menjelaskan alur bisnis, pemetaan 4 submenu utama **Modul Pra Cetak*
 
 ```mermaid
 flowchart TD
-    %% 1. Persiapan & Stok Material Plate (Submenu 2 & 3)
-    subgraph SUB2_3["Submenu 2 & 3: Manajemen Bahan Mentah Plate (Terisolasi dari Warehouse Printing)"]
-        M1["Submenu 2: Material & Stok Plate\nDaftar Master Plate: Kode, Brand, Tebal mm, Ukuran Sheet P x L, Harga Acuan\nTampil Saldo Realtime, Harga Rata-rata & Nilai Persediaan"]
-        M2["Submenu 3: Penerimaan Plate\nCatat Kedatangan dari Supplier: No SJ, Invoice, Qty Sheet & Harga Aktual\nStatus Awal: Draft"]
-        M3{"Aksi: Posting Penerimaan\n(Pessimistic Locking)"}
-        M4["Saldo Stok Bertambah (IN)\nHitung Weighted Average Cost / Sheet\nCatat Ledger Immutable di Histori Mutasi Plate"]
+    %% 1. Persiapan & Stok Material Plate (Submenu 2 + Alur Baku PR -> PO -> LPB)
+    subgraph SUB2_3["Submenu 2 + Alur Pembelian Baku PR -> PO -> LPB -> PO Billing"]
+        M1["Submenu 2: Material & Stok Plate\nDaftar Master Plate: Kode, Brand, Tebal mm, Ukuran Sheet P x L, Harga Acuan\nAuto-Sync ke MasterItem [PLATE] | Saldo Realtime, Weighted Avg & Nilai Persediaan"]
+        M2["Alur Pembelian Baku: PR -> PO -> Penerimaan Barang (LPB)\nPilih Item [PLATE] bersama/terpisah dari Kertas & Tinta\nLanjut ke Finance: PO Billing (Hutang AP)"]
+        M3{"Auto-Routing Stok di LPB\n(Item Plate vs Material Umum)"}
+        M4["Saldo Stok Plate Bertambah (IN)\nHitung Weighted Average Cost dari Harga PO\nCatat Ledger Immutable di Buku Besar Mutasi Plate\n(Opsional: Saldo Awal / Terima Manual tanpa PO)"]
 
-        M1 -->|"Dipilih saat pembelian"| M2
+        M1 -->|"Auto-Sync [PLATE] untuk dipilih di PR/PO"| M2
         M2 --> M3
-        M3 -->|"Transaksi Terkunci Read-Only"| M4
+        M3 -->|"Material Plate Mentah"| M4
         M4 -.->|"Update Saldo Realtime di Tabel"| M1
     end
 
@@ -112,9 +112,9 @@ flowchart LR
 
 ---
 
-## 3. Penjelasan 4 Submenu Inti Modul Pra Cetak
+## 3. Penjelasan 3 Submenu Inti Modul Pra Cetak
 
-Seluruh fitur prepress diringkas menjadi **4 submenu utama** di sidebar `PRA CETAK` agar alur kerja operator sederhana dan bebas duplikasi:
+Seluruh fitur prepress kini diringkas menjadi **3 submenu inti** di sidebar `PRA CETAK` karena pembelian & penerimaan plate mentah sudah menyatu ke alur baku **`Purchase Request → Purchase Order → Penerimaan Barang (LPB) → PO Billing`**:
 
 ### 1. Proses Pra Cetak (`PracetakProcessResource.php`)
 - **Peran:** Pusat monitoring & eksekusi harian operator prepress.

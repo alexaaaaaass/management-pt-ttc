@@ -36,9 +36,27 @@ class ExternalReturnService
                 continue;
             }
 
+            $poItem = $pbItem->purchaseOrderItem;
+            $plate = \App\Models\MasterMaterialPlate::where('master_item_id', $poItem->item_id)->first();
+
+            if ($plate) {
+                app(\App\Services\Pracetak\PracetakStockService::class)->rollbackFromLpb(
+                    plate: $plate,
+                    reference: $return,
+                    qty: (float) $item->qty_return,
+                    unitPrice: (float) ($poItem->price ?? 0),
+                    supplierId: $poItem->purchaseOrder?->supplier_id ?: $plate->supplier_id,
+                    userId: auth()->id(),
+                    nomorTransaksi: 'RET-' . ($return->no_return ?: $return->id),
+                    catatan: 'Retur Eksternal ke Supplier (' . ($return->no_return ?: ('#' . $return->id)) . ')',
+                    jenisTransaksi: 'OUT'
+                );
+                continue;
+            }
+
             $stock = MaterialStock::firstOrCreate(
                 [
-                    'item_id' => $pbItem->purchaseOrderItem->item_id,
+                    'item_id' => $poItem->item_id,
                 ],
                 [
                     'on_hand' => 0,
@@ -100,17 +118,33 @@ public function cancel(
         );
 
         foreach ($return->items as $item) {
+            $poItem = $item->penerimaanBarangItem?->purchaseOrderItem;
+            if (! $poItem) {
+                continue;
+            }
+
+            $plate = \App\Models\MasterMaterialPlate::where('master_item_id', $poItem->item_id)->first();
+            if ($plate) {
+                app(\App\Services\Pracetak\PracetakStockService::class)->receiveFromLpb(
+                    plate: $plate,
+                    reference: $return,
+                    qty: (float) $item->qty_return,
+                    unitPrice: (float) ($poItem->price ?? 0),
+                    supplierId: $poItem->purchaseOrder?->supplier_id ?: $plate->supplier_id,
+                    userId: auth()->id(),
+                    nomorTransaksi: 'CXL-RET-' . ($return->no_return ?: $return->id),
+                    catatan: 'Batal Retur Eksternal (' . ($return->no_return ?: ('#' . $return->id)) . ')'
+                );
+                continue;
+            }
 
             $stock = MaterialStock::firstOrCreate(
                 [
-                    'item_id'=>$item
-                        ->penerimaanBarangItem
-                        ->purchaseOrderItem
-                        ->item_id
+                    'item_id' => $poItem->item_id,
                 ],
                 [
-                    'on_hand'=>0,
-                    'allocation'=>0
+                    'on_hand' => 0,
+                    'allocation' => 0,
                 ]
             );
 
