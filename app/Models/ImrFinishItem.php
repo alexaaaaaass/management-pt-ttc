@@ -9,7 +9,7 @@ class ImrFinishItem extends Model
     protected $table = 'imr_finish_items';
 
     protected $fillable = [
-        'imr_id',
+        'imr_finish_id',
         'item_id',
         'total_pesanan',
         'qty_request',
@@ -22,7 +22,7 @@ class ImrFinishItem extends Model
 
     public function imr()
     {
-        return $this->belongsTo(ImrFinish::class, 'imr_id');
+        return $this->belongsTo(ImrFinish::class, 'imr_finish_id');
     }
 
     public function item()
