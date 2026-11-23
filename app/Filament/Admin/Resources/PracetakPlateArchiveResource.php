@@ -3,7 +3,9 @@
 namespace App\Filament\Admin\Resources;
 
 use App\Filament\Admin\Resources\PracetakPlateArchiveResource\Pages;
+use App\Models\IMRPrinting;
 use App\Models\PracetakPlateArchive;
+use App\Services\IMR\IMRPrintingService;
 use Filament\Forms;
 use Filament\Forms\Form;
 use Filament\Notifications\Notification;
@@ -25,6 +27,24 @@ class PracetakPlateArchiveResource extends Resource
     protected static ?string $navigationIcon = 'heroicon-o-folder-open';
 
     protected static ?int $navigationSort = 4;
+
+    public static function getNavigationBadge(): ?string
+    {
+        $pending = IMRPrinting::query()
+            ->whereNotNull('plate_archive_id')
+            ->where('request_plate', true)
+            ->where('plate_approved', true)
+            ->whereNull('plate_issued_at')
+            ->whereIn('status', ['Approved', 'Partial', 'Partial Issued'])
+            ->count();
+
+        return $pending > 0 ? (string) $pending : null;
+    }
+
+    public static function getNavigationBadgeColor(): ?string
+    {
+        return 'warning';
+    }
 
     public static function form(Form $form): Form
     {
@@ -172,6 +192,49 @@ class PracetakPlateArchiveResource extends Resource
                         default            => ucfirst((string) $state),
                     }),
 
+                Tables\Columns\TextColumn::make('active_imr_request')
+                    ->label('Request IMR Aktif')
+                    ->badge()
+                    ->getStateUsing(function (PracetakPlateArchive $record): string {
+                        if ($imr = $record->approvedPendingPlateImr()) {
+                            return "{$imr->no_imr} · {$imr->plate_qty_requested} Plate (Siap Keluar)";
+                        }
+                        if ($imr = $record->activeImrRequest()) {
+                            return "{$imr->no_imr} · {$imr->plate_qty_requested} Plate (Menunggu Approve)";
+                        }
+                        if ($record->status_kondisi === 'dipakai_printing' && ($issued = $record->latestIssuedImr())) {
+                            return "{$issued->no_imr} · {$issued->plate_received_by}";
+                        }
+
+                        return '-';
+                    })
+                    ->color(function (PracetakPlateArchive $record): string {
+                        if ($record->approvedPendingPlateImr()) {
+                            return 'warning';
+                        }
+                        if ($record->activeImrRequest()) {
+                            return 'info';
+                        }
+                        if ($record->status_kondisi === 'dipakai_printing' && $record->latestIssuedImr()) {
+                            return 'primary';
+                        }
+
+                        return 'gray';
+                    })
+                    ->tooltip(function (PracetakPlateArchive $record): ?string {
+                        if ($imr = $record->approvedPendingPlateImr()) {
+                            return "SPK {$imr->spk?->no_spk} — IMR sudah disetujui, siap diserahkan dari rak {$record->lokasi_rak}.";
+                        }
+                        if ($imr = $record->activeImrRequest()) {
+                            return "SPK {$imr->spk?->no_spk} — Menunggu approval IMR Printing terlebih dahulu.";
+                        }
+                        if ($record->status_kondisi === 'dipakai_printing' && ($issued = $record->latestIssuedImr())) {
+                            return "Diserahkan via {$issued->no_imr} kepada {$issued->plate_received_by} (" . $issued->plate_issued_at?->format('d M Y H:i') . ').';
+                        }
+
+                        return null;
+                    }),
+
                 Tables\Columns\TextColumn::make('material_pendukung')
                     ->label('Material Pendukung')
                     ->limit(35)
@@ -203,6 +266,65 @@ class PracetakPlateArchiveResource extends Resource
                     ->preload(),
             ])
             ->actions([
+                Tables\Actions\Action::make('issuePlateViaImr')
+                    ->label('Serahkan Plate (via IMR)')
+                    ->icon('heroicon-o-truck')
+                    ->color('warning')
+                    ->visible(fn (PracetakPlateArchive $record) => $record->approvedPendingPlateImr() !== null)
+                    ->modalHeading(fn (PracetakPlateArchive $record) => 'Serah Terima Plate via ' . ($record->approvedPendingPlateImr()?->no_imr ?? 'IMR'))
+                    ->modalDescription(function (PracetakPlateArchive $record): string {
+                        $imr = $record->approvedPendingPlateImr();
+                        $spkNo = $imr?->spk?->no_spk ?: '-';
+                        $qty = (int) ($imr?->plate_qty_requested ?: $record->jumlah_warna);
+
+                        return "Mengeluarkan {$qty} lembar plate {$record->nama_plat} ({$record->kode_arsip}) dari {$record->lokasi_rak} untuk SPK {$spkNo}. Pengeluaran akan tercatat langsung pada dokumen {$imr?->no_imr}.";
+                    })
+                    ->form([
+                        Forms\Components\TextInput::make('plate_received_by')
+                            ->label('Nama Penerima (Operator / Kepala Shift Printing)')
+                            ->placeholder('Contoh: Budi — Shift 1 Flexo Zonten')
+                            ->required(),
+
+                        Forms\Components\Textarea::make('plate_handover_notes')
+                            ->label('Catatan Serah Terima Plate (Opsional)')
+                            ->default(fn (PracetakPlateArchive $record) => $record->approvedPendingPlateImr()?->plate_notes)
+                            ->placeholder('Contoh: Kondisi plate lengkap & baik + pisau pond')
+                            ->rows(2),
+                    ])
+                    ->action(function (PracetakPlateArchive $record, array $data) {
+                        $imr = $record->approvedPendingPlateImr();
+                        if (! $imr) {
+                            Notification::make()
+                                ->title('Tidak ada IMR aktif yang disetujui untuk plate ini.')
+                                ->warning()
+                                ->send();
+
+                            return;
+                        }
+
+                        try {
+                            app(IMRPrintingService::class)->issue($imr, [
+                                'issue_plate'          => true,
+                                'plate_received_by'    => $data['plate_received_by'],
+                                'plate_handover_notes' => $data['plate_handover_notes'] ?? '',
+                                'items'                => [],
+                            ]);
+
+                            Notification::make()
+                                ->title("Plate {$record->kode_arsip} Berhasil Diserahkan")
+                                ->body("Tercatat pada {$imr->no_imr}, diterima oleh {$data['plate_received_by']}. Status arsip & proses Pra Cetak otomatis diperbarui.")
+                                ->success()
+                                ->send();
+                        } catch (\Throwable $e) {
+                            Notification::make()
+                                ->title('Serah Terima Plate Gagal')
+                                ->body($e->getMessage())
+                                ->danger()
+                                ->persistent()
+                                ->send();
+                        }
+                    }),
+
                 Tables\Actions\Action::make('returnToRack')
                     ->label('Kembalikan ke Rak')
                     ->icon('heroicon-o-archive-box-arrow-down')
@@ -248,7 +370,7 @@ class PracetakPlateArchiveResource extends Resource
 
     public static function getEloquentQuery(): Builder
     {
-        return parent::getEloquentQuery()->with(['customer', 'finishGoodItem', 'pracetakProcess.spk']);
+        return parent::getEloquentQuery()->with(['customer', 'finishGoodItem', 'pracetakProcess.spk', 'imrPrintings.spk']);
     }
 
     public static function getPages(): array

@@ -61,6 +61,59 @@ class PracetakPlateArchive extends Model
         return $this->hasMany(PracetakProcess::class, 'plate_archive_id');
     }
 
+    public function imrPrintings(): HasMany
+    {
+        return $this->hasMany(IMRPrinting::class, 'plate_archive_id');
+    }
+
+    /**
+     * Ambil IMR Printing aktif terbaru yang meminta pengambilan plate ini (belum diserahkan).
+     */
+    public function activeImrRequest(): ?IMRPrinting
+    {
+        $collection = $this->relationLoaded('imrPrintings')
+            ? $this->imrPrintings
+            : $this->imrPrintings()->with('spk')->get();
+
+        return $collection
+            ->filter(fn (IMRPrinting $imr) => (bool) $imr->request_plate
+                && is_null($imr->plate_issued_at)
+                && in_array($imr->status, ['Pending', 'Approved', 'Partial', 'Partial Issued'], true))
+            ->sortByDesc('id')
+            ->first();
+    }
+
+    /**
+     * Ambil IMR Printing yang sudah di-Approve dan siap untuk serah terima plate fisik dari rak.
+     */
+    public function approvedPendingPlateImr(): ?IMRPrinting
+    {
+        $collection = $this->relationLoaded('imrPrintings')
+            ? $this->imrPrintings
+            : $this->imrPrintings()->with('spk')->get();
+
+        return $collection
+            ->filter(fn (IMRPrinting $imr) => $imr->hasPendingPlateIssue()
+                && in_array($imr->status, ['Approved', 'Partial', 'Partial Issued'], true))
+            ->sortByDesc('id')
+            ->first();
+    }
+
+    /**
+     * Ambil IMR terakhir yang telah menerima penyerahan plate ini.
+     */
+    public function latestIssuedImr(): ?IMRPrinting
+    {
+        $collection = $this->relationLoaded('imrPrintings')
+            ? $this->imrPrintings
+            : $this->imrPrintings()->with('spk')->get();
+
+        return $collection
+            ->filter(fn (IMRPrinting $imr) => $imr->isPlateIssued())
+            ->sortByDesc('plate_issued_at')
+            ->first();
+    }
+
     public function getIsUsableAttribute(): bool
     {
         return in_array($this->status_kondisi, ['tersimpan', 'dipakai_printing'], true);

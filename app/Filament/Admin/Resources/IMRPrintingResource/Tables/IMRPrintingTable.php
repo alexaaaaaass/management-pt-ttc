@@ -36,48 +36,58 @@ class IMRPrintingTable
                     RejectAction::make(),
 
                     // =============================
-                    // CHANGE STATUS
+                    // CHANGE STATUS (Aman — tidak boleh bypass Approve!)
                     // =============================
                     Tables\Actions\Action::make('changeStatus')
-
                         ->label('Ubah Status')
-
                         ->icon('heroicon-o-arrow-path')
-
                         ->color('warning')
-
-                        ->form([
-
+                        ->visible(fn (ImrPrinting $record) => ! in_array($record->status, ['Issued', 'Closed'], true))
+                        ->form(fn (ImrPrinting $record) => [
                             Forms\Components\Select::make('status')
+                                ->label('Status Baru')
+                                ->options(function () use ($record) {
+                                    $hasIssued = $record->items->sum('qty_issued') > 0 || $record->isPlateIssued();
+                                    $opts = ['Closed' => 'Closed (Tutup IMR)'];
+                                    if (! $hasIssued) {
+                                        $opts = ['Pending' => 'Pending (Kembalikan agar bisa di-Approve)'] + $opts;
+                                    }
 
-                                ->options([
-
-                                    'Pending'  => 'Pending',
-
-                                    'Approved' => 'Approved',
-
-                                    'Partial'  => 'Partial',
-
-                                    'Rejected' => 'Rejected',
-
-                                    'Closed'   => 'Closed',
-
-                                ])
-
-                                ->default(fn ($record) => $record->status)
-
+                                    return $opts;
+                                })
+                                ->helperText('Untuk menyetujui IMR beserta qty material & plate, wajib gunakan tombol "Approve" saat status Pending.')
                                 ->required(),
-
                         ])
+                        ->action(function (ImrPrinting $record, array $data) {
+                            $newStatus = $data['status'];
+                            if ($newStatus === 'Pending') {
+                                \Illuminate\Support\Facades\DB::transaction(function () use ($record) {
+                                    $record->loadMissing('items');
+                                    foreach ($record->items as $item) {
+                                        $prevApproved = (float) $item->qty_approved;
+                                        if ($prevApproved > 0) {
+                                            $stock = \App\Models\MaterialStock::where('item_id', $item->item_id)
+                                                ->lockForUpdate()
+                                                ->first();
+                                            if ($stock) {
+                                                $stock->update([
+                                                    'allocation' => max(0, round((float) $stock->allocation - $prevApproved, 4)),
+                                                ]);
+                                            }
+                                            $item->update(['qty_approved' => 0]);
+                                        }
+                                    }
 
-                        ->action(function ($record, array $data) {
-
-                            $record->update([
-
-                                'status' => $data['status']
-
-                            ]);
-
+                                    $record->update([
+                                        'status'         => 'Pending',
+                                        'plate_approved' => false,
+                                    ]);
+                                });
+                            } else {
+                                $record->update([
+                                    'status' => $newStatus,
+                                ]);
+                            }
                         }),
 
                     Tables\Actions\Action::make('preview')
