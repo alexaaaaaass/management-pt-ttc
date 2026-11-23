@@ -148,11 +148,19 @@ class IssueAction
             $remaining = max(0, (float) $item->qty_approved - (float) $item->qty_issued);
             $onHand = (float) ($item->item->stock?->on_hand ?? 0);
             $maxIssuable = min($remaining, $onHand);
+            $satuan = trim((string) ($item->satuan ?? ''));
 
             $schema[] = Forms\Components\Section::make($item->item->nama_master_item)
                 ->icon('heroicon-o-cube')
-                ->description('Informasi material dan jumlah yang akan dikeluarkan dari gudang.')
-                ->collapsible(false)
+                ->description(
+                    'Disetujui: ' . number_format((float) $item->qty_approved, 2)
+                    . ' | Sisa: ' . number_format($remaining, 2)
+                    . ' | Keluar: ' . number_format($maxIssuable, 2) . ($satuan !== '' ? " {$satuan}" : '')
+                    . ' (Stok Gudang: ' . number_format($onHand, 2) . ')'
+                )
+                ->collapsible()
+                ->collapsed()
+                ->compact()
                 ->schema([
                     Forms\Components\Grid::make(4)->schema([
                         Forms\Components\Placeholder::make("approved{$index}")

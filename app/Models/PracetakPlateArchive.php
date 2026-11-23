@@ -17,6 +17,8 @@ class PracetakPlateArchive extends Model
         'customer_id',
         'nama_plat',
         'jumlah_warna',
+        'qty_total',
+        'qty_dipakai',
         'detail_warna',
         'dimensi_plate_mm',
         'lokasi_rak',
@@ -31,6 +33,8 @@ class PracetakPlateArchive extends Model
 
     protected $casts = [
         'jumlah_warna'   => 'integer',
+        'qty_total'      => 'integer',
+        'qty_dipakai'    => 'integer',
         'max_pemakaian'  => 'integer',
         'jumlah_dipakai' => 'integer',
         'last_used_at'   => 'datetime',
@@ -38,6 +42,8 @@ class PracetakPlateArchive extends Model
 
     protected $attributes = [
         'status_kondisi' => 'tersimpan',
+        'qty_total'      => 0,
+        'qty_dipakai'    => 0,
         'jumlah_dipakai' => 0,
     ];
 
@@ -114,6 +120,16 @@ class PracetakPlateArchive extends Model
             ->first();
     }
 
+    public function getEffectiveQtyTotalAttribute(): int
+    {
+        return (int) ($this->qty_total > 0 ? $this->qty_total : ($this->jumlah_warna ?: 0));
+    }
+
+    public function getQtyDiRakAttribute(): int
+    {
+        return max(0, $this->effective_qty_total - (int) ($this->qty_dipakai ?? 0));
+    }
+
     public function getIsUsableAttribute(): bool
     {
         return in_array($this->status_kondisi, ['tersimpan', 'dipakai_printing'], true);
@@ -124,7 +140,7 @@ class PracetakPlateArchive extends Model
         $rak = $this->lokasi_rak ?: 'Rak belum diisi';
         $cust = $this->customer?->nama_customer ? " · {$this->customer->nama_customer}" : '';
 
-        return "{$this->kode_arsip} — {$this->nama_plat} ({$this->jumlah_warna} Warna · {$rak}{$cust})";
+        return "{$this->kode_arsip} — {$this->nama_plat} ({$this->qty_di_rak}/{$this->effective_qty_total} Lbr di Rak · {$rak}{$cust})";
     }
 
     public static function generateKode(): string

@@ -47,28 +47,30 @@ class CreateIMR
                 ]);
             }
 
-            if ($process && $process->status !== 'selesai') {
-                $statusMsg = $process->status === 'handed_over'
-                    ? 'Plate untuk SPK ini sudah diserahkan ke divisi Printing sebelumnya.'
-                    : 'Proses Pra Cetak untuk SPK ini belum selesai disimpan di Rak (Tahap D). Selesaikan Pra Cetak terlebih dahulu sebelum mengajukan pengambilan plate via IMR.';
+            $availableInRack = $archive ? $archive->qty_di_rak : (int) ($process?->hasil_baik ?: ($process?->jumlah_warna_plate ?: 0));
 
+            if ($process && ! in_array($process->status, ['selesai', 'handed_over'], true)) {
                 throw ValidationException::withMessages([
-                    'request_plate' => $statusMsg,
+                    'request_plate' => 'Proses Pra Cetak untuk SPK ini belum selesai disimpan di Rak (Tahap D). Selesaikan Pra Cetak terlebih dahulu sebelum mengajukan pengambilan plate via IMR.',
                 ]);
             }
 
-            if (! $process && $archive && $archive->status_kondisi !== 'tersimpan') {
+            if ($availableInRack <= 0) {
                 throw ValidationException::withMessages([
-                    'request_plate' => "Arsip plate {$archive->kode_arsip} saat ini tidak dalam kondisi Tersimpan di Rak.",
+                    'request_plate' => 'Seluruh plate untuk SPK ini sedang dipakai di divisi Printing (sisa di rak: 0 lembar).',
+                ]);
+            }
+
+            $qtyReqPlate = max(1, (int) ($data['plate_qty_requested'] ?? $availableInRack));
+            if ($qtyReqPlate > $availableInRack) {
+                throw ValidationException::withMessages([
+                    'plate_qty_requested' => "Jumlah plate yang diminta ({$qtyReqPlate} lembar) melebihi sisa plate di rak ({$availableInRack} lembar).",
                 ]);
             }
 
             $data['pracetak_process_id'] = $process?->id;
             $data['plate_archive_id'] = $archive?->id;
-            $data['plate_qty_requested'] = max(
-                1,
-                (int) ($data['plate_qty_requested'] ?? $process?->hasil_baik ?? $process?->jumlah_warna_plate ?? $archive?->jumlah_warna ?? 1)
-            );
+            $data['plate_qty_requested'] = $qtyReqPlate;
             $data['plate_approved'] = false;
         } else {
             $data['request_plate'] = false;

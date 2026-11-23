@@ -79,8 +79,19 @@ class ApproveIMR
             if ($imr->request_plate) {
                 $approvePlate = (bool) ($data['plate_approved'] ?? true);
 
-                if ($approvePlate && $imr->pracetakProcess && $imr->pracetakProcess->status !== 'selesai') {
-                    throw new \Exception('Plate pada Pra Cetak tidak dalam status Tersimpan di Rak (status saat ini: ' . $imr->pracetakProcess->status . ').');
+                if ($approvePlate) {
+                    if ($imr->pracetakProcess && ! in_array($imr->pracetakProcess->status, ['selesai', 'handed_over'], true)) {
+                        throw new \Exception('Plate pada Pra Cetak belum selesai disimpan di Rak (status saat ini: ' . $imr->pracetakProcess->status . ').');
+                    }
+
+                    $archive = $imr->plateArchive ?: ($imr->pracetakProcess?->plateArchive ?: $imr->pracetakProcess?->generatedArchive);
+                    if ($archive) {
+                        $availableInRack = $archive->qty_di_rak;
+                        $qtyRequested = (int) ($imr->plate_qty_requested ?: 1);
+                        if ($qtyRequested > $availableInRack) {
+                            throw new \Exception("Jumlah plate diminta ({$qtyRequested} lembar) melebihi sisa plate di rak ({$availableInRack} lembar).");
+                        }
+                    }
                 }
 
                 $imr->update([

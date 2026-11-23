@@ -97,6 +97,20 @@ class PracetakPlateArchiveResource extends Resource
                         ->default(4)
                         ->required(),
 
+                    Forms\Components\TextInput::make('qty_total')
+                        ->label('Total Qty Plate Jadi (Lembar)')
+                        ->numeric()
+                        ->default(4)
+                        ->minValue(0)
+                        ->helperText('Total seluruh lembar plate yang dicetak untuk arsip ini'),
+
+                    Forms\Components\TextInput::make('qty_dipakai')
+                        ->label('Sedang Dipakai di Printing (Lembar)')
+                        ->numeric()
+                        ->default(0)
+                        ->minValue(0)
+                        ->helperText('Otomatis bertambah saat IMR diserahkan & berkurang saat dikembalikan ke rak'),
+
                     Forms\Components\TextInput::make('detail_warna')
                         ->label('Rincian Warna / Separasi')
                         ->placeholder('Contoh: CMYK + Pantone Gold'),
@@ -167,10 +181,22 @@ class PracetakPlateArchiveResource extends Resource
                 Tables\Columns\TextColumn::make('jumlah_warna')
                     ->label('Warna')
                     ->formatStateUsing(fn ($state) => "{$state} Warna")
-                    ->sortable(),
+                    ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true),
+
+                Tables\Columns\TextColumn::make('stok_rak_plate')
+                    ->label('Sisa Plate di Rak')
+                    ->badge()
+                    ->getStateUsing(fn (PracetakPlateArchive $r): string => "{$r->qty_di_rak} / {$r->effective_qty_total} Lbr")
+                    ->description(fn (PracetakPlateArchive $r): string => $r->qty_dipakai > 0
+                        ? "{$r->qty_dipakai} Lbr di Printing"
+                        : 'Lengkap di Rak')
+                    ->color(fn (PracetakPlateArchive $r): string => $r->qty_di_rak <= 0
+                        ? 'danger'
+                        : ($r->qty_dipakai > 0 ? 'warning' : 'success')),
 
                 Tables\Columns\TextColumn::make('jumlah_dipakai')
-                    ->label('Dipakai')
+                    ->label('Riwayat Pakai')
                     ->formatStateUsing(fn ($state, PracetakPlateArchive $r) => $r->max_pemakaian ? "{$state} / {$r->max_pemakaian}×" : "{$state}×")
                     ->sortable(),
 
@@ -329,10 +355,40 @@ class PracetakPlateArchiveResource extends Resource
                     ->label('Kembalikan ke Rak')
                     ->icon('heroicon-o-archive-box-arrow-down')
                     ->color('success')
-                    ->visible(fn (PracetakPlateArchive $record) => $record->status_kondisi === 'dipakai_printing')
-                    ->action(function (PracetakPlateArchive $record) {
-                        $record->update(['status_kondisi' => 'tersimpan']);
-                        Notification::make()->title("Plate {$record->kode_arsip} dikembalikan ke {$record->lokasi_rak}")->success()->send();
+                    ->visible(fn (PracetakPlateArchive $record) => $record->status_kondisi === 'dipakai_printing' || (int) $record->qty_dipakai > 0)
+                    ->modalHeading(fn (PracetakPlateArchive $record) => "Kembalikan Plate {$record->kode_arsip} ke Rak")
+                    ->modalDescription(fn (PracetakPlateArchive $record) => "Saat ini {$record->qty_dipakai} lembar sedang dipakai di Printing dan {$record->qty_di_rak} lembar berada di {$record->lokasi_rak} (Total {$record->effective_qty_total} lembar).")
+                    ->form([
+                        Forms\Components\TextInput::make('qty_return')
+                            ->label('Jumlah Plate Dikembalikan ke Rak (Lembar)')
+                            ->numeric()
+                            ->minValue(1)
+                            ->maxValue(fn (PracetakPlateArchive $record) => max(1, (int) $record->qty_dipakai ?: $record->effective_qty_total))
+                            ->default(fn (PracetakPlateArchive $record) => max(1, (int) $record->qty_dipakai ?: $record->effective_qty_total))
+                            ->required(),
+
+                        Forms\Components\Textarea::make('catatan_kembali')
+                            ->label('Catatan Kondisi Plate Saat Kembali (Opsional)')
+                            ->placeholder('Contoh: Semua plate bersih & layak dipakai repeat order')
+                            ->rows(2),
+                    ])
+                    ->action(function (PracetakPlateArchive $record, array $data) {
+                        $qtyReturn = max(1, (int) ($data['qty_return'] ?? 1));
+                        $newDipakai = max(0, (int) $record->qty_dipakai - $qtyReturn);
+                        $newStatus = $newDipakai === 0 ? 'tersimpan' : 'dipakai_printing';
+                        $note = trim((string) ($data['catatan_kembali'] ?? ''));
+
+                        $record->update([
+                            'qty_dipakai'    => $newDipakai,
+                            'status_kondisi' => $newStatus,
+                            'catatan'        => trim(($record->catatan ? $record->catatan . "\n" : '') . '[' . now()->format('d/m/Y H:i') . "] Dikembalikan {$qtyReturn} lembar ke {$record->lokasi_rak} (Sisa di rak: " . max(0, $record->effective_qty_total - $newDipakai) . ' lbr)' . ($note !== '' ? ": {$note}" : '')),
+                        ]);
+
+                        Notification::make()
+                            ->title("{$qtyReturn} Lembar Plate {$record->kode_arsip} Dikembalikan ke {$record->lokasi_rak}")
+                            ->body('Sisa di rak sekarang: ' . $record->fresh()->qty_di_rak . ' / ' . $record->effective_qty_total . ' lembar.')
+                            ->success()
+                            ->send();
                     }),
 
                 Tables\Actions\Action::make('markDamaged')

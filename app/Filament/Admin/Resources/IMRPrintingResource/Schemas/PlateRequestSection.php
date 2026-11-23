@@ -48,24 +48,41 @@ class PlateRequestSection
             }
         }
 
-        $qty = (int) ($process?->hasil_baik ?: ($process?->jumlah_warna_plate ?: ($archive?->jumlah_warna ?: 0)));
-        $isReady = ($process && $process->status === 'selesai')
-            || (! $process && $archive && $archive->status_kondisi === 'tersimpan');
+        $totalQty = (int) ($archive?->effective_qty_total ?: ($process?->hasil_baik ?: ($process?->jumlah_warna_plate ?: 0)));
+        $qtyDiRak = $archive ? $archive->qty_di_rak : $totalQty;
 
+        $isReady = false;
         $status = 'none';
         if ($process) {
-            $status = $process->status === 'selesai'
-                ? 'ready'
-                : ($process->status === 'handed_over' ? 'handed_over' : 'in_progress');
+            if ($process->status === 'selesai' && $qtyDiRak > 0) {
+                $status = 'ready';
+                $isReady = true;
+            } elseif ($process->status === 'handed_over') {
+                if ($archive && $qtyDiRak > 0) {
+                    $status = 'ready';
+                    $isReady = true;
+                } else {
+                    $status = 'handed_over';
+                }
+            } else {
+                $status = 'in_progress';
+            }
         } elseif ($archive) {
-            $status = $archive->status_kondisi === 'tersimpan' ? 'ready' : 'handed_over';
+            if ($qtyDiRak > 0 && in_array($archive->status_kondisi, ['tersimpan', 'dipakai_printing'], true)) {
+                $status = 'ready';
+                $isReady = true;
+            } else {
+                $status = 'handed_over';
+            }
         }
 
         return [
             'pracetak_process_id' => $process?->id,
             'plate_archive_id'    => $archive?->id,
             'request_plate'       => $isReady,
-            'plate_qty_requested' => $isReady ? max(1, $qty) : 0,
+            'plate_qty_requested' => $isReady ? max(1, $qtyDiRak) : 0,
+            'qty_di_rak'          => $qtyDiRak,
+            'qty_total'           => $totalQty,
             'status'              => $status,
             'process'             => $process,
             'archive'             => $archive,
@@ -93,12 +110,15 @@ class PlateRequestSection
                             $nama = e($process?->nama_plat ?: ($archive?->nama_plat ?: '-'));
                             $kode = e($archive?->kode_arsip ?: 'Belum berkode arsip');
                             $rak = e($process?->lokasi_simpan_plate ?: ($archive?->lokasi_rak ?: 'Belum diisi'));
-                            $warna = (int) ($process?->hasil_baik ?: ($process?->jumlah_warna_plate ?: ($archive?->jumlah_warna ?: 0)));
+                            $diRak = (int) ($info['qty_di_rak'] ?? 0);
+                            $total = (int) ($info['qty_total'] ?? $diRak);
+                            $dipakai = max(0, $total - $diRak);
+                            $infoDipakai = $dipakai > 0 ? " ({$dipakai} sedang di Printing)" : '';
 
                             return new HtmlString('
                                 <div style="background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.35); border-left: 4px solid #10b981; border-radius: 8px; padding: 12px 14px; font-size: 12px;">
                                     <div style="font-weight: 700; color: #10b981; margin-bottom: 4px;">Plate Siap di Rak Pra Cetak — Dapat Diambil via IMR Ini</div>
-                                    <div><strong>Nama Plate:</strong> ' . $nama . ' &nbsp;|&nbsp; <strong>Kode Arsip:</strong> ' . $kode . ' &nbsp;|&nbsp; <strong>Jumlah:</strong> ' . $warna . ' Lembar &nbsp;|&nbsp; <strong>Lokasi Rak:</strong> ' . $rak . '</div>
+                                    <div><strong>Nama Plate:</strong> ' . $nama . ' &nbsp;|&nbsp; <strong>Kode Arsip:</strong> ' . $kode . ' &nbsp;|&nbsp; <strong>Tersisa di Rak:</strong> ' . $diRak . ' / ' . $total . ' Lembar' . e($infoDipakai) . ' &nbsp;|&nbsp; <strong>Lokasi Rak:</strong> ' . $rak . '</div>
                                 </div>
                             ');
                         }

@@ -218,6 +218,8 @@ class PracetakCostingService
                     . rtrim(rtrim(number_format((float) $firstUsage->lebar_potong_mm, 2, '.', ''), '0'), '.') . ' mm'
                 : null;
 
+            $qtyTotalPlate = (int) ($process->hasil_baik ?: ($process->jumlah_warna_plate ?: ($process->qty ?: 4)));
+
             $archive = PracetakPlateArchive::updateOrCreate(
                 ['pracetak_process_id' => $process->id],
                 [
@@ -226,6 +228,7 @@ class PracetakCostingService
                     'customer_id'            => $customerId,
                     'nama_plat'              => $process->nama_plat,
                     'jumlah_warna'           => (int) ($process->jumlah_warna_plate ?: $process->qty ?: 4),
+                    'qty_total'              => $qtyTotalPlate,
                     'detail_warna'           => $process->detail_warna_plate,
                     'dimensi_plate_mm'       => $dimensi,
                     'lokasi_rak'             => $process->lokasi_simpan_plate,
@@ -245,25 +248,46 @@ class PracetakCostingService
     }
 
     /**
-     * Catat serah terima Plate Jadi ke divisi Printing Flexo.
+     * Catat serah terima Plate Jadi ke divisi Printing Flexo beserta tracking jumlah lembar keluar vs sisa di rak.
      */
-    public function handOverToPrinting(PracetakProcess $process, string $penerima, ?string $catatan = null): PracetakProcess
-    {
-        return DB::transaction(function () use ($process, $penerima, $catatan) {
+    public function handOverToPrinting(
+        PracetakProcess $process,
+        string $penerima,
+        ?string $catatan = null,
+        ?int $qtyIssued = null
+    ): PracetakProcess {
+        return DB::transaction(function () use ($process, $penerima, $catatan, $qtyIssued) {
+            $archive = $this->syncPlateArchive($process);
+
+            $totalPlate = $archive->effective_qty_total;
+            $currentOut = (int) ($archive->qty_dipakai ?? 0);
+            $availableInRack = max(0, $totalPlate - $currentOut);
+
+            $qtyOut = $qtyIssued !== null && $qtyIssued > 0
+                ? $qtyIssued
+                : max(1, $availableInRack ?: $totalPlate);
+
+            if ($availableInRack > 0 && $qtyOut > $availableInRack) {
+                throw new \Exception("Jumlah plate diminta ({$qtyOut} lembar) melebihi sisa plate di rak ({$availableInRack} lembar dari total {$totalPlate} lembar).");
+            }
+
+            $newOut = min($totalPlate, $currentOut + $qtyOut);
+
             $process->update([
                 'status'         => 'handed_over',
                 'handed_over_at' => now(),
                 'handed_over_to' => $penerima,
             ]);
 
-            $archive = $this->syncPlateArchive($process);
             $archive->increment('jumlah_dipakai');
             $archive->update([
-                'status_kondisi' => 'dipakai_printing',
+                'qty_total'      => $totalPlate,
+                'qty_dipakai'    => $newOut,
+                'status_kondisi' => $newOut > 0 ? 'dipakai_printing' : 'tersimpan',
                 'last_used_at'   => now(),
                 'catatan'        => $catatan
-                    ? trim(($archive->catatan ? $archive->catatan . "\n" : '') . '[' . now()->format('d/m/Y H:i') . "] Diserahkan ke {$penerima}: {$catatan}")
-                    : $archive->catatan,
+                    ? trim(($archive->catatan ? $archive->catatan . "\n" : '') . '[' . now()->format('d/m/Y H:i') . "] Diserahkan {$qtyOut} lembar ke {$penerima} (Sisa di rak: " . max(0, $totalPlate - $newOut) . " lbr): {$catatan}")
+                    : trim(($archive->catatan ? $archive->catatan . "\n" : '') . '[' . now()->format('d/m/Y H:i') . "] Diserahkan {$qtyOut} lembar ke {$penerima} (Sisa di rak: " . max(0, $totalPlate - $newOut) . ' lbr)'),
             ]);
 
             return $process->fresh();

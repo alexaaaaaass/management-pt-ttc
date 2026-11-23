@@ -91,19 +91,30 @@ class IssueMaterial
                 $handoverNotes = trim((string) ($data['plate_handover_notes'] ?? ''));
                 $imrNote = "Via {$imr->no_imr}" . ($handoverNotes !== '' ? " — {$handoverNotes}" : '');
 
+                $qtyPlateOut = max(1, (int) ($imr->plate_qty_requested ?: 1));
+
                 if ($imr->pracetakProcess) {
                     app(PracetakCostingService::class)->handOverToPrinting(
                         $imr->pracetakProcess,
                         $receiver,
-                        $imrNote
+                        $imrNote,
+                        $qtyPlateOut
                     );
                 } elseif ($imr->plateArchive) {
                     $archive = $imr->plateArchive;
+                    $totalPlate = $archive->effective_qty_total;
+                    $availableInRack = $archive->qty_di_rak;
+                    if ($availableInRack > 0 && $qtyPlateOut > $availableInRack) {
+                        throw new \Exception("Jumlah plate diminta ({$qtyPlateOut} lembar) melebihi sisa di rak ({$availableInRack} lembar).");
+                    }
+                    $newOut = min($totalPlate, (int) $archive->qty_dipakai + $qtyPlateOut);
                     $archive->increment('jumlah_dipakai');
                     $archive->update([
+                        'qty_total'      => $totalPlate,
+                        'qty_dipakai'    => $newOut,
                         'status_kondisi' => 'dipakai_printing',
                         'last_used_at'   => now(),
-                        'catatan'        => trim(($archive->catatan ? $archive->catatan . "\n" : '') . '[' . now()->format('d/m/Y H:i') . "] Diserahkan ke {$receiver} ({$imrNote})"),
+                        'catatan'        => trim(($archive->catatan ? $archive->catatan . "\n" : '') . '[' . now()->format('d/m/Y H:i') . "] Diserahkan {$qtyPlateOut} lembar ke {$receiver} (Sisa di rak: " . max(0, $totalPlate - $newOut) . " lbr) ({$imrNote})"),
                     ]);
                 }
 
