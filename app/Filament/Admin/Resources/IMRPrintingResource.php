@@ -9,6 +9,7 @@ use App\Models\ImrPrinting;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
 
 class IMRPrintingResource extends Resource
 {
@@ -21,6 +22,14 @@ class IMRPrintingResource extends Resource
     protected static ?string $navigationLabel = 'IMR Printing';
 
     protected static ?int $navigationSort = 1;
+
+    public static function getEloquentQuery(): Builder
+    {
+        return parent::getEloquentQuery()
+            ->with(['spk', 'departemen', 'items', 'pracetakProcess', 'plateArchive'])
+            ->orderByDesc('created_at')
+            ->orderByDesc('id');
+    }
 
     public static function form(Form $form): Form
     {

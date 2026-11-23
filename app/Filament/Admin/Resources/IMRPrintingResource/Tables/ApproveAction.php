@@ -65,8 +65,28 @@ class ApproveAction
 
         $record->loadMissing([
             'items.item.stock',
-            'items.item.satuan'
+            'items.item.satuan',
+            'pracetakProcess',
+            'plateArchive',
         ]);
+
+        if ($record->request_plate) {
+            $proc = $record->pracetakProcess;
+            $arch = $record->plateArchive;
+            $namaPlat = $proc?->nama_plat ?: ($arch?->nama_plat ?: '-');
+            $lokasiRak = $proc?->lokasi_simpan_plate ?: ($arch?->lokasi_rak ?: '-');
+            $kodeArsip = $arch?->kode_arsip ?: '-';
+
+            $schema[] = Forms\Components\Section::make('Persetujuan Pengambilan Plate Cetak (Rak Pra Cetak)')
+                ->icon('heroicon-o-cpu-chip')
+                ->description("Plate: {$namaPlat} | Arsip: {$kodeArsip} | Lokasi: {$lokasiRak} | Qty: {$record->plate_qty_requested} Lembar")
+                ->schema([
+                    Forms\Components\Toggle::make('plate_approved')
+                        ->label('Setujui Pengeluaran Plate ke Divisi Printing')
+                        ->default(true)
+                        ->helperText('Jika disetujui, Gudang dapat langsung memproses serah terima plate di menu Pengeluaran Material.'),
+                ]);
+        }
 
         foreach ($record->items as $index => $item) {
 

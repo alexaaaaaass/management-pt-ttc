@@ -153,7 +153,7 @@ class ItemsRepeater
 
                             ->minValue(0)
 
-                            ->live(debounce: 500)
+                            ->live(onBlur: true)
 
                             ->afterStateUpdated(function (
 

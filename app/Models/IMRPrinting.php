@@ -11,9 +11,24 @@ class IMRPrinting extends Model
     protected $fillable = [
         'no_imr',
         'spk_id',
+        'pracetak_process_id',
+        'plate_archive_id',
         'departemen_id',
         'tanggal_request',
         'status',
+        'request_plate',
+        'plate_qty_requested',
+        'plate_approved',
+        'plate_issued_at',
+        'plate_received_by',
+        'plate_notes',
+    ];
+
+    protected $casts = [
+        'request_plate'       => 'boolean',
+        'plate_approved'      => 'boolean',
+        'plate_qty_requested' => 'integer',
+        'plate_issued_at'     => 'datetime',
     ];
 
     protected static function booted(): void
@@ -43,6 +58,35 @@ class IMRPrinting extends Model
             MasterSpk::class,
             'spk_id'
         );
+    }
+
+    public function pracetakProcess()
+    {
+        return $this->belongsTo(
+            PracetakProcess::class,
+            'pracetak_process_id'
+        );
+    }
+
+    public function plateArchive()
+    {
+        return $this->belongsTo(
+            PracetakPlateArchive::class,
+            'plate_archive_id'
+        );
+    }
+
+    public function hasPendingPlateIssue(): bool
+    {
+        return (bool) $this->request_plate
+            && (bool) $this->plate_approved
+            && is_null($this->plate_issued_at);
+    }
+
+    public function isPlateIssued(): bool
+    {
+        return (bool) $this->request_plate
+            && ! is_null($this->plate_issued_at);
     }
 
     public function departemen()

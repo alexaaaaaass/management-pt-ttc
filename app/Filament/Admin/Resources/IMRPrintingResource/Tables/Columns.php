@@ -41,6 +41,37 @@ class Columns
                     fn($record) => $record->items->sum('qty_request')
                 ),
 
+            Tables\Columns\TextColumn::make('plate_status_badge')
+                ->label('Plate Cetak')
+                ->badge()
+                ->getStateUsing(function ($record): string {
+                    if (! $record->request_plate) {
+                        return '-';
+                    }
+                    $qty = (int) ($record->plate_qty_requested ?: 0);
+                    if ($record->plate_issued_at) {
+                        return "{$qty} Plate · Diserahkan";
+                    }
+                    if ($record->plate_approved) {
+                        return "{$qty} Plate · Siap Keluar";
+                    }
+
+                    return "{$qty} Plate · Diminta";
+                })
+                ->color(function ($record): string {
+                    if (! $record->request_plate) {
+                        return 'gray';
+                    }
+                    if ($record->plate_issued_at) {
+                        return 'success';
+                    }
+                    if ($record->plate_approved) {
+                        return 'info';
+                    }
+
+                    return 'warning';
+                }),
+
             Tables\Columns\TextColumn::make('status')
                 ->badge()
                 ->sortable()

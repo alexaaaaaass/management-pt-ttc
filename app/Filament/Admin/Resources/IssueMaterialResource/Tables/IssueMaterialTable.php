@@ -172,42 +172,60 @@ class IssueMaterialTable
                 |--------------------------------------------------------------------------
                 */
 
-                Tables\Columns\TextColumn::make('progress')
-
-                    ->label('Progress')
-
-                    ->state(function($record){
-
-                        $approved=$record->items->sum('qty_approved');
-
-                        $issued=$record->items->sum('qty_issued');
-
-                        if($approved==0){
-
+                Tables\Columns\TextColumn::make('plate_issue_status')
+                    ->label('Plate Cetak')
+                    ->badge()
+                    ->alignCenter()
+                    ->state(function ($record): string {
+                        if (! $record->request_plate) {
                             return '-';
+                        }
+                        $qty = (int) ($record->plate_qty_requested ?: 0);
+                        if ($record->plate_issued_at) {
+                            return "{$qty} Plate · Diserahkan";
+                        }
+                        if ($record->plate_approved) {
+                            $rak = $record->pracetakProcess?->lokasi_simpan_plate ?: ($record->plateArchive?->lokasi_rak ?: 'Rak');
 
+                            return "{$qty} Plate · {$rak}";
                         }
 
-                        return
+                        return 'Tidak Disetujui';
+                    })
+                    ->color(function ($record): string {
+                        if (! $record->request_plate) {
+                            return 'gray';
+                        }
+                        if ($record->plate_issued_at) {
+                            return 'success';
+                        }
+                        if ($record->plate_approved) {
+                            return 'warning';
+                        }
 
-                            number_format($issued,2)
+                        return 'danger';
+                    }),
 
-                            .' / '.
+                Tables\Columns\TextColumn::make('progress')
+                    ->label('Progress')
+                    ->state(function ($record) {
+                        $approved = (float) $record->items->sum('qty_approved');
+                        $issued = (float) $record->items->sum('qty_issued');
 
-                            number_format($approved,2)
+                        if ($approved <= 0) {
+                            if ($record->request_plate && $record->plate_approved) {
+                                return $record->plate_issued_at ? 'Plate Diserahkan (100%)' : 'Plate Siap Keluar (0%)';
+                            }
 
-                            .' ('
+                            return '-';
+                        }
 
-                            .round(
-
-                                ($issued/$approved)*100,
-
-                                1
-
-                            )
-
-                            .'%)';
-
+                        return number_format($issued, 2)
+                            . ' / '
+                            . number_format($approved, 2)
+                            . ' ('
+                            . round(($issued / $approved) * 100, 1)
+                            . '%)';
                     }),
 
                 /*

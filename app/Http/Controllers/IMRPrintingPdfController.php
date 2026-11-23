@@ -13,6 +13,8 @@ class IMRPrintingPdfController extends Controller
             'departemen',
             'spk',
             'items.item.satuan',
+            'pracetakProcess',
+            'plateArchive',
         ]);
 
         $pdf = Pdf::loadView(

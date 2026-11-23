@@ -27,33 +27,29 @@ class IssueMaterialResource extends Resource
     public static function getEloquentQuery(): Builder
     {
         return parent::getEloquentQuery()
-
             ->with([
                 'spk',
                 'departemen',
                 'items.item.stock',
+                'pracetakProcess',
+                'plateArchive',
             ])
-
             ->whereIn('status', [
-
                 'Approved',
-
+                'Partial',
                 'Partial Issued',
-
-            ]);
+            ])
+            ->orderByDesc('created_at')
+            ->orderByDesc('id');
     }
 
     public static function getNavigationBadge(): ?string
     {
-        return (string)
-
-            ImrPrinting::whereIn('status', [
-
-                'Approved',
-
-                'Partial Issued',
-
-            ])->count();
+        return (string) ImrPrinting::whereIn('status', [
+            'Approved',
+            'Partial',
+            'Partial Issued',
+        ])->count();
     }
 
     public static function form(Form $form): Form

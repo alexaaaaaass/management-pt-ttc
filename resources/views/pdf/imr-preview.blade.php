@@ -277,6 +277,44 @@ Catatan
 
 </table>
 
+@if($imr->request_plate)
+<br>
+<h3 align="center" style="margin-bottom:8px;">
+    DETAIL PLATE CETAK (RAK PRA CETAK)
+</h3>
+<table>
+    <thead>
+        <tr class="blue">
+            <th width="18%">Kode Arsip</th>
+            <th>Nama Plate / Produk</th>
+            <th width="14%">Jumlah Plate</th>
+            <th width="20%">Lokasi Rak</th>
+            <th width="22%">Status / Penerima</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td>{{ $imr->plateArchive?->kode_arsip ?: '-' }}</td>
+            <td>{{ $imr->pracetakProcess?->nama_plat ?: ($imr->plateArchive?->nama_plat ?: '-') }}</td>
+            <td align="center">{{ $imr->plate_qty_requested }} Lembar</td>
+            <td>{{ $imr->pracetakProcess?->lokasi_simpan_plate ?: ($imr->plateArchive?->lokasi_rak ?: '-') }}</td>
+            <td>
+                @if($imr->plate_issued_at)
+                    Diserahkan ke {{ $imr->plate_received_by }} ({{ $imr->plate_issued_at->format('d-m-Y H:i') }})
+                @elseif($imr->plate_approved)
+                    Disetujui (Siap Keluar)
+                @else
+                    Menunggu Approval
+                @endif
+            </td>
+        </tr>
+    </tbody>
+</table>
+@if($imr->plate_notes)
+<p style="margin-top:6px;"><b>Catatan Plate:</b> {{ $imr->plate_notes }}</p>
+@endif
+@endif
+
 @if($imr->items->whereNotNull('catatan')->count())
 
 <br>

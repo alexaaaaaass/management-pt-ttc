@@ -58,16 +58,17 @@ flowchart TD
     H1 -.->|"Opsional Pre-Order"| P0
     POST -.->|"Kurangi Saldo Stok & Catat Ledger OUT"| M1
 
-    %% 4. Arsip Plate Jadi & Hilir Printing (Submenu 4)
-    subgraph SUB4["Submenu 4: Arsip & Rak Plate (Aset Plate Jadi & Repeat Order)"]
+    %% 4. Arsip Plate Jadi & Hilir Printing (Submenu 4 + 1 Pintu IMR Printing)
+    subgraph SUB4["Submenu 4: Arsip & Rak Plate + 1 Pintu Pengeluaran via IMR Printing"]
         A1["Submenu 4: Arsip & Rak Plate\nKode Otomatis PLT-YYYY-0001\nStatus: Tersimpan di Rak (Siap Pakai)"]
-        A2["Aksi: Serah Terima ke Printing\nCatat Nama Penerima & Waktu\nCounter Pemakaian +1 | Status: Dipakai Printing"]
+        A2A["Printing: Buat IMR Printing\nAuto-Deteksi Plate Siap di Rak + Request Material Gudang\nApprove IMR (Material + Persetujuan Plate)"]
+        A2["Warehouse: Pengeluaran Material (Issue)\n1 Pintu Keluar Bahan Baku & Serah Terima Plate\nCatat Penerima | Counter +1 | Status: Dipakai Printing"]
         A3["Modul Printing Flexo\nTampil Banner Otomatis: Status Plate & Lokasi Rak"]
         A4{"Kondisi Plate\nSetelah Selesai Cetak"}
         A5["Kembalikan ke Rak\nStatus: Tersimpan (Siap Repeat Order)"]
         A6["Lapor Rusak / Hilang\nStatus: Perlu Remake / Rusak"]
 
-        A1 --> A2 --> A3 --> A4
+        A1 --> A2A --> A2 --> A3 --> A4
         A4 -->|"Baik"| A5
         A4 -->|"Rusak / Melewati Toleransi"| A6
     end
@@ -124,7 +125,7 @@ Seluruh fitur prepress diringkas menjadi **4 submenu utama** di sidebar `PRA CET
   - **A. Trial Design:** Preview desain langsung dari `Approval Form`, cek ketersediaan & kesiapan file, toleransi hasil, dan biaya desain aktual.
   - **B. Prove Print:** Uji cetak sampel bahan khusus, status ACC/Revisi, upload bukti arsip prove (foto/PDF), dan biaya prove aktual.
   - **C. Plate Making & Stok:** Detail warna/separasi, operator & mesin CTP (bisa tambah Master Mesin/Operator langsung via ikon `+` di dropdown atau tombol *Master Mesin & Operator* di header), repeater pemakaian bahan plate (produksi normal / remake rusak / prove), tombol **Posting Potong Stok Plate (OUT)**, dan kartu **Actual Cost vs Budget OC**.
-  - **D. Penyimpanan & Serah Terima:** Pendataan lokasi rak, arsip material pendukung finishing (pisau pond, film UV, emboss), toleransi rusak/hilang, sinkronisasi otomatis ke **Arsip & Rak Plate**, serta aksi **Serah Terima ke Printing**.
+  - **D. Penyimpanan & Serah Terima:** Pendataan lokasi rak, arsip material pendukung finishing (pisau pond, film UV, emboss), toleransi rusak/hilang, sinkronisasi otomatis ke **Arsip & Rak Plate**, serta pintasan **Ajukan IMR Printing** karena serah terima plate ke Printing berjalan 1 pintu ketat melalui **IMR Printing → Warehouse Pengeluaran Material**.
 
 ### 2. Material & Stok Plate (`MasterMaterialPlateResource.php`)
 - **Peran:** Satu pintu untuk katalog master bahan mentah plate, pemantauan saldo stok realtime, dan audit mutasi.

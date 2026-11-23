@@ -704,12 +704,14 @@ class PracetakProcessResource extends Resource
                                 ->placeholder('Catatan lokasi penyimpanan pisau pond, master film spot UV, master emboss/hotprint...')
                                 ->rows(3),
 
-                            Forms\Components\Section::make('Status Serah Terima ke Divisi Printing Flexo')
+                            Forms\Components\Section::make('Status Serah Terima ke Divisi Printing (1 Pintu via IMR Printing)')
+                                ->description('Serah terima plate ke divisi Printing diproses secara terpusat melalui IMR Printing → Warehouse Pengeluaran Material agar seluruh pengeluaran gudang tercatat 1 pintu.')
                                 ->columns(2)
                                 ->schema([
                                     Forms\Components\TextInput::make('handed_over_to')
                                         ->label('Diserahkan Kepada (Operator / Shift Printing)')
-                                        ->placeholder('Diisi otomatis saat klik aksi "Serah Terima ke Printing"'),
+                                        ->placeholder('Otomatis terisi saat Gudang memproses IMR Printing')
+                                        ->disabled(),
 
                                     Forms\Components\DateTimePicker::make('handed_over_at')
                                         ->label('Waktu Serah Terima')
@@ -926,35 +928,12 @@ class PracetakProcessResource extends Resource
                                 ->send();
                         }),
 
-                    Tables\Actions\Action::make('handOver')
-                        ->label('Serah Terima ke Printing')
-                        ->icon('heroicon-o-truck')
-                        ->color('success')
-                        ->visible(fn (PracetakProcess $record) => $record->status === 'selesai')
-                        ->form([
-                            Forms\Components\TextInput::make('handed_over_to')
-                                ->label('Nama Penerima (Operator / Kepala Shift Printing)')
-                                ->placeholder('Contoh: Budi - Shift 1 Flexo Zonten')
-                                ->required(),
-
-                            Forms\Components\Textarea::make('catatan')
-                                ->label('Catatan Serah Terima (Opsional)')
-                                ->placeholder('Contoh: 4 Plate CMYK + Pisau Pond kondisi baik')
-                                ->rows(2),
-                        ])
-                        ->action(function (PracetakProcess $record, array $data) {
-                            app(PracetakCostingService::class)->handOverToPrinting(
-                                $record,
-                                $data['handed_over_to'],
-                                $data['catatan'] ?? null
-                            );
-
-                            Notification::make()
-                                ->title('Plate Diserahkan ke Divisi Printing')
-                                ->body("Diserahkan kepada {$data['handed_over_to']}. Status arsip rak otomatis diperbarui menjadi Dipakai Printing.")
-                                ->success()
-                                ->send();
-                        }),
+                    Tables\Actions\Action::make('createImrForHandover')
+                        ->label('Ajukan IMR Printing (Serah Terima)')
+                        ->icon('heroicon-o-document-text')
+                        ->color('primary')
+                        ->visible(fn (PracetakProcess $record) => $record->status === 'selesai' && filled($record->spk_id))
+                        ->url(fn (PracetakProcess $record) => IMRPrintingResource::getUrl('create', ['spk_id' => $record->spk_id])),
 
                     Tables\Actions\EditAction::make(),
                 ])

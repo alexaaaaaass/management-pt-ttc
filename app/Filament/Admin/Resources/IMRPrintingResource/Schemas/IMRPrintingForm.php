@@ -10,13 +10,10 @@ class IMRPrintingForm
     {
         return $form
             ->schema([
-
                 HeaderSection::make(),
-
+                PlateRequestSection::make(),
                 LoadBomAction::make(),
-
                 ItemsRepeater::make(),
-
             ]);
     }
 }

@@ -2,11 +2,11 @@
 
 namespace App\Filament\Admin\Resources\PracetakProcessResource\Pages;
 
+use App\Filament\Admin\Resources\IMRPrintingResource;
 use App\Filament\Admin\Resources\PracetakProcessResource;
 use App\Services\Pracetak\PracetakCostingService;
 use App\Services\Pracetak\PracetakStockService;
 use Filament\Actions;
-use Filament\Forms;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\EditRecord;
 
@@ -69,32 +69,12 @@ class EditPracetakProcess extends EditRecord
                         ->send();
                 }),
 
-            Actions\Action::make('handOver')
-                ->label('Serah Terima ke Printing')
-                ->icon('heroicon-o-truck')
+            Actions\Action::make('createImrForHandover')
+                ->label('Ajukan IMR Printing (Serah Terima)')
+                ->icon('heroicon-o-document-text')
                 ->color('primary')
-                ->visible(fn () => $this->record->status === 'selesai')
-                ->form([
-                    Forms\Components\TextInput::make('handed_over_to')
-                        ->label('Nama Penerima (Operator Printing)')
-                        ->required(),
-                    Forms\Components\Textarea::make('catatan')
-                        ->label('Catatan Serah Terima')
-                        ->rows(2),
-                ])
-                ->action(function (array $data) {
-                    app(PracetakCostingService::class)->handOverToPrinting(
-                        $this->record,
-                        $data['handed_over_to'],
-                        $data['catatan'] ?? null
-                    );
-                    $this->refreshFormData(['status', 'handed_over_to', 'handed_over_at']);
-
-                    Notification::make()
-                        ->title('Plate Diserahkan ke Printing')
-                        ->success()
-                        ->send();
-                }),
+                ->visible(fn () => $this->record->status === 'selesai' && filled($this->record->spk_id))
+                ->url(fn () => IMRPrintingResource::getUrl('create', ['spk_id' => $this->record->spk_id])),
 
             Actions\DeleteAction::make(),
         ];

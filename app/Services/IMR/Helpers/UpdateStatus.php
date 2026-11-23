@@ -9,31 +9,34 @@ class UpdateStatus
     public function handle(ImrPrinting $imr): void
     {
         $imr->refresh();
+        $imr->loadMissing('items');
 
-        $approved = $imr->items->sum('qty_approved');
+        $approved = (float) $imr->items->sum('qty_approved');
+        $request = (float) $imr->items->sum('qty_request');
+        $plateRequested = (bool) $imr->request_plate;
+        $plateApproved = $plateRequested && (bool) $imr->plate_approved;
 
-        $request = $imr->items->sum('qty_request');
-
-        if ($approved <= 0) {
-
+        if ($approved <= 0 && ! $plateApproved) {
             $imr->update([
-                'status' => 'Rejected'
+                'status' => 'Rejected',
             ]);
 
             return;
         }
 
-        if ($approved < $request) {
+        $materialPartial = $request > 0 && $approved < $request;
+        $plateRejected = $plateRequested && ! $plateApproved;
 
+        if ($materialPartial || $plateRejected) {
             $imr->update([
-                'status' => 'Partial'
+                'status' => 'Partial',
             ]);
 
             return;
         }
 
         $imr->update([
-            'status' => 'Approved'
+            'status' => 'Approved',
         ]);
     }
 }

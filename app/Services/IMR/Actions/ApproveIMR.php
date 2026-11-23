@@ -33,7 +33,7 @@ class ApproveIMR
 
             }
 
-            $imr->loadMissing('items');
+            $imr->loadMissing(['items.item', 'pracetakProcess', 'plateArchive']);
 
             $this->validator->handle(
                 $imr,
@@ -41,84 +41,53 @@ class ApproveIMR
             );
 
             foreach ($imr->items as $index => $item) {
+                $qtyApproved = (float) ($data['items'][$index]['qty_approved'] ?? 0);
 
-    $qtyApproved = (float) (
-        $data['items'][$index]['qty_approved'] ?? 0
-    );
+                $stock = MaterialStock::where('item_id', $item->item_id)
+                    ->lockForUpdate()
+                    ->first();
 
-    $stock = MaterialStock::where(
-        'item_id',
-        $item->item_id
-    )
-    ->lockForUpdate()
-    ->first();
+                if (! $stock) {
+                    throw new \Exception("Stock {$item->item->nama_master_item} tidak ditemukan.");
+                }
 
-    if (! $stock) {
+                if ($qtyApproved > $stock->available) {
+                    throw new \Exception("Available Stock {$item->item->nama_master_item} hanya {$stock->available}");
+                }
 
-        throw new \Exception(
-            "Stock {$item->item->nama_master_item} tidak ditemukan."
-        );
+                $item->update([
+                    'qty_approved' => $qtyApproved,
+                ]);
 
-    }
+                if ($qtyApproved > 0) {
+                    $stock->increment('allocation', $qtyApproved);
 
-    /*
-    |--------------------------------------------------------------------------
-    | VALIDASI AVAILABLE
-    |--------------------------------------------------------------------------
-    */
+                    $this->movement->handle([
+                        'item_id'        => $item->item_id,
+                        'reference_type' => 'IMR',
+                        'reference_id'   => $imr->id,
+                        'movement_type'  => 'APPROVE',
+                        'qty'            => $qtyApproved,
+                        'stock_before'   => $stock->on_hand,
+                        'stock_after'    => $stock->on_hand,
+                        'remarks'        => "Approve IMR {$imr->no_imr}",
+                    ]);
+                }
+            }
 
-    if ($qtyApproved > $stock->available) {
+            // Persetujuan pengambilan Plate Cetak Jadi dari Rak Pra Cetak (1 pintu via IMR)
+            if ($imr->request_plate) {
+                $approvePlate = (bool) ($data['plate_approved'] ?? true);
 
-        throw new \Exception(
-            "Available Stock {$item->item->nama_master_item} hanya {$stock->available}"
-        );
+                if ($approvePlate && $imr->pracetakProcess && $imr->pracetakProcess->status !== 'selesai') {
+                    throw new \Exception('Plate pada Pra Cetak tidak dalam status Tersimpan di Rak (status saat ini: ' . $imr->pracetakProcess->status . ').');
+                }
 
-    }
+                $imr->update([
+                    'plate_approved' => $approvePlate,
+                ]);
+            }
 
-    /*
-    |--------------------------------------------------------------------------
-    | UPDATE ITEM
-    |--------------------------------------------------------------------------
-    */
-
-    $item->update([
-
-        'qty_approved' => $qtyApproved
-
-    ]);
-
-    /*
-    |--------------------------------------------------------------------------
-    | RESERVE STOCK
-    |--------------------------------------------------------------------------
-    */
-
-    $stock->increment(
-        'allocation',
-        $qtyApproved
-    );
-
-   $this->movement->handle([
-
-    'item_id'        => $item->item_id,
-
-    'reference_type' => 'IMR',
-
-    'reference_id'   => $imr->id,
-
-    'movement_type'  => 'APPROVE',
-
-    'qty'            => $qtyApproved,
-
-    'stock_before'   => $stock->on_hand,
-
-    'stock_after'    => $stock->on_hand,
-
-    'remarks'        => "Approve IMR {$imr->no_imr}",
-
-]);
-
-}
             $this->statusUpdater->handle($imr);
 
         });
