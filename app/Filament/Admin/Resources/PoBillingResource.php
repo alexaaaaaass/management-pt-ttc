@@ -19,10 +19,12 @@ use Filament\Forms\Components\{
     Textarea,
     Repeater
 };
+use Filament\Forms\Get;
 use Filament\Forms\Set;
 
 use App\Models\PenerimaanBarang;
 use App\Models\User;
+use App\Support\MoneyHelper;
 
 class PoBillingResource extends Resource
 {
@@ -42,27 +44,36 @@ class PoBillingResource extends Resource
                 // ==========================================
                 Wizard\Step::make('Penerimaan Barang & Info Tagihan')
                     ->icon('heroicon-o-document-text')
-                    ->description('Pilih LPB acuan, nomor invoice vendor, karyawan, dan tanggal transaksi')
+                    ->description('Pilih LPB acuan, cek supplier terkait, nomor invoice vendor, karyawan, dan tanggal transaksi')
                     ->schema([
                         Forms\Components\Hidden::make('purchase_order_id'),
                         Forms\Components\Hidden::make('supplier_id'),
 
-                        Grid::make(3)
+                        Grid::make(2)
                             ->schema([
                                 Select::make('penerimaan_barang_id')
                                     ->label('Penerimaan Barang (LPB)')
                                     ->options(function (?PoBilling $record) {
-                                        return PenerimaanBarang::with('purchaseOrder')
+                                        return PenerimaanBarang::with(['purchaseOrder.supplier', 'purchaseOrder.purchaseRequest'])
                                             ->where(function ($query) use ($record) {
                                                 $query->whereDoesntHave('poBilling');
                                                 if ($record && $record->penerimaan_barang_id) {
                                                     $query->orWhere('id', $record->penerimaan_barang_id);
                                                 }
                                             })
+                                            ->orderByDesc('created_at')
+                                            ->orderByDesc('id')
                                             ->get()
-                                            ->mapWithKeys(fn ($item) => [
-                                                $item->id => $item->no_penerimaan . ' (PO: ' . ($item->purchaseOrder?->no_po ?? '-') . ')'
-                                            ]);
+                                            ->mapWithKeys(function ($item) {
+                                                $supplierName = $item->purchaseOrder?->supplier?->nama_supplier ?? 'Tanpa Supplier';
+                                                $poNo = $item->purchaseOrder?->no_po ?? '-';
+                                                $prNo = $item->purchaseOrder?->purchaseRequest?->nomor_pr;
+                                                $ref = $prNo ? "PO: {$poNo} | PR: {$prNo}" : "PO: {$poNo}";
+
+                                                return [
+                                                    $item->id => "{$item->no_penerimaan} — {$supplierName} ({$ref})",
+                                                ];
+                                            });
                                     })
                                     ->disabled(fn (string $operation) => $operation === 'edit')
                                     ->searchable()
@@ -75,10 +86,14 @@ class PoBillingResource extends Resource
                                     ) {
                                         $lpb = PenerimaanBarang::with([
                                             'items.purchaseOrderItem.item',
-                                            'purchaseOrder'
+                                            'purchaseOrder.supplier',
                                         ])->find($state);
 
                                         if (!$lpb) {
+                                            $set('supplier_name_display', null);
+                                            $set('supplier_id', null);
+                                            $set('purchase_order_id', null);
+
                                             return;
                                         }
 
@@ -86,34 +101,43 @@ class PoBillingResource extends Resource
                                         $totalBarang = 0;
 
                                         foreach ($lpb->items as $item) {
-                                            $harga = optional($item->purchaseOrderItem)->price ?? 0;
-                                            $qty = $item->qty_terima ?? 0;
-                                            $subtotal = $qty * $harga;
+                                            $harga = (float) (optional($item->purchaseOrderItem)->price ?? 0);
+                                            $qty = (float) ($item->qty_terima ?? 0);
+                                            $diskon = (float) (optional($item->purchaseOrderItem)->discount ?? 0);
+                                            $subtotal = round(($qty * $harga) - (($qty * $harga) * $diskon / 100), 2);
                                             $totalBarang += $subtotal;
 
                                             $items[] = [
+                                                'item_id' => optional($item->purchaseOrderItem)->item_id,
                                                 'item_name' => optional(optional($item->purchaseOrderItem)->item)->nama_master_item ?? 'Item',
                                                 'qty' => $qty,
                                                 'harga' => $harga,
-                                                'diskon' => 0,
+                                                'diskon' => $diskon,
                                                 'subtotal' => $subtotal,
                                             ];
                                         }
 
-                                        $ppn = $totalBarang * 0.11;
-                                        $ongkir = 0;
-                                        $dp = 0;
-                                        $grandTotal = $totalBarang + $ppn + $ongkir - $dp;
+                                        $ppn = round($totalBarang * 0.11, 2);
+                                        $ongkir = (float) ($lpb->purchaseOrder?->ongkir ?? 0);
+                                        $dp = (float) ($lpb->purchaseOrder?->dp ?? 0);
+                                        $grandTotal = max(0.0, round($totalBarang + $ppn + $ongkir - $dp, 2));
 
                                         $set('items', $items);
                                         $set('purchase_order_id', $lpb->purchase_order_id);
                                         $set('supplier_id', optional($lpb->purchaseOrder)->supplier_id);
+                                        $set('supplier_name_display', $lpb->purchaseOrder?->supplier?->nama_supplier ?? '-');
                                         $set('total_barang', $totalBarang);
                                         $set('ppn', $ppn);
                                         $set('ongkir', $ongkir);
                                         $set('dp', $dp);
                                         $set('grand_total', $grandTotal);
                                     }),
+
+                                TextInput::make('supplier_name_display')
+                                    ->label('Supplier / Vendor Tertagih')
+                                    ->placeholder('Otomatis terisi dari LPB / PO')
+                                    ->disabled()
+                                    ->dehydrated(false),
 
                                 Select::make('karyawan_id')
                                     ->label('Karyawan Penanggung Jawab')
@@ -122,7 +146,7 @@ class PoBillingResource extends Resource
 
                                 TextInput::make('invoice_vendor')
                                     ->label('No Invoice Vendor / Tagihan')
-                                    ->placeholder('Contoh: INV-SUP-2024/09'),
+                                    ->placeholder('Contoh: INV-SUP-2026/09'),
                             ]),
 
                         Grid::make(3)
@@ -166,6 +190,7 @@ class PoBillingResource extends Resource
                                     ->live()
                                     ->itemLabel(fn (array $state): ?string => $state['item_name'] ?? 'Item')
                                     ->schema([
+                                        Forms\Components\Hidden::make('item_id')->dehydrated(),
                                         Grid::make(5)
                                             ->schema([
                                                 TextInput::make('item_name')
@@ -176,21 +201,21 @@ class PoBillingResource extends Resource
                                                 TextInput::make('qty')
                                                     ->label('Qty Terima')
                                                     ->quantityMask(2)
-                                                    ->live(),
+                                                    ->live(onBlur: true),
 
                                                 TextInput::make('harga')
                                                     ->label('Harga Satuan')
                                                     ->prefix('Rp')
                                                     ->currencyMask(2)
                                                     ->placeholder('0.00')
-                                                    ->live(),
+                                                    ->live(onBlur: true),
 
                                                 TextInput::make('diskon')
                                                     ->label('Diskon (%)')
                                                     ->numeric()
                                                     ->default(0)
                                                     ->suffix('%')
-                                                    ->live(),
+                                                    ->live(onBlur: true),
 
                                                 TextInput::make('subtotal')
                                                     ->label('Subtotal')
@@ -204,19 +229,19 @@ class PoBillingResource extends Resource
                                         $totalBarang = 0;
 
                                         foreach ($state as $key => $item) {
-                                            $qty = (float) ($item['qty'] ?? 0);
-                                            $harga = \App\Support\MoneyHelper::clean($item['harga'] ?? 0) ?? 0;
+                                            $qty = (float) (MoneyHelper::clean($item['qty'] ?? 0) ?? 0);
+                                            $harga = (float) (MoneyHelper::clean($item['harga'] ?? 0) ?? 0);
                                             $diskon = (float) ($item['diskon'] ?? 0);
-                                            $subtotal = ($qty * $harga) - (($qty * $harga) * $diskon / 100);
+                                            $subtotal = round(($qty * $harga) - (($qty * $harga) * $diskon / 100), 2);
 
                                             $state[$key]['subtotal'] = $subtotal;
                                             $totalBarang += $subtotal;
                                         }
 
-                                        $ppn = $totalBarang * 0.11;
-                                        $ongkir = \App\Support\MoneyHelper::clean($get('ongkir')) ?? 0;
-                                        $dp = \App\Support\MoneyHelper::clean($get('dp')) ?? 0;
-                                        $grandTotal = $totalBarang + $ppn + $ongkir - $dp;
+                                        $ppn = round($totalBarang * 0.11, 2);
+                                        $ongkir = (float) (MoneyHelper::clean($get('ongkir')) ?? 0);
+                                        $dp = (float) (MoneyHelper::clean($get('dp')) ?? 0);
+                                        $grandTotal = max(0.0, round($totalBarang + $ppn + $ongkir - $dp, 2));
 
                                         $set('items', $state);
                                         $set('total_barang', $totalBarang);
@@ -249,13 +274,13 @@ class PoBillingResource extends Resource
                                             ->prefix('Rp')
                                             ->currencyMask(2)
                                             ->default(0)
-                                            ->live()
+                                            ->live(onBlur: true)
                                             ->afterStateUpdated(function ($state, Get $get, Set $set) {
-                                                $totalBarang = (float) ($get('total_barang') ?? 0);
-                                                $ppn = (float) ($get('ppn') ?? 0);
-                                                $ongkir = \App\Support\MoneyHelper::clean($state) ?? 0;
-                                                $dp = \App\Support\MoneyHelper::clean($get('dp')) ?? 0;
-                                                $set('grand_total', $totalBarang + $ppn + $ongkir - $dp);
+                                                $totalBarang = (float) (MoneyHelper::clean($get('total_barang')) ?? 0);
+                                                $ppn = (float) (MoneyHelper::clean($get('ppn')) ?? 0);
+                                                $ongkir = (float) (MoneyHelper::clean($state) ?? 0);
+                                                $dp = (float) (MoneyHelper::clean($get('dp')) ?? 0);
+                                                $set('grand_total', max(0.0, round($totalBarang + $ppn + $ongkir - $dp, 2)));
                                             }),
 
                                         TextInput::make('dp')
@@ -263,13 +288,13 @@ class PoBillingResource extends Resource
                                             ->prefix('Rp')
                                             ->currencyMask(2)
                                             ->default(0)
-                                            ->live()
+                                            ->live(onBlur: true)
                                             ->afterStateUpdated(function ($state, Get $get, Set $set) {
-                                                $totalBarang = (float) ($get('total_barang') ?? 0);
-                                                $ppn = (float) ($get('ppn') ?? 0);
-                                                $ongkir = \App\Support\MoneyHelper::clean($get('ongkir')) ?? 0;
-                                                $dp = \App\Support\MoneyHelper::clean($state) ?? 0;
-                                                $set('grand_total', $totalBarang + $ppn + $ongkir - $dp);
+                                                $totalBarang = (float) (MoneyHelper::clean($get('total_barang')) ?? 0);
+                                                $ppn = (float) (MoneyHelper::clean($get('ppn')) ?? 0);
+                                                $ongkir = (float) (MoneyHelper::clean($get('ongkir')) ?? 0);
+                                                $dp = (float) (MoneyHelper::clean($state) ?? 0);
+                                                $set('grand_total', max(0.0, round($totalBarang + $ppn + $ongkir - $dp, 2)));
                                             }),
 
                                         TextInput::make('grand_total')
@@ -306,6 +331,7 @@ class PoBillingResource extends Resource
     public static function table(Table $table): Table
     {
         return $table
+           ->defaultSort('created_at', 'desc')
            ->columns([
                 Tables\Columns\TextColumn::make('kode_tagihan')
                     ->label('Kode Tagihan')
@@ -318,11 +344,15 @@ class PoBillingResource extends Resource
 
                 Tables\Columns\TextColumn::make('purchaseOrder.no_po')
                     ->label('PO')
+                    ->description(fn (PoBilling $record): ?string => $record->purchaseOrder?->purchaseRequest?->nomor_pr
+                        ? 'PR: ' . $record->purchaseOrder->purchaseRequest->nomor_pr
+                        : null)
                     ->searchable(),
 
                 Tables\Columns\TextColumn::make('supplier.nama_supplier')
                     ->label('Supplier')
-                    ->searchable(),
+                    ->searchable()
+                    ->sortable(),
 
                 Tables\Columns\TextColumn::make('grand_total')
                     ->label('Total Tagihan')
@@ -380,6 +410,15 @@ class PoBillingResource extends Resource
         return [
             //
         ];
+    }
+
+    public static function getEloquentQuery(): \Illuminate\Database\Eloquent\Builder
+    {
+        return parent::getEloquentQuery()->with([
+            'penerimaanBarang',
+            'purchaseOrder.purchaseRequest',
+            'supplier',
+        ]);
     }
 
     public static function getPages(): array

@@ -52,10 +52,16 @@ protected static ?int $navigationSort = 12;
                         Select::make('po_billing_id')
                             ->label('Billing Reference')
                             ->options(function () {
-                                return PoBilling::with(['supplier'])->get()->mapWithKeys(function ($bill) {
-                                    $label = $bill->kode_tagihan . ' • ' . ($bill->supplier?->nama_supplier ?? '-') . ' (Sisa: Rp ' . number_format($bill->sisa_tagihan, 0, ',', '.') . ')';
-                                    return [$bill->id => $label];
-                                });
+                                return PoBilling::with(['supplier', 'purchaseOrder'])
+                                    ->orderByDesc('created_at')
+                                    ->orderByDesc('id')
+                                    ->get()
+                                    ->mapWithKeys(function ($bill) {
+                                        $poNo = $bill->purchaseOrder?->no_po;
+                                        $poPart = $poNo ? "PO: {$poNo} · " : '';
+                                        $label = $bill->kode_tagihan . ' • ' . ($bill->supplier?->nama_supplier ?? '-') . ' (' . $poPart . 'Sisa: Rp ' . number_format($bill->sisa_tagihan, 0, ',', '.') . ')';
+                                        return [$bill->id => $label];
+                                    });
                             })
                             ->searchable()
                             ->preload()
@@ -300,6 +306,7 @@ protected static ?int $navigationSort = 12;
    public static function table(Table $table): Table
 {
     return $table
+        ->defaultSort('created_at', 'desc')
         ->columns([
             Tables\Columns\TextColumn::make('tanggal_pembayaran')
                 ->label('Tgl Pembayaran')
@@ -308,8 +315,15 @@ protected static ?int $navigationSort = 12;
 
             Tables\Columns\TextColumn::make('poBilling.kode_tagihan')
                 ->label('Billing Ref')
+                ->description(fn (PoBillPay $record): ?string => $record->poBilling?->purchaseOrder?->no_po
+                    ? 'PO: ' . $record->poBilling->purchaseOrder->no_po
+                    : null)
                 ->searchable()
                 ->sortable(),
+
+            Tables\Columns\TextColumn::make('poBilling.supplier.nama_supplier')
+                ->label('Supplier')
+                ->searchable(),
 
             Tables\Columns\TextColumn::make('gudang')
                 ->label('Gudang')
@@ -377,6 +391,14 @@ protected static ?int $navigationSort = 12;
         return [
             //
         ];
+    }
+
+    public static function getEloquentQuery(): \Illuminate\Database\Eloquent\Builder
+    {
+        return parent::getEloquentQuery()->with([
+            'poBilling.supplier',
+            'poBilling.purchaseOrder',
+        ]);
     }
 
     public static function getPages(): array

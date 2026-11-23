@@ -35,12 +35,21 @@ class PenerimaanBarangResource extends Resource
                     ->schema([
 
                       Forms\Components\Select::make('purchase_order_id')
-    ->label('ID Purchase Order')
+    ->label('Purchase Order (PO)')
     ->relationship(
         name: 'purchaseOrder',
         titleAttribute: 'no_po',
-        modifyQueryUsing: fn (\Illuminate\Database\Eloquent\Builder $query) => $query->orderByDesc('created_at')->orderByDesc('id')
+        modifyQueryUsing: fn (\Illuminate\Database\Eloquent\Builder $query) => $query
+            ->with(['supplier', 'purchaseRequest'])
+            ->orderByDesc('created_at')
+            ->orderByDesc('id')
     )
+    ->getOptionLabelFromRecordUsing(function (\App\Models\PurchaseOrder $record): string {
+        $supplier = $record->supplier?->nama_supplier ?? 'Tanpa Supplier';
+        $prNo = $record->purchaseRequest?->nomor_pr;
+
+        return $record->no_po . ' — ' . $supplier . ($prNo ? " ({$prNo})" : '');
+    })
     ->searchable()
     ->preload()
     ->live()
@@ -222,6 +231,13 @@ class PenerimaanBarangResource extends Resource
 
                 Tables\Columns\TextColumn::make('purchaseOrder.no_po')
                     ->label('No Purchase Order')
+                    ->description(fn (PenerimaanBarang $record): ?string => $record->purchaseOrder?->purchaseRequest?->nomor_pr
+                        ? 'PR: ' . $record->purchaseOrder->purchaseRequest->nomor_pr
+                        : null)
+                    ->searchable(),
+
+                Tables\Columns\TextColumn::make('purchaseOrder.supplier.nama_supplier')
+                    ->label('Supplier')
                     ->searchable(),
 
                 Tables\Columns\TextColumn::make('tanggal_terima')
@@ -283,9 +299,7 @@ class PenerimaanBarangResource extends Resource
       Action::make('download')
     ->label('Download PDF')
     ->icon('heroicon-o-arrow-down-tray')
-    ->url(fn (PenerimaanBarang $record) => route('pb.download', [
-        'id' => $record->id,
-    ])),
+    ->url(fn (PenerimaanBarang $record) => route('pb.download', $record)),
 
         Tables\Actions\EditAction::make()
             ->disabled(fn ($record) => ! app(\App\Services\PurchaseOrder\PenerimaanBarangService::class)->canModify($record))
@@ -306,6 +320,15 @@ class PenerimaanBarangResource extends Resource
             ->bulkActions([
                 Tables\Actions\DeleteBulkAction::make(),
             ]);
+    }
+
+    public static function getEloquentQuery(): \Illuminate\Database\Eloquent\Builder
+    {
+        return parent::getEloquentQuery()->with([
+            'purchaseOrder.supplier',
+            'purchaseOrder.purchaseRequest',
+            'items.purchaseOrderItem.item.materialPlate',
+        ]);
     }
 
     public static function getPages(): array

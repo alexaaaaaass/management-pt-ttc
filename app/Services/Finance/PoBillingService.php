@@ -86,7 +86,7 @@ class PoBillingService
                 ]);
             }
 
-            $lpb = PenerimaanBarang::with('purchaseOrder')->findOrFail($lpbId);
+            $lpb = PenerimaanBarang::with(['purchaseOrder', 'items.purchaseOrderItem.item'])->findOrFail($lpbId);
 
             if (empty($data['kode_tagihan']) || $data['kode_tagihan'] === 'AUTO') {
                 $data['kode_tagihan'] = $this->generateKodeTagihan();
@@ -111,11 +111,19 @@ class PoBillingService
             /** @var PoBilling $billing */
             $billing = PoBilling::create($data);
 
-            foreach ($itemsData as $item) {
+            $lpbItemsByName = $lpb->items->keyBy(fn ($it) => $it->purchaseOrderItem?->item?->nama_master_item ?? '');
+            $lpbItemsList = $lpb->items->values();
+
+            foreach (array_values($itemsData) as $idx => $item) {
                 $qty = (float) ($item['qty'] ?? 0);
                 $harga = (float) ($item['harga'] ?? 0);
                 $diskon = (float) ($item['diskon'] ?? 0);
                 $subtotal = ($qty * $harga) - (($qty * $harga) * $diskon / 100);
+
+                if (empty($item['item_id'])) {
+                    $matched = $lpbItemsByName->get($item['item_name'] ?? '') ?? $lpbItemsList->get($idx);
+                    $item['item_id'] = $matched?->purchaseOrderItem?->item_id;
+                }
 
                 $item['subtotal'] = round($subtotal, 2);
                 $billing->items()->create($item);
