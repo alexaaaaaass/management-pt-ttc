@@ -34,15 +34,12 @@ class ItemsRepeater
                     ->reorderable(false)
 
                     ->itemLabel(function (array $state): ?string {
-
                         $nama = $state['nama_item'] ?? '-';
+                        $qty = max(0, (float) ($state['qty_input'] ?? $state['qty_request'] ?? 0));
+                        $qtyFormatted = \App\Support\MoneyHelper::format($qty, 2) ?? '0';
+                        $satuan = trim((string) ($state['satuan'] ?? ''));
 
-                        $qty = $state['total_pesanan'] ?? 0;
-
-                        $satuan = $state['satuan'] ?? '';
-
-                        return "{$nama} ({$qty} {$satuan})";
-
+                        return $satuan !== '' ? "{$nama} ({$qtyFormatted} {$satuan})" : "{$nama} ({$qtyFormatted})";
                     })
 
                     ->schema([

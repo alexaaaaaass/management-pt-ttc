@@ -3,7 +3,9 @@
 namespace App\Filament\Admin\Resources\ImrFinishResource\Schemas;
 
 use App\Models\MasterDepartemen;
+use App\Models\MasterSpk;
 use Filament\Forms;
+use Illuminate\Database\Eloquent\Builder;
 
 class HeaderSection
 {
@@ -26,7 +28,21 @@ class HeaderSection
 
                 Forms\Components\Select::make('spk_id')
                     ->label('Surat Perintah Kerja')
-                    ->relationship('spk', 'no_spk')
+                    ->placeholder('Pilih SPK (Terbaru di Atas)')
+                    ->relationship(
+                        name: 'spk',
+                        titleAttribute: 'no_spk',
+                        modifyQueryUsing: fn (Builder $query) => $query
+                            ->with(['salesOrder.customer', 'salesOrder.itemable'])
+                            ->orderByDesc('created_at')
+                            ->orderByDesc('id')
+                    )
+                    ->getOptionLabelFromRecordUsing(function (MasterSpk $spk): string {
+                        $cust = $spk->salesOrder?->customer?->nama_customer ?? '-';
+                        $prod = $spk->salesOrder?->product_name ?: '-';
+
+                        return "{$spk->no_spk} — {$cust} · {$prod}";
+                    })
                     ->searchable()
                     ->preload()
                     ->required(),

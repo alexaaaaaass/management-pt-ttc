@@ -17,7 +17,14 @@ class CreateIMR
         unset($data['imr_items']);
 
         $requestPlate = (bool) ($data['request_plate'] ?? false);
-        $validItems = array_values(array_filter($items, fn ($item) => (float) ($item['qty_request'] ?? 0) > 0));
+        $validItems = [];
+        foreach ($items as $item) {
+            $qtyReq = max(0, (float) ($item['qty_input'] ?? $item['qty_request'] ?? 0));
+            if ($qtyReq > 0) {
+                $item['qty_request'] = $qtyReq;
+                $validItems[] = $item;
+            }
+        }
 
         if (empty($validItems) && ! $requestPlate) {
             throw ValidationException::withMessages([
