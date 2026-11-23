@@ -21,7 +21,7 @@ class CreatePracetakProcess extends CreateRecord
 
         if ($spkId && ($spk = MasterSpk::find($spkId))) {
             $resolved = app(PracetakCostingService::class)->resolveEstimatedPlateFromSpk($spk);
-            $this->form->fill([
+            $this->form->fill(array_merge($this->form->getRawState(), [
                 'spk_id'                => $spk->id,
                 'approval_form_id'      => $resolved['approval_form_id'],
                 'order_confirmation_id' => $resolved['order_confirmation_id'],
@@ -34,14 +34,14 @@ class CreatePracetakProcess extends CreateRecord
                 'plate_archive_id'      => $resolved['plate_archive_id'],
                 'ket_spk'               => $spk->is_subcount ? 'subcount' : 'reguler',
                 'status'                => $resolved['is_repeat_order'] ? 'selesai' : 'design',
-            ]);
+            ]));
         } elseif ($afId && ($af = ApprovalForm::with('items')->find($afId))) {
             $firstItem = $af->items->first();
             $warnaCount = 4;
             if ($firstItem?->warna && preg_match('/\d+/', (string) $firstItem->warna, $m)) {
                 $warnaCount = max(1, (int) $m[0]);
             }
-            $this->form->fill([
+            $this->form->fill(array_merge($this->form->getRawState(), [
                 'approval_form_id'    => $af->id,
                 'finish_good_item_id' => $firstItem?->finish_good_item_id,
                 'nama_plat'           => $firstItem?->item_name ?: "Pre-Order {$af->form_no}",
@@ -49,7 +49,7 @@ class CreatePracetakProcess extends CreateRecord
                 'jumlah_warna_plate'  => $warnaCount,
                 'ket_spk'             => 'reguler',
                 'status'              => 'design',
-            ]);
+            ]));
         }
     }
 

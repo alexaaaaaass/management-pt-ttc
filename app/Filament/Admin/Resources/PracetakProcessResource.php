@@ -12,6 +12,7 @@ use App\Models\PracetakPlateArchive;
 use App\Models\PracetakProcess;
 use App\Services\Pracetak\PracetakCostingService;
 use App\Services\Pracetak\PracetakStockService;
+use App\Support\MoneyHelper;
 use Filament\Forms;
 use Filament\Forms\Form;
 use Filament\Forms\Get;
@@ -64,8 +65,8 @@ class PracetakProcessResource extends Resource
             $unitPrice = $avgStock > 0 ? $avgStock : (float) $plate->harga_beli;
         }
 
-        $set('harga_satuan_snapshot', round($unitPrice, 2));
-        $set('total_biaya', round($qtySheet * $unitPrice, 2));
+        $set('harga_satuan_snapshot', MoneyHelper::format(round($unitPrice, 2), 2) ?? '0');
+        $set('total_biaya', MoneyHelper::format(round($qtySheet * $unitPrice, 2), 2) ?? '0');
     }
 
     public static function form(Form $form): Form
@@ -105,7 +106,7 @@ class PracetakProcessResource extends Resource
                                         }
                                         $set('jumlah_warna_plate', $resolved['jumlah_warna_plate']);
                                         $set('qty', $resolved['jumlah_warna_plate']);
-                                        $set('estimasi_biaya_plate', $resolved['estimasi_biaya_plate']);
+                                        $set('estimasi_biaya_plate', MoneyHelper::format($resolved['estimasi_biaya_plate'], 2) ?? '0');
                                         $set('is_repeat_order', $resolved['is_repeat_order']);
                                         if ($resolved['plate_archive_id']) {
                                             $set('plate_archive_id', $resolved['plate_archive_id']);
@@ -187,7 +188,7 @@ class PracetakProcessResource extends Resource
                                 Forms\Components\TextInput::make('estimasi_biaya_plate')
                                     ->label('Estimasi Biaya Plate (dari OC)')
                                     ->prefix('Rp')
-                                    ->numeric()
+                                    ->currencyMask(2)
                                     ->default(0)
                                     ->helperText('Acuan budget dari Kalkulator HPP Order Confirmation'),
                             ]),
@@ -342,7 +343,7 @@ class PracetakProcessResource extends Resource
                                 Forms\Components\TextInput::make('actual_design_cost')
                                     ->label('Biaya Setting / Jasa Desain Aktual (Rp)')
                                     ->prefix('Rp')
-                                    ->numeric()
+                                    ->currencyMask(2)
                                     ->default(0)
                                     ->helperText('Isi jika ada biaya edit/redraw file desain di luar standar'),
                             ]),
@@ -383,7 +384,7 @@ class PracetakProcessResource extends Resource
                                 Forms\Components\TextInput::make('actual_prove_cost')
                                     ->label('Biaya Aktual Prove Print (Rp)')
                                     ->prefix('Rp')
-                                    ->numeric()
+                                    ->currencyMask(2)
                                     ->default(0)
                                     ->helperText('Biaya bahan sampel & cetak prove')
                                     ->visible(fn (Get $get) => (bool) $get('is_prove_print')),
@@ -451,7 +452,7 @@ class PracetakProcessResource extends Resource
                                         Forms\Components\TextInput::make('tarif_per_plate')
                                             ->label('Tarif Proses / Plate (Rp)')
                                             ->prefix('Rp')
-                                            ->numeric()
+                                            ->currencyMask(2)
                                             ->default(0),
                                         Forms\Components\Hidden::make('status')->default('aktif'),
                                     ])
@@ -460,19 +461,19 @@ class PracetakProcessResource extends Resource
                                             return;
                                         }
                                         $mesin = MesinPraCetak::find($state);
-                                        if ($mesin && (float) $mesin->tarif_per_plate > 0 && (float) ($get('actual_process_cost') ?? 0) <= 0) {
+                                        if ($mesin && (float) $mesin->tarif_per_plate > 0 && (float) (MoneyHelper::clean($get('actual_process_cost')) ?? 0) <= 0) {
                                             $plateCount = max(
                                                 (int) (($get('hasil_baik') ?? 0) + ($get('hasil_rusak') ?? 0)),
                                                 (int) ($get('jumlah_warna_plate') ?? 4)
                                             );
-                                            $set('actual_process_cost', round((float) $mesin->tarif_per_plate * $plateCount, 2));
+                                            $set('actual_process_cost', MoneyHelper::format(round((float) $mesin->tarif_per_plate * $plateCount, 2), 2) ?? '0');
                                         }
                                     }),
 
                                 Forms\Components\TextInput::make('actual_process_cost')
                                     ->label('Biaya Proses CTP / Solvent / Mesin (Rp)')
                                     ->prefix('Rp')
-                                    ->numeric()
+                                    ->currencyMask(2)
                                     ->default(0)
                                     ->helperText('Otomatis dari tarif mesin atau isi manual'),
                             ]),
@@ -515,7 +516,7 @@ class PracetakProcessResource extends Resource
                                                 ? (MasterMaterialPlate::find($state['master_material_plate_id'])?->nama_material ?? 'Material Plate')
                                                 : 'Item Pemakaian Baru';
                                             $qty = number_format((float) ($state['qty_sheet_terpakai'] ?? 0), 4, '.', ',');
-                                            $biaya = number_format((float) ($state['total_biaya'] ?? 0), 0, ',', '.');
+                                            $biaya = MoneyHelper::format($state['total_biaya'] ?? 0, 2) ?? '0';
                                             $status = strtoupper((string) ($state['status'] ?? 'draft'));
 
                                             return "[{$status}] {$plateName} — {$qty} Sheet (Rp {$biaya})";
@@ -578,7 +579,7 @@ class PracetakProcessResource extends Resource
                                                     ->default(4)
                                                     ->minValue(1)
                                                     ->required()
-                                                    ->live(debounce: 400)
+                                                    ->live(onBlur: true)
                                                     ->disabled(fn (Get $get) => ($get('status') ?? 'draft') !== 'draft')
                                                     ->afterStateUpdated(fn (Get $get, Set $set) => self::recalculateUsageRow($get, $set, true)),
 
@@ -587,7 +588,7 @@ class PracetakProcessResource extends Resource
                                                     ->numeric()
                                                     ->default(432.8)
                                                     ->helperText('Repeat + margin')
-                                                    ->live(debounce: 400)
+                                                    ->live(onBlur: true)
                                                     ->disabled(fn (Get $get) => ($get('status') ?? 'draft') !== 'draft')
                                                     ->afterStateUpdated(fn (Get $get, Set $set) => self::recalculateUsageRow($get, $set, true)),
 
@@ -596,7 +597,7 @@ class PracetakProcessResource extends Resource
                                                     ->numeric()
                                                     ->default(280)
                                                     ->helperText('Lebar web + margin')
-                                                    ->live(debounce: 400)
+                                                    ->live(onBlur: true)
                                                     ->disabled(fn (Get $get) => ($get('status') ?? 'draft') !== 'draft')
                                                     ->afterStateUpdated(fn (Get $get, Set $set) => self::recalculateUsageRow($get, $set, true)),
 
@@ -614,22 +615,24 @@ class PracetakProcessResource extends Resource
                                                     ->step('0.0001')
                                                     ->required()
                                                     ->helperText('Otomatis dari luas cm²; ubah manual misal ke 1.00 jika potong 1 sheet penuh')
-                                                    ->live(debounce: 400)
+                                                    ->live(onBlur: true)
                                                     ->disabled(fn (Get $get) => ($get('status') ?? 'draft') !== 'draft')
                                                     ->afterStateUpdated(fn (Get $get, Set $set) => self::recalculateUsageRow($get, $set, false)),
 
                                                 Forms\Components\TextInput::make('harga_satuan_snapshot')
                                                     ->label('Harga Rata-rata / Sheet (Rp)')
                                                     ->prefix('Rp')
-                                                    ->numeric()
                                                     ->readOnly()
+                                                    ->formatStateUsing(fn ($state) => MoneyHelper::format($state, 2) ?? '0')
+                                                    ->dehydrateStateUsing(fn ($state) => MoneyHelper::clean($state) ?? 0)
                                                     ->dehydrated(),
 
                                                 Forms\Components\TextInput::make('total_biaya')
                                                     ->label('Total Biaya Material (Rp)')
                                                     ->prefix('Rp')
-                                                    ->numeric()
                                                     ->readOnly()
+                                                    ->formatStateUsing(fn ($state) => MoneyHelper::format($state, 2) ?? '0')
+                                                    ->dehydrateStateUsing(fn ($state) => MoneyHelper::clean($state) ?? 0)
                                                     ->dehydrated(),
                                             ]),
 
@@ -646,11 +649,11 @@ class PracetakProcessResource extends Resource
                             Forms\Components\Placeholder::make('cost_variance_summary')
                                 ->label('Ringkasan Actual Costing & Variance vs Estimasi Order Confirmation')
                                 ->content(function (?PracetakProcess $record, Get $get) {
-                                    $est = (float) ($get('estimasi_biaya_plate') ?? $record?->estimasi_biaya_plate ?? 0);
+                                    $est = (float) (MoneyHelper::clean($get('estimasi_biaya_plate')) ?? $record?->estimasi_biaya_plate ?? 0);
                                     $mat = (float) ($record?->actual_material_cost ?? 0);
-                                    $proc = (float) ($get('actual_process_cost') ?? $record?->actual_process_cost ?? 0);
-                                    $des = (float) ($get('actual_design_cost') ?? $record?->actual_design_cost ?? 0);
-                                    $prv = (float) ($get('actual_prove_cost') ?? $record?->actual_prove_cost ?? 0);
+                                    $proc = (float) (MoneyHelper::clean($get('actual_process_cost')) ?? $record?->actual_process_cost ?? 0);
+                                    $des = (float) (MoneyHelper::clean($get('actual_design_cost')) ?? $record?->actual_design_cost ?? 0);
+                                    $prv = (float) (MoneyHelper::clean($get('actual_prove_cost')) ?? $record?->actual_prove_cost ?? 0);
                                     $actualTotal = $mat + $proc + $des + $prv;
                                     $variance = $est > 0 ? ($est - $actualTotal) : 0;
                                     $varColor = $variance >= 0 ? '#10b981' : '#ef4444';
@@ -660,19 +663,19 @@ class PracetakProcessResource extends Resource
                                         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 10px; padding: 12px; border-radius: 10px; border: 1px solid rgba(156,163,175,0.25); background: rgba(156,163,175,0.06);">
                                             <div>
                                                 <div style="font-size: 11px; color: #6b7280;">Estimasi Budget OC</div>
-                                                <div style="font-size: 15px; font-weight: 700; color: #3b82f6;">Rp ' . number_format($est, 0, ',', '.') . '</div>
+                                                <div style="font-size: 15px; font-weight: 700; color: #3b82f6;">Rp ' . (MoneyHelper::format($est, 2) ?? '0') . '</div>
                                             </div>
                                             <div>
                                                 <div style="font-size: 11px; color: #6b7280;">Material Plate Posted (OUT)</div>
-                                                <div style="font-size: 15px; font-weight: 700;">Rp ' . number_format($mat, 0, ',', '.') . '</div>
+                                                <div style="font-size: 15px; font-weight: 700;">Rp ' . (MoneyHelper::format($mat, 2) ?? '0') . '</div>
                                             </div>
                                             <div>
                                                 <div style="font-size: 11px; color: #6b7280;">Total Biaya Aktual Plate</div>
-                                                <div style="font-size: 15px; font-weight: 700; color: #f59e0b;">Rp ' . number_format($actualTotal, 0, ',', '.') . '</div>
+                                                <div style="font-size: 15px; font-weight: 700; color: #f59e0b;">Rp ' . (MoneyHelper::format($actualTotal, 2) ?? '0') . '</div>
                                             </div>
                                             <div>
                                                 <div style="font-size: 11px; color: #6b7280;">Variance (' . e($varLabel) . ')</div>
-                                                <div style="font-size: 15px; font-weight: 800; color: ' . $varColor . ';">' . ($variance >= 0 ? '+' : '') . 'Rp ' . number_format($variance, 0, ',', '.') . '</div>
+                                                <div style="font-size: 15px; font-weight: 800; color: ' . $varColor . ';">' . ($variance >= 0 ? '+' : '-') . 'Rp ' . (MoneyHelper::format(abs($variance), 2) ?? '0') . '</div>
                                             </div>
                                         </div>
                                     ');
