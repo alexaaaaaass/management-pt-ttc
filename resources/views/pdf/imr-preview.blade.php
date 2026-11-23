@@ -278,10 +278,9 @@ Catatan
 </table>
 
 @if($imr->request_plate)
-<br>
-<h3 align="center" style="margin-bottom:8px;">
-    DETAIL PLATE CETAK (RAK PRA CETAK)
-</h3>
+<div style="font-size:11px; font-weight:bold; text-align:left; margin:12px 0 4px 0;">
+    Plate Cetak (Rak Pra Cetak)
+</div>
 <table>
     <thead>
         <tr class="blue">
