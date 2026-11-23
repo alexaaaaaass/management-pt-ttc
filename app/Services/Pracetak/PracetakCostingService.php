@@ -7,6 +7,7 @@ use App\Models\MasterSpk;
 use App\Models\OrderConfirmationItem;
 use App\Models\PracetakPlateArchive;
 use App\Models\PracetakProcess;
+use App\Support\MoneyHelper;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
@@ -60,7 +61,7 @@ class PracetakCostingService
 
         // Mode Manual (kompatibel penuh dengan kalkulator lama)
         if ($plateMode !== 'new') {
-            $manualCost = max(0, (float) ($params['biaya_plate'] ?? 0));
+            $manualCost = max(0, (float) (MoneyHelper::clean($params['biaya_plate'] ?? 0) ?? 0));
             $hargaJual = round($manualCost * (1 + ($marginJualPersen / 100.0)), 2);
 
             return [
@@ -113,9 +114,9 @@ class PracetakCostingService
         }
 
         $biayaMaterial = round($estimasiSheet * $hargaPerSheet, 2);
-        $biayaDesign = max(0, (float) ($params['plate_biaya_design'] ?? 0));
-        $biayaProve = max(0, (float) ($params['plate_biaya_prove'] ?? 0));
-        $tarifProsesPerPlate = max(0, (float) ($params['plate_tarif_proses'] ?? 0));
+        $biayaDesign = max(0, (float) (MoneyHelper::clean($params['plate_biaya_design'] ?? 0) ?? 0));
+        $biayaProve = max(0, (float) (MoneyHelper::clean($params['plate_biaya_prove'] ?? 0) ?? 0));
+        $tarifProsesPerPlate = max(0, (float) (MoneyHelper::clean($params['plate_tarif_proses'] ?? 0) ?? 0));
         $biayaProses = round($biayaDesign + $biayaProve + ($tarifProsesPerPlate * $jumlahWarna), 2);
 
         $estimasiHpp = round($biayaMaterial + $biayaProses, 2);

@@ -98,8 +98,8 @@ class FlexoHppCalculatorService
         $beratBahanTeoritis = $totalPanjangBahan * ($lebarBahan / 100.0) * ($gramatur / 1000.0); // kg
         $kgPerMeter = ($lebarBahan / 100.0) * ($gramatur / 1000.0); // kg/meter
 
-        $hargaBahanPerKg = isset($data['harga_bahan_per_kg']) ? (float) $data['harga_bahan_per_kg'] : 0;
-        $hargaBahanPerMeter = isset($data['harga_bahan_per_meter']) ? (float) $data['harga_bahan_per_meter'] : 0;
+        $hargaBahanPerKg = isset($data['harga_bahan_per_kg']) ? (float) (MoneyHelper::clean($data['harga_bahan_per_kg']) ?? 0) : 0.0;
+        $hargaBahanPerMeter = isset($data['harga_bahan_per_meter']) ? (float) (MoneyHelper::clean($data['harga_bahan_per_meter']) ?? 0) : 0.0;
         $basisHarga = $data['basis_harga_bahan'] ?? ($hargaBahanPerMeter > 0 && $hargaBahanPerKg <= 0 ? 'meter' : 'kg');
 
         if ($basisHarga === 'meter' && $hargaBahanPerMeter > 0) {
@@ -131,15 +131,19 @@ class FlexoHppCalculatorService
         $waktuCetak = $totalPanjangBahan / $kecepatanCetak; // menit
         $totalWaktuMesin = $waktuSetup + $waktuCetak;      // menit
 
-        $tarifMesinPerJam = (float) ($data['tarif_mesin_per_jam'] ?? 0);
+        $tarifMesinPerJam = (float) (MoneyHelper::clean($data['tarif_mesin_per_jam'] ?? 0) ?? 0);
         $biayaMesin = ($totalWaktuMesin / 60.0) * $tarifMesinPerJam;
-        $biayaTintaTotal = (float) ($data['biaya_tinta_total'] ?? 0);
-        $biayaTenagaKerja = (float) ($data['biaya_tenaga_kerja'] ?? 0);
+        $biayaTintaTotal = (float) (MoneyHelper::clean($data['biaya_tinta_total'] ?? 0) ?? 0);
+        $biayaTenagaKerja = (float) (MoneyHelper::clean($data['biaya_tenaga_kerja'] ?? 0) ?? 0);
 
         // Integrasi Estimasi Plate Prepress (Plate Baru / Repeat Order / Manual)
         $plateMode = $data['plate_mode'] ?? 'manual';
         $plateChargeMode = $data['plate_charge_mode'] ?? 'include_in_hpp';
         $plateMarginPersen = max(0, (float) ($data['plate_margin_persen'] ?? 0));
+        $plateBiayaDesign = max(0, (float) (MoneyHelper::clean($data['plate_biaya_design'] ?? 0) ?? 0));
+        $plateBiayaProve = max(0, (float) (MoneyHelper::clean($data['plate_biaya_prove'] ?? 0) ?? 0));
+        $plateTarifProses = max(0, (float) (MoneyHelper::clean($data['plate_tarif_proses'] ?? 0) ?? 0));
+        $biayaPlateInput = max(0, (float) (MoneyHelper::clean($data['biaya_plate'] ?? 0) ?? 0));
 
         $plateCalc = app(PracetakCostingService::class)->estimatePlateCost([
             'plate_mode'               => $plateMode,
@@ -149,11 +153,11 @@ class FlexoHppCalculatorService
             'plate_margin_potong_cm'   => $data['plate_margin_potong_cm'] ?? PracetakCostingService::DEFAULT_MARGIN_PLATE_CM,
             'plate_jumlah_warna'       => $data['plate_jumlah_warna'] ?? 4,
             'plate_toleransi_persen'   => $data['plate_toleransi_persen'] ?? PracetakCostingService::DEFAULT_TOLERANSI_RUSAK_PERSEN,
-            'plate_biaya_design'       => $data['plate_biaya_design'] ?? 0,
-            'plate_biaya_prove'        => $data['plate_biaya_prove'] ?? 0,
-            'plate_tarif_proses'       => $data['plate_tarif_proses'] ?? 0,
+            'plate_biaya_design'       => $plateBiayaDesign,
+            'plate_biaya_prove'        => $plateBiayaProve,
+            'plate_tarif_proses'       => $plateTarifProses,
             'plate_margin_persen'      => $plateMarginPersen,
-            'biaya_plate'              => (float) ($data['biaya_plate'] ?? 0),
+            'biaya_plate'              => $biayaPlateInput,
         ]);
 
         $biayaPlateHpp = (float) $plateCalc['plate_estimasi_hpp'];
@@ -176,7 +180,7 @@ class FlexoHppCalculatorService
         // =====================================================================
         // D. RINGKASAN HPP & MARGIN
         // =====================================================================
-        $biayaOverhead = (float) ($data['biaya_overhead'] ?? 0);
+        $biayaOverhead = (float) (MoneyHelper::clean($data['biaya_overhead'] ?? 0) ?? 0);
         $totalBiayaOrder = $biayaBahan + $biayaProsesCetakTotal + $biayaOverhead;
         $hppPerEtiket = $targetOrder > 0 ? ($totalBiayaOrder / $targetOrder) : 0;
 
@@ -239,9 +243,9 @@ class FlexoHppCalculatorService
             'plate_jumlah_warna' => (int) ($data['plate_jumlah_warna'] ?? 4),
             'plate_margin_potong_cm' => (float) ($data['plate_margin_potong_cm'] ?? PracetakCostingService::DEFAULT_MARGIN_PLATE_CM),
             'plate_toleransi_persen' => (float) ($data['plate_toleransi_persen'] ?? PracetakCostingService::DEFAULT_TOLERANSI_RUSAK_PERSEN),
-            'plate_biaya_design' => (float) ($data['plate_biaya_design'] ?? 0),
-            'plate_biaya_prove' => (float) ($data['plate_biaya_prove'] ?? 0),
-            'plate_tarif_proses' => (float) ($data['plate_tarif_proses'] ?? 0),
+            'plate_biaya_design' => round($plateBiayaDesign, 2),
+            'plate_biaya_prove' => round($plateBiayaProve, 2),
+            'plate_tarif_proses' => round($plateTarifProses, 2),
             'plate_panjang_mm' => $plateCalc['plate_panjang_mm'],
             'plate_lebar_mm' => $plateCalc['plate_lebar_mm'],
             'plate_luas_total_cm2' => $plateCalc['plate_luas_total_cm2'],

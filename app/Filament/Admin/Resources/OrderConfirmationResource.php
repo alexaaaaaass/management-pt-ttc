@@ -504,10 +504,10 @@ class OrderConfirmationResource extends Resource
                                                     if (!isset($existing['basis_harga_bahan'])) {
                                                         $existing['basis_harga_bahan'] = 'kg';
                                                     }
-                                                    if (!isset($existing['harga_bahan_per_meter']) || (float) $existing['harga_bahan_per_meter'] <= 0) {
+                                                    if (!isset($existing['harga_bahan_per_meter']) || (float) (\App\Support\MoneyHelper::clean($existing['harga_bahan_per_meter']) ?? 0) <= 0) {
                                                         $lebarBahanCm = (float) ($existing['lebar_bahan'] ?? 0);
                                                         $gramatur = (float) ($existing['gramatur_kertas'] ?? FlexoHppCalculatorService::DEFAULT_GRAMATUR);
-                                                        $hargaPerKg = (float) ($existing['harga_bahan_per_kg'] ?? FlexoHppCalculatorService::DEFAULT_HARGA_BAHAN);
+                                                        $hargaPerKg = (float) (\App\Support\MoneyHelper::clean($existing['harga_bahan_per_kg'] ?? FlexoHppCalculatorService::DEFAULT_HARGA_BAHAN) ?? FlexoHppCalculatorService::DEFAULT_HARGA_BAHAN);
                                                         if ($lebarBahanCm > 0) {
                                                             $existing['harga_bahan_per_meter'] = round(($lebarBahanCm / 100.0) * ($gramatur / 1000.0) * $hargaPerKg, 2);
                                                         }

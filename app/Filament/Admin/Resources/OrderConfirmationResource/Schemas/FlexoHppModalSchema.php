@@ -6,6 +6,7 @@ use App\Models\MasterMaterialPlate;
 use App\Models\PracetakPlateArchive;
 use App\Services\Costing\FlexoHppCalculatorService;
 use App\Services\Pracetak\PracetakCostingService;
+use App\Support\MoneyHelper;
 use Filament\Forms\Components\Checkbox;
 use Filament\Forms\Components\Grid;
 use Filament\Forms\Components\Hidden;
@@ -44,14 +45,14 @@ class FlexoHppModalSchema
             'waste_setting' => (float) ($get('waste_setting') ?? FlexoHppCalculatorService::DEFAULT_WASTE_SETTING),
             'waste_tambahan_persen' => (float) ($get('waste_tambahan_persen') ?? FlexoHppCalculatorService::DEFAULT_WASTE_PERSEN),
             'gramatur_kertas' => (float) ($get('gramatur_kertas') ?? FlexoHppCalculatorService::DEFAULT_GRAMATUR),
-            'harga_bahan_per_kg' => (float) ($get('harga_bahan_per_kg') ?? 0),
-            'harga_bahan_per_meter' => (float) ($get('harga_bahan_per_meter') ?? 0),
+            'harga_bahan_per_kg' => (float) (MoneyHelper::clean($get('harga_bahan_per_kg')) ?? 0),
+            'harga_bahan_per_meter' => (float) (MoneyHelper::clean($get('harga_bahan_per_meter')) ?? 0),
             'basis_harga_bahan' => $get('basis_harga_bahan') ?? 'kg',
             'kecepatan_cetak' => (float) ($get('kecepatan_cetak') ?? FlexoHppCalculatorService::DEFAULT_KECEPATAN_CETAK),
             'waktu_setup' => (float) ($get('waktu_setup') ?? FlexoHppCalculatorService::DEFAULT_WAKTU_SETUP),
-            'tarif_mesin_per_jam' => (float) ($get('tarif_mesin_per_jam') ?? 0),
-            'biaya_tinta_total' => (float) ($get('biaya_tinta_total') ?? 0),
-            'biaya_plate' => (float) ($get('biaya_plate') ?? 0),
+            'tarif_mesin_per_jam' => (float) (MoneyHelper::clean($get('tarif_mesin_per_jam')) ?? 0),
+            'biaya_tinta_total' => (float) (MoneyHelper::clean($get('biaya_tinta_total')) ?? 0),
+            'biaya_plate' => (float) (MoneyHelper::clean($get('biaya_plate')) ?? 0),
             'plate_mode' => $get('plate_mode') ?? 'manual',
             'plate_charge_mode' => $get('plate_charge_mode') ?? 'include_in_hpp',
             'plate_margin_persen' => (float) ($get('plate_margin_persen') ?? 0),
@@ -60,11 +61,11 @@ class FlexoHppModalSchema
             'plate_jumlah_warna' => (int) ($get('plate_jumlah_warna') ?? 4),
             'plate_margin_potong_cm' => (float) ($get('plate_margin_potong_cm') ?? PracetakCostingService::DEFAULT_MARGIN_PLATE_CM),
             'plate_toleransi_persen' => (float) ($get('plate_toleransi_persen') ?? PracetakCostingService::DEFAULT_TOLERANSI_RUSAK_PERSEN),
-            'plate_biaya_design' => (float) ($get('plate_biaya_design') ?? 0),
-            'plate_biaya_prove' => (float) ($get('plate_biaya_prove') ?? 0),
-            'plate_tarif_proses' => (float) ($get('plate_tarif_proses') ?? 0),
-            'biaya_tenaga_kerja' => (float) ($get('biaya_tenaga_kerja') ?? 0),
-            'biaya_overhead' => (float) ($get('biaya_overhead') ?? 0),
+            'plate_biaya_design' => (float) (MoneyHelper::clean($get('plate_biaya_design')) ?? 0),
+            'plate_biaya_prove' => (float) (MoneyHelper::clean($get('plate_biaya_prove')) ?? 0),
+            'plate_tarif_proses' => (float) (MoneyHelper::clean($get('plate_tarif_proses')) ?? 0),
+            'biaya_tenaga_kerja' => (float) (MoneyHelper::clean($get('biaya_tenaga_kerja')) ?? 0),
+            'biaya_overhead' => (float) (MoneyHelper::clean($get('biaya_overhead')) ?? 0),
             'margin_persen' => (float) ($get('margin_persen') ?? 0),
         ], $target);
 
@@ -81,35 +82,35 @@ class FlexoHppModalSchema
         $set('total_panjang_bahan', $result['total_panjang_bahan']);
         $set('berat_bahan_teoritis', $result['berat_bahan_teoritis']);
 
-        // Sinkronisasi harga bahan (kg vs meter)
+        // Sinkronisasi harga bahan (kg vs meter) dengan format mata uang
         if (($get('basis_harga_bahan') ?? 'kg') === 'meter') {
-            $set('harga_bahan_per_kg', $result['harga_bahan_per_kg']);
+            $set('harga_bahan_per_kg', MoneyHelper::format($result['harga_bahan_per_kg'], 2) ?? '0');
         } else {
-            $set('harga_bahan_per_meter', $result['harga_bahan_per_meter']);
+            $set('harga_bahan_per_meter', MoneyHelper::format($result['harga_bahan_per_meter'], 2) ?? '0');
         }
 
-        $set('biaya_bahan', $result['biaya_bahan']);
-        $set('biaya_bahan_per_etiket', $result['biaya_bahan_per_etiket']);
+        $set('biaya_bahan', MoneyHelper::format($result['biaya_bahan'], 2) ?? '0');
+        $set('biaya_bahan_per_etiket', MoneyHelper::format($result['biaya_bahan_per_etiket'], 2) ?? '0');
 
-        // Update hasil kalkulasi Plate Prepress
+        // Update hasil kalkulasi Plate Prepress (terformat)
         $set('plate_estimasi_sheet', $result['plate_estimasi_sheet']);
-        $set('plate_harga_per_sheet', $result['plate_harga_per_sheet']);
-        $set('plate_estimasi_material', $result['plate_estimasi_material']);
-        $set('plate_estimasi_proses', $result['plate_estimasi_proses']);
+        $set('plate_harga_per_sheet', MoneyHelper::format($result['plate_harga_per_sheet'], 2) ?? '0');
+        $set('plate_estimasi_material', MoneyHelper::format($result['plate_estimasi_material'], 2) ?? '0');
+        $set('plate_estimasi_proses', MoneyHelper::format($result['plate_estimasi_proses'], 2) ?? '0');
         if (($get('plate_mode') ?? 'manual') !== 'manual') {
-            $set('biaya_plate', $result['biaya_plate']);
+            $set('biaya_plate', MoneyHelper::format($result['biaya_plate'], 2) ?? '0');
         }
-        $set('biaya_plate_terpisah', $result['biaya_plate_terpisah']);
+        $set('biaya_plate_terpisah', MoneyHelper::format($result['biaya_plate_terpisah'], 2) ?? '0');
 
         $set('waktu_cetak', $result['waktu_cetak']);
         $set('total_waktu_mesin', $result['total_waktu_mesin']);
-        $set('biaya_mesin', $result['biaya_mesin']);
-        $set('biaya_proses_cetak_total', $result['biaya_proses_cetak_total']);
-        $set('biaya_proses_per_etiket', $result['biaya_proses_per_etiket']);
+        $set('biaya_mesin', MoneyHelper::format($result['biaya_mesin'], 2) ?? '0');
+        $set('biaya_proses_cetak_total', MoneyHelper::format($result['biaya_proses_cetak_total'], 2) ?? '0');
+        $set('biaya_proses_per_etiket', MoneyHelper::format($result['biaya_proses_per_etiket'], 2) ?? '0');
 
-        $set('total_biaya_order', \App\Support\MoneyHelper::format($result['total_biaya_order'], 2));
-        $set('hpp_per_etiket', \App\Support\MoneyHelper::format($result['hpp_per_etiket'], 2));
-        $set('harga_jual_indikatif', \App\Support\MoneyHelper::format($result['harga_jual_indikatif'], 2));
+        $set('total_biaya_order', MoneyHelper::format($result['total_biaya_order'], 2) ?? '0');
+        $set('hpp_per_etiket', MoneyHelper::format($result['hpp_per_etiket'], 2) ?? '0');
+        $set('harga_jual_indikatif', MoneyHelper::format($result['harga_jual_indikatif'], 2) ?? '0');
         $set('terbilang_total_biaya', $result['terbilang_total_biaya']);
     }
 
@@ -286,7 +287,7 @@ class FlexoHppModalSchema
                                         TextInput::make('harga_bahan_per_meter')
                                             ->label('Harga Bahan per Meter (Rp/m)')
                                             ->prefix('Rp')
-                                            ->numeric()
+                                            ->currencyMask(2)
                                             ->helperText('Harga kertas per meter linear')
                                             ->live(debounce: 500)
                                             ->afterStateUpdated(function (Get $get, Set $set) {
@@ -297,7 +298,7 @@ class FlexoHppModalSchema
                                         TextInput::make('harga_bahan_per_kg')
                                             ->label('Harga Bahan per Kg (Rp/kg)')
                                             ->prefix('Rp')
-                                            ->numeric()
+                                            ->currencyMask(2)
                                             ->default(FlexoHppCalculatorService::DEFAULT_HARGA_BAHAN)
                                             ->helperText('Harga kertas per kilogram')
                                             ->live(debounce: 500)
@@ -365,14 +366,16 @@ class FlexoHppModalSchema
                                             ->label('Total Biaya Bahan Kertas (Rp)')
                                             ->prefix('Rp')
                                             ->readOnly()
-                                            ->formatStateUsing(fn ($state) => number_format((float)$state, 2, '.', ','))
+                                            ->formatStateUsing(fn ($state) => MoneyHelper::format($state, 2) ?? '0')
+                                            ->dehydrateStateUsing(fn ($state) => MoneyHelper::clean($state) ?? 0)
                                             ->extraInputAttributes(['style' => 'background-color: rgba(16, 185, 129, 0.15); font-weight: 700; color: #10b981; font-size: 14px;']),
 
                                         TextInput::make('biaya_bahan_per_etiket')
                                             ->label('Biaya Bahan per Etiket (Rp/pcs)')
                                             ->prefix('Rp')
                                             ->readOnly()
-                                            ->formatStateUsing(fn ($state) => number_format((float)$state, 4, '.', ','))
+                                            ->formatStateUsing(fn ($state) => MoneyHelper::format($state, 2) ?? '0')
+                                            ->dehydrateStateUsing(fn ($state) => MoneyHelper::clean($state) ?? 0)
                                             ->extraInputAttributes(['style' => 'background-color: rgba(16, 185, 129, 0.15); font-weight: 700; color: #10b981; font-size: 14px;']),
                                     ]),
                                 ]),
@@ -408,7 +411,7 @@ class FlexoHppModalSchema
                                         TextInput::make('tarif_mesin_per_jam')
                                             ->label('Tarif Mesin per Jam (Rp)')
                                             ->prefix('Rp')
-                                            ->numeric()
+                                            ->currencyMask(2)
                                             ->default(0)
                                             ->helperText('Tarif biaya mesin per jam')
                                             ->live(debounce: 500)
@@ -417,7 +420,7 @@ class FlexoHppModalSchema
                                         TextInput::make('biaya_tenaga_kerja')
                                             ->label('Tenaga Kerja Tambahan (Rp)')
                                             ->prefix('Rp')
-                                            ->numeric()
+                                            ->currencyMask(2)
                                             ->default(0)
                                             ->helperText('Jika di luar tarif mesin')
                                             ->live(debounce: 500)
@@ -428,7 +431,7 @@ class FlexoHppModalSchema
                                         TextInput::make('biaya_tinta_total')
                                             ->label('Biaya Tinta Total (Rp)')
                                             ->prefix('Rp')
-                                            ->numeric()
+                                            ->currencyMask(2)
                                             ->default(0)
                                             ->helperText('Total estimasi pemakaian tinta seluruh warna')
                                             ->live(debounce: 500)
@@ -481,7 +484,7 @@ class FlexoHppModalSchema
                                                                 : (float) $p->harga_beli;
 
                                                             return [
-                                                                $p->id => "{$p->kode_material} · {$p->nama_material} ({$p->ukuran_sheet} | Stok: {$stok} sh | Rp " . number_format($avg, 0, ',', '.') . '/sh)',
+                                                                $p->id => "{$p->kode_material} · {$p->nama_material} ({$p->ukuran_sheet} | Stok: {$stok} sh | Rp " . (MoneyHelper::format($avg, 0) ?? '0') . '/sh)',
                                                             ];
                                                         });
                                                 })
@@ -521,7 +524,7 @@ class FlexoHppModalSchema
                                                 TextInput::make('plate_biaya_design')
                                                     ->label('Biaya Trial Design / Layout (Rp)')
                                                     ->prefix('Rp')
-                                                    ->numeric()
+                                                    ->currencyMask(2)
                                                     ->default(0)
                                                     ->live(debounce: 400)
                                                     ->afterStateUpdated(fn (Get $get, Set $set) => self::triggerLiveRecalculate($get, $set)),
@@ -529,7 +532,7 @@ class FlexoHppModalSchema
                                                 TextInput::make('plate_biaya_prove')
                                                     ->label('Biaya Prove Print Sampel (Rp)')
                                                     ->prefix('Rp')
-                                                    ->numeric()
+                                                    ->currencyMask(2)
                                                     ->default(0)
                                                     ->live(debounce: 400)
                                                     ->afterStateUpdated(fn (Get $get, Set $set) => self::triggerLiveRecalculate($get, $set)),
@@ -537,7 +540,7 @@ class FlexoHppModalSchema
                                                 TextInput::make('plate_tarif_proses')
                                                     ->label('Tarif Proses CTP / Plate (Rp)')
                                                     ->prefix('Rp')
-                                                    ->numeric()
+                                                    ->currencyMask(2)
                                                     ->default(0)
                                                     ->helperText('Dikalikan jumlah warna plate')
                                                     ->live(debounce: 400)
@@ -554,18 +557,24 @@ class FlexoHppModalSchema
                                                     ->label('Harga Rata-rata / Sheet')
                                                     ->prefix('Rp')
                                                     ->readOnly()
+                                                    ->formatStateUsing(fn ($state) => MoneyHelper::format($state, 2) ?? '0')
+                                                    ->dehydrateStateUsing(fn ($state) => MoneyHelper::clean($state) ?? 0)
                                                     ->extraInputAttributes(['style' => 'background-color: rgba(16, 185, 129, 0.1); font-weight: bold; color: #10b981;']),
 
                                                 TextInput::make('plate_estimasi_material')
                                                     ->label('Est. Material Plate (Rp)')
                                                     ->prefix('Rp')
                                                     ->readOnly()
+                                                    ->formatStateUsing(fn ($state) => MoneyHelper::format($state, 2) ?? '0')
+                                                    ->dehydrateStateUsing(fn ($state) => MoneyHelper::clean($state) ?? 0)
                                                     ->extraInputAttributes(['style' => 'background-color: rgba(16, 185, 129, 0.1); font-weight: bold; color: #10b981;']),
 
                                                 TextInput::make('plate_estimasi_proses')
                                                     ->label('Est. Proses Prepress (Rp)')
                                                     ->prefix('Rp')
                                                     ->readOnly()
+                                                    ->formatStateUsing(fn ($state) => MoneyHelper::format($state, 2) ?? '0')
+                                                    ->dehydrateStateUsing(fn ($state) => MoneyHelper::clean($state) ?? 0)
                                                     ->extraInputAttributes(['style' => 'background-color: rgba(16, 185, 129, 0.1); font-weight: bold; color: #10b981;']),
                                             ]),
                                         ]),
@@ -573,7 +582,7 @@ class FlexoHppModalSchema
                                     TextInput::make('biaya_plate')
                                         ->label(fn (Get $get) => $get('plate_mode') === 'new' ? 'Total Estimasi HPP Plate (Otomatis) (Rp)' : 'Biaya Plate / Cliché (Rp)')
                                         ->prefix('Rp')
-                                        ->numeric()
+                                        ->currencyMask(2)
                                         ->default(0)
                                         ->readOnly(fn (Get $get) => ($get('plate_mode') ?? 'manual') !== 'manual')
                                         ->helperText('Total HPP pembuatan plate (material + proses prepress)')
@@ -607,6 +616,8 @@ class FlexoHppModalSchema
                                                 ->label('Tagihan Biaya Plate Terpisah di OC (Rp)')
                                                 ->prefix('Rp')
                                                 ->readOnly()
+                                                ->formatStateUsing(fn ($state) => MoneyHelper::format($state, 2) ?? '0')
+                                                ->dehydrateStateUsing(fn ($state) => MoneyHelper::clean($state) ?? 0)
                                                 ->extraInputAttributes(['style' => 'background-color: rgba(59, 130, 246, 0.15); font-weight: 700; color: #3b82f6;']),
                                         ]),
                                 ]),
@@ -628,7 +639,8 @@ class FlexoHppModalSchema
                                             ->label('Biaya Mesin (Rp)')
                                             ->prefix('Rp')
                                             ->readOnly()
-                                            ->formatStateUsing(fn ($state) => number_format((float)$state, 2, '.', ','))
+                                            ->formatStateUsing(fn ($state) => MoneyHelper::format($state, 2) ?? '0')
+                                            ->dehydrateStateUsing(fn ($state) => MoneyHelper::clean($state) ?? 0)
                                             ->extraInputAttributes(['style' => 'background-color: rgba(16, 185, 129, 0.1); font-weight: bold; color: #10b981;']),
                                     ]),
 
@@ -637,14 +649,16 @@ class FlexoHppModalSchema
                                             ->label('Biaya Proses Cetak Total (Rp)')
                                             ->prefix('Rp')
                                             ->readOnly()
-                                            ->formatStateUsing(fn ($state) => number_format((float)$state, 2, '.', ','))
+                                            ->formatStateUsing(fn ($state) => MoneyHelper::format($state, 2) ?? '0')
+                                            ->dehydrateStateUsing(fn ($state) => MoneyHelper::clean($state) ?? 0)
                                             ->extraInputAttributes(['style' => 'background-color: rgba(16, 185, 129, 0.15); font-weight: 700; color: #10b981; font-size: 14px;']),
 
                                         TextInput::make('biaya_proses_per_etiket')
                                             ->label('Biaya Proses per Etiket (Rp/pcs)')
                                             ->prefix('Rp')
                                             ->readOnly()
-                                            ->formatStateUsing(fn ($state) => number_format((float)$state, 4, '.', ','))
+                                            ->formatStateUsing(fn ($state) => MoneyHelper::format($state, 2) ?? '0')
+                                            ->dehydrateStateUsing(fn ($state) => MoneyHelper::clean($state) ?? 0)
                                             ->extraInputAttributes(['style' => 'background-color: rgba(16, 185, 129, 0.15); font-weight: 700; color: #10b981; font-size: 14px;']),
                                     ]),
                                 ]),
@@ -662,7 +676,7 @@ class FlexoHppModalSchema
                                         TextInput::make('biaya_overhead')
                                             ->label('Biaya Lain-lain / Overhead (Rp)')
                                             ->prefix('Rp')
-                                            ->numeric()
+                                            ->currencyMask(2)
                                             ->default(0)
                                             ->helperText('Biaya operasional/overhead per order')
                                             ->live(debounce: 500)
@@ -686,30 +700,33 @@ class FlexoHppModalSchema
                                             ->label('Total Biaya Order (Rp)')
                                             ->prefix('Rp')
                                             ->readOnly()
-                                            ->formatStateUsing(fn ($state) => \App\Support\MoneyHelper::format($state, 2))
+                                            ->formatStateUsing(fn ($state) => MoneyHelper::format($state, 2) ?? '0')
+                                            ->dehydrateStateUsing(fn ($state) => MoneyHelper::clean($state) ?? 0)
                                             ->extraInputAttributes(['style' => 'background-color: rgba(59, 130, 246, 0.15); font-weight: 700; color: #3b82f6; font-size: 14px;']),
 
                                         TextInput::make('hpp_per_etiket')
                                             ->label('HPP Pokok per Etiket (Rp/pcs)')
                                             ->prefix('Rp')
                                             ->readOnly()
-                                            ->formatStateUsing(fn ($state) => \App\Support\MoneyHelper::format($state, 2))
+                                            ->formatStateUsing(fn ($state) => MoneyHelper::format($state, 2) ?? '0')
+                                            ->dehydrateStateUsing(fn ($state) => MoneyHelper::clean($state) ?? 0)
                                             ->extraInputAttributes(['style' => 'background-color: rgba(245, 158, 11, 0.2); font-weight: 800; color: #f59e0b; font-size: 16px;']),
 
                                         TextInput::make('harga_jual_indikatif')
                                             ->label('Harga Jual Indikatif (+Margin) (Rp/pcs)')
                                             ->prefix('Rp')
                                             ->readOnly()
-                                            ->formatStateUsing(fn ($state) => \App\Support\MoneyHelper::format($state, 2))
+                                            ->formatStateUsing(fn ($state) => MoneyHelper::format($state, 2) ?? '0')
+                                            ->dehydrateStateUsing(fn ($state) => MoneyHelper::clean($state) ?? 0)
                                             ->extraInputAttributes(['style' => 'background-color: rgba(16, 185, 129, 0.25); font-weight: 800; color: #10b981; font-size: 16px;']),
                                     ]),
 
                                     Placeholder::make('plate_charge_summary_box')
                                         ->hiddenLabel()
-                                        ->visible(fn (Get $get) => ($get('plate_charge_mode') ?? 'include_in_hpp') === 'separate_charge' && (float) \App\Support\MoneyHelper::clean($get('biaya_plate_terpisah')) > 0)
+                                        ->visible(fn (Get $get) => ($get('plate_charge_mode') ?? 'include_in_hpp') === 'separate_charge' && (float) MoneyHelper::clean($get('biaya_plate_terpisah')) > 0)
                                         ->content(function (Get $get) {
-                                            $plateSep = (float) (\App\Support\MoneyHelper::clean($get('biaya_plate_terpisah')) ?? 0);
-                                            $totalBiaya = (float) (\App\Support\MoneyHelper::clean($get('total_biaya_order')) ?? 0);
+                                            $plateSep = (float) (MoneyHelper::clean($get('biaya_plate_terpisah')) ?? 0);
+                                            $totalBiaya = (float) (MoneyHelper::clean($get('total_biaya_order')) ?? 0);
                                             $grandWithPlate = $totalBiaya + $plateSep;
 
                                             return new HtmlString('
@@ -719,8 +736,8 @@ class FlexoHppModalSchema
                                                         <div style="font-size: 12px; margin-top: 2px;">Biaya Plate tidak dimasukkan ke HPP/pcs, melainkan ditambahkan di Ringkasan OC & PDF.</div>
                                                     </div>
                                                     <div style="text-align: right;">
-                                                        <div style="font-size: 11px; color: #6b7280;">Tagihan Plate Terpisah: <strong style="color: #8b5cf6;">Rp ' . number_format($plateSep, 0, ',', '.') . '</strong></div>
-                                                        <div style="font-size: 12px; font-weight: 700;">Total Biaya + Plate: Rp ' . number_format($grandWithPlate, 0, ',', '.') . '</div>
+                                                        <div style="font-size: 11px; color: #6b7280;">Tagihan Plate Terpisah: <strong style="color: #8b5cf6;">Rp ' . (MoneyHelper::format($plateSep, 2) ?? '0') . '</strong></div>
+                                                        <div style="font-size: 12px; font-weight: 700;">Total Biaya + Plate: Rp ' . (MoneyHelper::format($grandWithPlate, 2) ?? '0') . '</div>
                                                     </div>
                                                 </div>
                                             ');
