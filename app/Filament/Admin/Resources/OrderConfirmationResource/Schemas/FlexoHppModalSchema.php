@@ -159,7 +159,7 @@ class FlexoHppModalSchema
                                             ->numeric()
                                             ->helperText('Arah jalan bahan (feeding)')
                                             ->required()
-                                            ->live(debounce: 500)
+                                            ->live(onBlur: true)
                                             ->afterStateUpdated(fn (Get $get, Set $set) => self::triggerLiveRecalculate($get, $set)),
 
                                         TextInput::make('lebar_etiket_jadi')
@@ -167,7 +167,7 @@ class FlexoHppModalSchema
                                             ->numeric()
                                             ->helperText('Melintang terhadap arah bahan')
                                             ->required()
-                                            ->live(debounce: 500)
+                                            ->live(onBlur: true)
                                             ->afterStateUpdated(fn (Get $get, Set $set) => self::triggerLiveRecalculate($get, $set)),
 
                                         TextInput::make('repeat_cylinder')
@@ -176,7 +176,7 @@ class FlexoHppModalSchema
                                             ->default(FlexoHppCalculatorService::DEFAULT_REPEAT_CYLINDER)
                                             ->helperText('Standar Zonten: 41.28 cm (412.75 mm)')
                                             ->required()
-                                            ->live(debounce: 500)
+                                            ->live(onBlur: true)
                                             ->afterStateUpdated(fn (Get $get, Set $set) => self::triggerLiveRecalculate($get, $set)),
                                     ]),
 
@@ -186,7 +186,7 @@ class FlexoHppModalSchema
                                             ->numeric()
                                             ->default(FlexoHppCalculatorService::DEFAULT_ALLOWANCE_PANJANG)
                                             ->helperText('Allowance pitch (default: 0.3 cm / 3 mm)')
-                                            ->live(debounce: 500)
+                                            ->live(onBlur: true)
                                             ->afterStateUpdated(fn (Get $get, Set $set) => self::triggerLiveRecalculate($get, $set)),
 
                                         TextInput::make('lebihan_cetak_lebar')
@@ -194,7 +194,7 @@ class FlexoHppModalSchema
                                             ->numeric()
                                             ->default(FlexoHppCalculatorService::DEFAULT_ALLOWANCE_LEBAR)
                                             ->helperText('Allowance lebar per item (default: 0.3 cm / 3 mm)')
-                                            ->live(debounce: 500)
+                                            ->live(onBlur: true)
                                             ->afterStateUpdated(fn (Get $get, Set $set) => self::triggerLiveRecalculate($get, $set)),
 
                                         TextInput::make('lebihan_lebar_bahan')
@@ -202,7 +202,7 @@ class FlexoHppModalSchema
                                             ->numeric()
                                             ->default(FlexoHppCalculatorService::DEFAULT_ALLOWANCE_WEB)
                                             ->helperText('Allowance tepi bahan (default: 2.0 cm / 20 mm)')
-                                            ->live(debounce: 500)
+                                            ->live(onBlur: true)
                                             ->afterStateUpdated(fn (Get $get, Set $set) => self::triggerLiveRecalculate($get, $set)),
                                     ]),
 
@@ -213,7 +213,7 @@ class FlexoHppModalSchema
                                             ->default(2)
                                             ->helperText('Arah keliling cylinder')
                                             ->required()
-                                            ->live(debounce: 500)
+                                            ->live(onBlur: true)
                                             ->afterStateUpdated(fn (Get $get, Set $set) => self::triggerLiveRecalculate($get, $set)),
 
                                         TextInput::make('jumlah_etiket_sepanjang_lebar')
@@ -222,7 +222,7 @@ class FlexoHppModalSchema
                                             ->default(2)
                                             ->helperText('Jumlah baris melintang web')
                                             ->required()
-                                            ->live(debounce: 500)
+                                            ->live(onBlur: true)
                                             ->afterStateUpdated(fn (Get $get, Set $set) => self::triggerLiveRecalculate($get, $set)),
                                     ]),
                                 ]),
@@ -281,7 +281,7 @@ class FlexoHppModalSchema
                                             ->default(FlexoHppCalculatorService::DEFAULT_GRAMATUR)
                                             ->helperText('Contoh: 230 gsm')
                                             ->required()
-                                            ->live(debounce: 500)
+                                            ->live(onBlur: true)
                                             ->afterStateUpdated(fn (Get $get, Set $set) => self::triggerLiveRecalculate($get, $set)),
 
                                         TextInput::make('harga_bahan_per_meter')
@@ -289,7 +289,7 @@ class FlexoHppModalSchema
                                             ->prefix('Rp')
                                             ->currencyMask(2)
                                             ->helperText('Harga kertas per meter linear')
-                                            ->live(debounce: 500)
+                                            ->live(onBlur: true)
                                             ->afterStateUpdated(function (Get $get, Set $set) {
                                                 $set('basis_harga_bahan', 'meter');
                                                 self::triggerLiveRecalculate($get, $set);
@@ -301,7 +301,7 @@ class FlexoHppModalSchema
                                             ->currencyMask(2)
                                             ->default(FlexoHppCalculatorService::DEFAULT_HARGA_BAHAN)
                                             ->helperText('Harga kertas per kilogram')
-                                            ->live(debounce: 500)
+                                            ->live(onBlur: true)
                                             ->afterStateUpdated(function (Get $get, Set $set) {
                                                 $set('basis_harga_bahan', 'kg');
                                                 self::triggerLiveRecalculate($get, $set);
@@ -314,7 +314,7 @@ class FlexoHppModalSchema
                                             ->numeric()
                                             ->default(FlexoHppCalculatorService::DEFAULT_WASTE_SETTING)
                                             ->helperText('Persiapan awal mesin (default: 40 m)')
-                                            ->live(debounce: 500)
+                                            ->live(onBlur: true)
                                             ->afterStateUpdated(fn (Get $get, Set $set) => self::triggerLiveRecalculate($get, $set)),
 
                                         TextInput::make('waste_tambahan_persen')
@@ -323,7 +323,7 @@ class FlexoHppModalSchema
                                             ->suffix('%')
                                             ->default(FlexoHppCalculatorService::DEFAULT_WASTE_PERSEN)
                                             ->helperText('Persentase toleransi waste produksi')
-                                            ->live(debounce: 500)
+                                            ->live(onBlur: true)
                                             ->afterStateUpdated(fn (Get $get, Set $set) => self::triggerLiveRecalculate($get, $set)),
                                     ]),
                                 ]),
@@ -396,7 +396,7 @@ class FlexoHppModalSchema
                                             ->default(FlexoHppCalculatorService::DEFAULT_KECEPATAN_CETAK)
                                             ->helperText('Kecepatan aktual rata-rata')
                                             ->required()
-                                            ->live(debounce: 500)
+                                            ->live(onBlur: true)
                                             ->afterStateUpdated(fn (Get $get, Set $set) => self::triggerLiveRecalculate($get, $set)),
 
                                         TextInput::make('waktu_setup')
@@ -405,7 +405,7 @@ class FlexoHppModalSchema
                                             ->default(FlexoHppCalculatorService::DEFAULT_WAKTU_SETUP)
                                             ->helperText('Persiapan mesin sebelum jalan')
                                             ->required()
-                                            ->live(debounce: 500)
+                                            ->live(onBlur: true)
                                             ->afterStateUpdated(fn (Get $get, Set $set) => self::triggerLiveRecalculate($get, $set)),
 
                                         TextInput::make('tarif_mesin_per_jam')
@@ -414,7 +414,7 @@ class FlexoHppModalSchema
                                             ->currencyMask(2)
                                             ->default(0)
                                             ->helperText('Tarif biaya mesin per jam')
-                                            ->live(debounce: 500)
+                                            ->live(onBlur: true)
                                             ->afterStateUpdated(fn (Get $get, Set $set) => self::triggerLiveRecalculate($get, $set)),
 
                                         TextInput::make('biaya_tenaga_kerja')
@@ -423,7 +423,7 @@ class FlexoHppModalSchema
                                             ->currencyMask(2)
                                             ->default(0)
                                             ->helperText('Jika di luar tarif mesin')
-                                            ->live(debounce: 500)
+                                            ->live(onBlur: true)
                                             ->afterStateUpdated(fn (Get $get, Set $set) => self::triggerLiveRecalculate($get, $set)),
                                     ]),
 
@@ -434,7 +434,7 @@ class FlexoHppModalSchema
                                             ->currencyMask(2)
                                             ->default(0)
                                             ->helperText('Total estimasi pemakaian tinta seluruh warna')
-                                            ->live(debounce: 500)
+                                            ->live(onBlur: true)
                                             ->afterStateUpdated(fn (Get $get, Set $set) => self::triggerLiveRecalculate($get, $set)),
                                     ]),
                                 ]),
@@ -499,7 +499,7 @@ class FlexoHppModalSchema
                                                     ->numeric()
                                                     ->default(4)
                                                     ->minValue(1)
-                                                    ->live(debounce: 400)
+                                                    ->live(onBlur: true)
                                                     ->afterStateUpdated(fn (Get $get, Set $set) => self::triggerLiveRecalculate($get, $set)),
 
                                                 TextInput::make('plate_margin_potong_cm')
@@ -507,7 +507,7 @@ class FlexoHppModalSchema
                                                     ->numeric()
                                                     ->default(PracetakCostingService::DEFAULT_MARGIN_PLATE_CM)
                                                     ->helperText('Tambahan margin keliling plate (default 2 cm)')
-                                                    ->live(debounce: 400)
+                                                    ->live(onBlur: true)
                                                     ->afterStateUpdated(fn (Get $get, Set $set) => self::triggerLiveRecalculate($get, $set)),
 
                                                 TextInput::make('plate_toleransi_persen')
@@ -516,7 +516,7 @@ class FlexoHppModalSchema
                                                     ->suffix('%')
                                                     ->default(PracetakCostingService::DEFAULT_TOLERANSI_RUSAK_PERSEN)
                                                     ->helperText('Cadangan kerusakan plate (default 10%)')
-                                                    ->live(debounce: 400)
+                                                    ->live(onBlur: true)
                                                     ->afterStateUpdated(fn (Get $get, Set $set) => self::triggerLiveRecalculate($get, $set)),
                                             ]),
 
@@ -526,7 +526,7 @@ class FlexoHppModalSchema
                                                     ->prefix('Rp')
                                                     ->currencyMask(2)
                                                     ->default(0)
-                                                    ->live(debounce: 400)
+                                                    ->live(onBlur: true)
                                                     ->afterStateUpdated(fn (Get $get, Set $set) => self::triggerLiveRecalculate($get, $set)),
 
                                                 TextInput::make('plate_biaya_prove')
@@ -534,7 +534,7 @@ class FlexoHppModalSchema
                                                     ->prefix('Rp')
                                                     ->currencyMask(2)
                                                     ->default(0)
-                                                    ->live(debounce: 400)
+                                                    ->live(onBlur: true)
                                                     ->afterStateUpdated(fn (Get $get, Set $set) => self::triggerLiveRecalculate($get, $set)),
 
                                                 TextInput::make('plate_tarif_proses')
@@ -543,7 +543,7 @@ class FlexoHppModalSchema
                                                     ->currencyMask(2)
                                                     ->default(0)
                                                     ->helperText('Dikalikan jumlah warna plate')
-                                                    ->live(debounce: 400)
+                                                    ->live(onBlur: true)
                                                     ->afterStateUpdated(fn (Get $get, Set $set) => self::triggerLiveRecalculate($get, $set)),
                                             ]),
 
@@ -586,7 +586,7 @@ class FlexoHppModalSchema
                                         ->default(0)
                                         ->readOnly(fn (Get $get) => ($get('plate_mode') ?? 'manual') !== 'manual')
                                         ->helperText('Total HPP pembuatan plate (material + proses prepress)')
-                                        ->live(debounce: 500)
+                                        ->live(onBlur: true)
                                         ->afterStateUpdated(fn (Get $get, Set $set) => self::triggerLiveRecalculate($get, $set)),
 
                                     Radio::make('plate_charge_mode')
@@ -609,7 +609,7 @@ class FlexoHppModalSchema
                                                 ->numeric()
                                                 ->default(0)
                                                 ->helperText('Isi 0 jika ditagihkan pas sesuai HPP plate, atau isi markup misal 15%')
-                                                ->live(debounce: 400)
+                                                ->live(onBlur: true)
                                                 ->afterStateUpdated(fn (Get $get, Set $set) => self::triggerLiveRecalculate($get, $set)),
 
                                             TextInput::make('biaya_plate_terpisah')
@@ -679,7 +679,7 @@ class FlexoHppModalSchema
                                             ->currencyMask(2)
                                             ->default(0)
                                             ->helperText('Biaya operasional/overhead per order')
-                                            ->live(debounce: 500)
+                                            ->live(onBlur: true)
                                             ->afterStateUpdated(fn (Get $get, Set $set) => self::triggerLiveRecalculate($get, $set)),
 
                                         TextInput::make('margin_persen')
@@ -688,7 +688,7 @@ class FlexoHppModalSchema
                                             ->numeric()
                                             ->default(0)
                                             ->helperText('Markup atas HPP (contoh: isi 15 untuk 15%)')
-                                            ->live(debounce: 500)
+                                            ->live(onBlur: true)
                                             ->afterStateUpdated(fn (Get $get, Set $set) => self::triggerLiveRecalculate($get, $set)),
                                     ]),
                                 ]),
