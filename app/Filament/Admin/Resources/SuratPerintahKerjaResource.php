@@ -42,22 +42,40 @@ public static function form(Form $form): Form
                             ->relationship(
                                 name: 'salesOrder',
                                 titleAttribute: 'no_sales_order',
-                                modifyQueryUsing: function (Builder $query) {
-                                    $query->where('order_type', 'SPK');
+                                modifyQueryUsing: function (Builder $query, ?MasterSpk $record = null) {
+                                    $query->with(['customer', 'itemable', 'orderConfirmation.items'])
+                                        ->where('order_type', 'SPK');
+
                                     if (\Illuminate\Support\Facades\Schema::hasTable('sales_orders') && \Illuminate\Support\Facades\Schema::hasColumn('sales_orders', 'fulfillment_type')) {
                                         $query->where(fn (Builder $q) => $q->whereNull('fulfillment_type')->orWhere('fulfillment_type', '!=', 'FROM_STOCK'));
                                     }
-                                    return $query;
+
+                                    // Pada mode Create hanya tampilkan SO yang belum memiliki SPK; pada Edit tetap tampilkan SO milik record ini
+                                    $query->where(function (Builder $q) use ($record) {
+                                        $q->whereDoesntHave('spk');
+                                        if ($record?->sales_order_id) {
+                                            $q->orWhere('id', $record->sales_order_id);
+                                        }
+                                    });
+
+                                    return $query->orderByDesc('created_at')->orderByDesc('id');
                                 }
                             )
-                            ->searchable()
+                            ->getOptionLabelFromRecordUsing(function (SalesOrder $so): string {
+                                $cust = $so->customer?->nama_customer ?? '-';
+                                $prod = $so->product_name ?: '-';
+                                $qty = number_format((float) ($so->qty ?? 0), 0, ',', '.');
+
+                                return "{$so->no_sales_order} — {$cust} · {$prod} ({$qty} pcs)";
+                            })
+                            ->searchable(['no_sales_order', 'no_po_customer', 'product_name'])
                             ->preload()
                             ->native(false)
-                            ->optionsLimit(20)
-                            ->reactive()
+                            ->optionsLimit(30)
+                            ->live()
                             ->required()
                             ->afterStateUpdated(function ($state, Set $set) {
-                                $so = SalesOrder::with(['customer', 'itemable'])->find($state);
+                                $so = SalesOrder::with(['customer', 'itemable', 'orderConfirmation.items'])->find($state);
 
                                 if (!$so) return;
 
@@ -72,17 +90,16 @@ public static function form(Form $form): Form
                                 $set('no_po_customer', $so->no_po_customer);
                                 $set('tipe_pesanan', $so->tipe_pesanan);
 
-                                // 🔥 data Finish Good
-                                $fg = $so->itemable;
+                                // 🔥 Spesifikasi Teknis Cetak: Prioritas 1 dari Kalkulasi HPP Order Confirmation, Fallback ke FinishGoodItem
+                                $specs = app(\App\Services\Production\ProductionService::class)
+                                    ->resolveTechnicalSpecsFromSalesOrder($so);
 
-                                if ($fg instanceof \App\Models\FinishGoodItem) {
-                                    $set('up_satu', $fg->up_satu);
-                                    $set('up_dua', $fg->up_dua);
-                                    $set('up_tiga', $fg->up_tiga);
-                                    $set('ukuran_potong', $fg->ukuran_potong);
-                                    $set('ukuran_cetak', $fg->ukuran_cetak);
-                                    $set('spesifikasi_kertas', $fg->spesifikasi_kertas);
-                                }
+                                $set('up_satu', $specs['up_satu']);
+                                $set('up_dua', $specs['up_dua']);
+                                $set('up_tiga', $specs['up_tiga']);
+                                $set('ukuran_potong', $specs['ukuran_potong']);
+                                $set('ukuran_cetak', $specs['ukuran_cetak']);
+                                $set('spesifikasi_kertas', $specs['spesifikasi_kertas']);
                             }),
 
                         // Auto fields hidden
@@ -228,36 +245,77 @@ public static function form(Form $form): Form
                 // ==========================================
                 Wizard\Step::make('Spesifikasi Teknis Cetak')
                     ->icon('heroicon-o-wrench-screwdriver')
-                    ->description('Ukuran potong (UP), dimensi cetak, dan spesifikasi kertas')
+                    ->description('Susunan UP (Repeat × Lane), ukuran potong die-cut, area cetak, dan spesifikasi kertas')
                     ->schema([
+                        Forms\Components\Placeholder::make('oc_spec_info')
+                            ->hiddenLabel()
+                            ->visible(fn (Get $get) => filled($get('sales_order_id')))
+                            ->content(function (Get $get) {
+                                $so = SalesOrder::with(['orderConfirmation.items', 'itemable'])->find($get('sales_order_id'));
+                                if (! $so) {
+                                    return null;
+                                }
+                                $specs = app(\App\Services\Production\ProductionService::class)
+                                    ->resolveTechnicalSpecsFromSalesOrder($so);
+
+                                if ($specs['source'] === 'order_confirmation') {
+                                    $docNo = e($specs['oc_doc_no'] ?: '-');
+
+                                    return new \Illuminate\Support\HtmlString(
+                                        '<div style="background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.3); border-left: 4px solid #10b981; border-radius: 8px; padding: 10px 14px; font-size: 12px;">'
+                                        . '<strong style="color: #10b981;">Terisi Otomatis dari Kalkulasi HPP Order Confirmation (' . $docNo . ')</strong><br>'
+                                        . '<span style="opacity: 0.85;">Nilai UP, Ukuran Potong (Die-Cut), Ukuran Cetak (Web × Repeat), dan Spesifikasi Kertas ditarik dari hasil kalkulasi Flexo OC. Anda tetap dapat menyesuaikan secara manual bila diperlukan.</span>'
+                                        . '</div>'
+                                    );
+                                }
+
+                                return new \Illuminate\Support\HtmlString(
+                                    '<div style="background: rgba(245, 158, 11, 0.1); border: 1px solid rgba(245, 158, 11, 0.3); border-left: 4px solid #f59e0b; border-radius: 8px; padding: 10px 14px; font-size: 12px;">'
+                                    . '<strong style="color: #f59e0b;">Sales Order belum terhubung dengan Kalkulasi HPP Order Confirmation</strong><br>'
+                                    . '<span style="opacity: 0.85;">Data menggunakan fallback dari Master Finish Good (jika ada). Silakan isi atau sesuaikan spesifikasi teknis cetak di bawah ini secara manual.</span>'
+                                    . '</div>'
+                                );
+                            })
+                            ->columnSpanFull(),
+
                         Forms\Components\Grid::make(3)->schema([
                             Forms\Components\TextInput::make('up_satu')
-                                ->label('UP 1 (Opsional)')
+                                ->label('UP 1 — Total UP / Repeat')
                                 ->numeric()
-                                ->placeholder('Contoh: 4'),
+                                ->placeholder('Contoh: 4')
+                                ->helperText('Total etiket per 1 putaran cylinder (UP Repeat × UP Lebar).'),
 
                             Forms\Components\TextInput::make('up_dua')
-                                ->label('UP 2 (Opsional)')
-                                ->numeric(),
+                                ->label('UP 2 — Arah Repeat (Keliling)')
+                                ->numeric()
+                                ->placeholder('Contoh: 2')
+                                ->helperText('Jumlah susunan etiket sepanjang keliling repeat cylinder.'),
 
                             Forms\Components\TextInput::make('up_tiga')
-                                ->label('UP 3 (Opsional)')
-                                ->numeric(),
+                                ->label('UP 3 — Arah Lebar (Jalur / Lane)')
+                                ->numeric()
+                                ->placeholder('Contoh: 2')
+                                ->helperText('Jumlah jalur / baris etiket melintang lebar web kertas.'),
+                        ]),
 
+                        Forms\Components\Grid::make(2)->schema([
                             Forms\Components\TextInput::make('ukuran_potong')
-                                ->label('Ukuran Potong')
-                                ->placeholder('Contoh: 650 x 1000 mm'),
+                                ->label('Ukuran Potong / Jadi Etiket (Die-Cut)')
+                                ->placeholder('Contoh: 178 × 119 mm')
+                                ->helperText('Ukuran jadi / potong akhir etiket (Panjang × Lebar dalam mm).'),
 
                             Forms\Components\TextInput::make('ukuran_cetak')
-                                ->label('Ukuran Cetak')
-                                ->placeholder('Contoh: 640 x 980 mm'),
-
-                            Forms\Components\Textarea::make('spesifikasi_kertas')
-                                ->label('Spesifikasi Kertas / Material')
-                                ->placeholder('Contoh: Ivory 250 GSM / Folio')
-                                ->rows(3)
-                                ->columnSpanFull(),
+                                ->label('Ukuran Cetak (Lebar Web × Repeat Cylinder)')
+                                ->placeholder('Contoh: 264 × 412.8 mm')
+                                ->helperText('Area cetak 1 repeat mesin Flexo (Lebar Bahan/Web × Repeat dalam mm).'),
                         ]),
+
+                        Forms\Components\Textarea::make('spesifikasi_kertas')
+                            ->label('Spesifikasi Kertas / Material')
+                            ->placeholder('Contoh: Ivory 230 GSM | Lebar Web: 26.4 cm | Est. Kebutuhan: 5,716 m / 347.1 kg')
+                            ->helperText('Jenis kertas, gramatur, lebar web roll, dan estimasi kebutuhan dari Order Confirmation.')
+                            ->rows(3)
+                            ->columnSpanFull(),
                     ]),
             ])
             ->skippable()

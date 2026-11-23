@@ -90,7 +90,33 @@ class ViewSuratPerintahKerja extends ViewRecord
                                     ->label('Nama Produk'),
 
                                 TextEntry::make('salesOrder.qty')
-                                    ->label('Qty Order'),
+                                    ->label('Qty Order')
+                                    ->numeric(),
+
+                                TextEntry::make('up_satu')
+                                    ->label('UP 1 — Total UP / Repeat')
+                                    ->placeholder('-'),
+
+                                TextEntry::make('up_dua')
+                                    ->label('UP 2 — Arah Repeat')
+                                    ->placeholder('-'),
+
+                                TextEntry::make('up_tiga')
+                                    ->label('UP 3 — Arah Lebar (Lane)')
+                                    ->placeholder('-'),
+
+                                TextEntry::make('ukuran_potong')
+                                    ->label('Ukuran Potong / Jadi (Die-Cut)')
+                                    ->placeholder('-'),
+
+                                TextEntry::make('ukuran_cetak')
+                                    ->label('Ukuran Cetak (Web × Repeat)')
+                                    ->placeholder('-'),
+
+                                TextEntry::make('spesifikasi_kertas')
+                                    ->label('Spesifikasi Kertas / Material')
+                                    ->placeholder('-')
+                                    ->columnSpanFull(),
                             ])
                     ]),
 

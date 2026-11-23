@@ -84,16 +84,14 @@ class ProductionService
                 $data['tanggal_po'] = $salesOrder->tanggal_po;
             }
 
-            // Salin spesifikasi produk dari FinishGoodItem jika ada
-            $fg = $salesOrder->itemable;
-            if ($fg instanceof \App\Models\FinishGoodItem) {
-                $data['up_satu'] = $data['up_satu'] ?? $fg->up_satu;
-                $data['up_dua'] = $data['up_dua'] ?? $fg->up_dua;
-                $data['up_tiga'] = $data['up_tiga'] ?? $fg->up_tiga;
-                $data['ukuran_potong'] = $data['ukuran_potong'] ?? $fg->ukuran_potong;
-                $data['ukuran_cetak'] = $data['ukuran_cetak'] ?? $fg->ukuran_cetak;
-                $data['spesifikasi_kertas'] = $data['spesifikasi_kertas'] ?? $fg->spesifikasi_kertas;
-            }
+            // Tarik spesifikasi teknis cetak (Prioritas 1: Kalkulasi HPP Order Confirmation, Fallback: FinishGoodItem)
+            $specs = $this->resolveTechnicalSpecsFromSalesOrder($salesOrder);
+            $data['up_satu'] = filled($data['up_satu'] ?? null) ? $data['up_satu'] : $specs['up_satu'];
+            $data['up_dua'] = filled($data['up_dua'] ?? null) ? $data['up_dua'] : $specs['up_dua'];
+            $data['up_tiga'] = filled($data['up_tiga'] ?? null) ? $data['up_tiga'] : $specs['up_tiga'];
+            $data['ukuran_potong'] = filled($data['ukuran_potong'] ?? null) ? $data['ukuran_potong'] : $specs['ukuran_potong'];
+            $data['ukuran_cetak'] = filled($data['ukuran_cetak'] ?? null) ? $data['ukuran_cetak'] : $specs['ukuran_cetak'];
+            $data['spesifikasi_kertas'] = filled($data['spesifikasi_kertas'] ?? null) ? $data['spesifikasi_kertas'] : $specs['spesifikasi_kertas'];
 
             if (empty($data['status'])) {
                 $data['status'] = 'ON PROCESS';
@@ -101,6 +99,153 @@ class ProductionService
 
             return MasterSpk::create($data);
         });
+    }
+
+    /**
+     * Resolusi spesifikasi teknis cetak SPK (UP 1-3, Ukuran Potong, Ukuran Cetak, Spesifikasi Kertas).
+     * Prioritas 1: Kalkulasi HPP Flexo pada item Order Confirmation terkait.
+     * Prioritas 2 (Fallback): Data master FinishGoodItem.
+     */
+    public function resolveTechnicalSpecsFromSalesOrder(SalesOrder $salesOrder): array
+    {
+        $salesOrder->loadMissing(['orderConfirmation.items', 'itemable']);
+
+        $fg = $salesOrder->itemable instanceof FinishGoodItem ? $salesOrder->itemable : null;
+        $oc = $salesOrder->orderConfirmation;
+        $matchedOcItem = null;
+
+        if ($oc && $oc->items->isNotEmpty()) {
+            $fgId = $fg?->id;
+            $productName = trim((string) ($salesOrder->product_name ?: ($fg?->nama_barang ?? '')));
+
+            $matchedOcItem = $oc->items->first(function ($item) use ($fgId, $productName) {
+                if ($fgId && (int) $item->finish_good_item_id === (int) $fgId) {
+                    return true;
+                }
+
+                return $productName !== '' && strcasecmp(trim((string) $item->item_name), $productName) === 0;
+            }) ?? $oc->items->first();
+        }
+
+        $hpp = [];
+        if ($matchedOcItem) {
+            $rawHpp = $matchedOcItem->kalkulasi_hpp_data;
+            if (is_array($rawHpp)) {
+                $hpp = $rawHpp;
+            } elseif (is_string($rawHpp) && trim($rawHpp) !== '') {
+                $decoded = json_decode($rawHpp, true);
+                if (is_array($decoded)) {
+                    $hpp = $decoded;
+                }
+            }
+        }
+
+        $fmtMm = static function (float $cm): string {
+            $mm = round($cm * 10.0, 2);
+
+            return rtrim(rtrim(number_format($mm, 2, '.', ''), '0'), '.');
+        };
+
+        $cleanDuplicateTags = static function (?string $text): ?string {
+            if ($text === null || trim($text) === '') {
+                return $text;
+            }
+
+            return trim((string) preg_replace('/(\[[^\]]+\])(?:\s*\1)+/i', '$1', $text));
+        };
+
+        // 1) UP 1 (Total UP/Repeat), UP 2 (Arah Repeat), UP 3 (Arah Lebar/Lane)
+        $upRepeat = ! empty($hpp['jumlah_etiket_sepanjang_repeat']) ? (int) $hpp['jumlah_etiket_sepanjang_repeat'] : null;
+        $upLebar = ! empty($hpp['jumlah_etiket_sepanjang_lebar']) ? (int) $hpp['jumlah_etiket_sepanjang_lebar'] : null;
+        $upTotal = ! empty($hpp['etiket_per_repeat'])
+            ? (int) $hpp['etiket_per_repeat']
+            : (($upRepeat && $upLebar) ? ($upRepeat * $upLebar) : null);
+
+        $upSatu = $upTotal ?? $fg?->up_satu;
+        $upDua = $upRepeat ?? $fg?->up_dua;
+        $upTiga = $upLebar ?? $fg?->up_tiga;
+
+        // 2) Ukuran Potong / Jadi Etiket (Die-Cut) dalam mm
+        $ukuranPotong = null;
+        $panjangCm = (float) ($hpp['panjang_etiket_jadi'] ?? 0);
+        $lebarCm = (float) ($hpp['lebar_etiket_jadi'] ?? 0);
+        if ($panjangCm > 50) {
+            $panjangCm /= 10.0;
+        }
+        if ($lebarCm > 50) {
+            $lebarCm /= 10.0;
+        }
+        if ($panjangCm > 0 && $lebarCm > 0) {
+            $ukuranPotong = "{$fmtMm($panjangCm)} × {$fmtMm($lebarCm)} mm";
+        } else {
+            $ukuranPotong = $fg?->ukuran_potong;
+        }
+
+        // 3) Ukuran Cetak (Lebar Web × Repeat Cylinder) dalam mm
+        $ukuranCetak = null;
+        $lebarWebCm = (float) ($hpp['lebar_bahan'] ?? 0);
+        $repeatCm = (float) ($hpp['repeat_cylinder'] ?? 0);
+        if ($lebarWebCm > 100) {
+            $lebarWebCm /= 10.0;
+        }
+        if ($repeatCm > 100) {
+            $repeatCm /= 10.0;
+        }
+        if ($lebarWebCm > 0 && $repeatCm > 0) {
+            $ukuranCetak = "{$fmtMm($lebarWebCm)} × {$fmtMm($repeatCm)} mm";
+        } else {
+            $ukuranCetak = $fg?->ukuran_cetak;
+        }
+
+        // 4) Spesifikasi Kertas / Material
+        $baseKertas = $cleanDuplicateTags(
+            $matchedOcItem?->kertas
+                ?: $salesOrder->kertas
+                ?: $fg?->spesifikasi_kertas
+        );
+
+        $specParts = [];
+        if (! empty($baseKertas)) {
+            $gramatur = (float) ($hpp['gramatur_kertas'] ?? 0);
+            if ($gramatur > 0 && ! str_contains(strtolower($baseKertas), 'gsm')) {
+                $specParts[] = $baseKertas . ' (' . rtrim(rtrim(number_format($gramatur, 2, '.', ''), '0'), '.') . ' GSM)';
+            } else {
+                $specParts[] = $baseKertas;
+            }
+        } elseif (! empty($hpp['gramatur_kertas'])) {
+            $specParts[] = 'Kertas ' . rtrim(rtrim(number_format((float) $hpp['gramatur_kertas'], 2, '.', ''), '0'), '.') . ' GSM';
+        }
+
+        if ($lebarWebCm > 0) {
+            $specParts[] = 'Lebar Web: ' . rtrim(rtrim(number_format($lebarWebCm, 2, '.', ''), '0'), '.') . ' cm';
+        }
+
+        $panjangRoll = (float) ($hpp['total_panjang_bahan'] ?? $matchedOcItem?->kebutuhan_kertas_meter ?? 0);
+        $beratRoll = (float) ($hpp['berat_bahan_teoritis'] ?? $matchedOcItem?->kebutuhan_kertas_kg ?? 0);
+        if ($panjangRoll > 0 || $beratRoll > 0) {
+            $estBits = [];
+            if ($panjangRoll > 0) {
+                $estBits[] = number_format($panjangRoll, 1, '.', ',') . ' m';
+            }
+            if ($beratRoll > 0) {
+                $estBits[] = number_format($beratRoll, 1, '.', ',') . ' kg';
+            }
+            $specParts[] = 'Est. Kebutuhan: ' . implode(' / ', $estBits);
+        }
+
+        $spesifikasiKertas = ! empty($specParts) ? implode(' | ', $specParts) : null;
+        $fromOc = ! empty($hpp) && ($upTotal !== null || ($panjangCm > 0 && $lebarCm > 0) || ($lebarWebCm > 0 && $repeatCm > 0));
+
+        return [
+            'up_satu'            => $upSatu,
+            'up_dua'             => $upDua,
+            'up_tiga'            => $upTiga,
+            'ukuran_potong'      => $ukuranPotong,
+            'ukuran_cetak'       => $ukuranCetak,
+            'spesifikasi_kertas' => $spesifikasiKertas,
+            'source'             => $fromOc ? 'order_confirmation' : ($fg ? 'finish_good' : 'none'),
+            'oc_doc_no'          => $oc?->doc_no,
+        ];
     }
 
     /**

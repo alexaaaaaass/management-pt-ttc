@@ -124,9 +124,17 @@ class FinishGoodItem extends Model
                 foreach ($items as $item) {
                     $name = trim($item['nama_kertas'] ?? $item['spesifikasi_kertas'] ?? '');
                     if ($name !== '') {
-                        $part = !empty($item['bagian_kemasan']) ? " [{$item['bagian_kemasan']}]" : '';
-                        $gsm = !empty($item['gramasi']) ? " {$item['gramasi']} GSM" : '';
-                        $paperNames[] = $name . $gsm . $part;
+                        // Cegah duplikasi label kurung siku seperti "[Etiket] [Etiket]" saat disimpan ulang
+                        $name = trim((string) preg_replace('/(\[[^\]]+\])(?:\s*\1)+/i', '$1', $name));
+                        $partRaw = trim((string) ($item['bagian_kemasan'] ?? ''));
+                        $part = ($partRaw !== '' && ! str_contains(strtolower($name), '[' . strtolower($partRaw) . ']'))
+                            ? " [{$partRaw}]"
+                            : '';
+                        $gsmRaw = trim((string) ($item['gramasi'] ?? ''));
+                        $gsm = ($gsmRaw !== '' && ! str_contains(strtolower($name), 'gsm'))
+                            ? " {$gsmRaw} GSM"
+                            : '';
+                        $paperNames[] = trim($name . $gsm . $part);
                     }
                 }
 
