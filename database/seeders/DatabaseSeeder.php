@@ -37,6 +37,7 @@ class DatabaseSeeder extends Seeder
             KaryawanSeeder::class,
             IndigamaCoaSeeder::class,
             BismillahMacroSalesSeeder::class,
+            PracetakMaterialSeeder::class,
         ]);
     }
 }
