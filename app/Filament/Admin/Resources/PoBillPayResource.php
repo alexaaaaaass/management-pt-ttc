@@ -311,6 +311,15 @@ protected static ?int $navigationSort = 12;
 {
     return $table
         ->defaultSort('created_at', 'desc')
+        ->searchPlaceholder('Cari No Billing, No PO, No Bukti, Supplier...')
+        ->groups([
+            Tables\Grouping\Group::make('poBilling.kode_tagihan')
+                ->label('No Billing')
+                ->getDescriptionFromRecordUsing(fn (PoBillPay $record): string => ($record->poBilling?->supplier?->nama_supplier ?? '-')
+                    . ($record->poBilling?->purchaseOrder?->no_po ? ' · PO: ' . $record->poBilling->purchaseOrder->no_po : '')
+                    . ' · Status: ' . ($record->poBilling?->status ?? '-'))
+                ->collapsible(),
+        ])
         ->columns([
             Tables\Columns\TextColumn::make('kode_pembayaran')
                 ->label('No. Bukti')
@@ -326,7 +335,12 @@ protected static ?int $navigationSort = 12;
                 ->description(fn (PoBillPay $record): ?string => $record->poBilling?->purchaseOrder?->no_po
                     ? 'PO: ' . $record->poBilling->purchaseOrder->no_po
                     : null)
-                ->searchable()
+                ->searchable(query: function (\Illuminate\Database\Eloquent\Builder $query, string $search): \Illuminate\Database\Eloquent\Builder {
+                    return $query->whereHas('poBilling', function ($q) use ($search) {
+                        $q->where('kode_tagihan', 'like', "%{$search}%")
+                            ->orWhereHas('purchaseOrder', fn ($poQ) => $poQ->where('no_po', 'like', "%{$search}%"));
+                    });
+                })
                 ->sortable(),
 
             Tables\Columns\TextColumn::make('poBilling.supplier.nama_supplier')
@@ -357,7 +371,12 @@ protected static ?int $navigationSort = 12;
                 })
                 ->sortable()
                 ->badge()
-                ->color('success'),
+                ->color('success')
+                ->summarize(
+                    Tables\Columns\Summarizers\Sum::make()
+                        ->label('Total Dibayar')
+                        ->money('IDR', locale: 'id')
+                ),
 
             // Sisa Tagihan setelah transaksi pembayaran ini
             Tables\Columns\TextColumn::make('sisa_setelah_bayar')
@@ -398,6 +417,31 @@ protected static ?int $navigationSort = 12;
                 }),
         ])
         ->filters([
+            Tables\Filters\SelectFilter::make('po_billing_id')
+                ->label('No Billing (Billing Ref)')
+                ->options(function () {
+                    return PoBilling::with(['supplier', 'purchaseOrder'])
+                        ->orderByDesc('created_at')
+                        ->orderByDesc('id')
+                        ->get()
+                        ->mapWithKeys(function ($bill) {
+                            $poNo = $bill->purchaseOrder?->no_po;
+                            $sup = $bill->supplier?->nama_supplier ?? '-';
+
+                            return [
+                                $bill->id => $bill->kode_tagihan . ' • ' . $sup . ($poNo ? " ({$poNo})" : ''),
+                            ];
+                        });
+                })
+                ->searchable()
+                ->preload(),
+
+            Tables\Filters\SelectFilter::make('supplier')
+                ->label('Supplier')
+                ->relationship('poBilling.supplier', 'nama_supplier')
+                ->searchable()
+                ->preload(),
+
             Tables\Filters\Filter::make('tanggal_pembayaran')
                 ->form([
                     DatePicker::make('dari_tanggal')->label('Dari Tanggal'),
@@ -407,7 +451,7 @@ protected static ?int $navigationSort = 12;
                     return $query
                         ->when($data['dari_tanggal'], fn ($q, $date) => $q->whereDate('tanggal_pembayaran', '>=', $date))
                         ->when($data['sampai_tanggal'], fn ($q, $date) => $q->whereDate('tanggal_pembayaran', '<=', $date));
-                })
+                }),
         ])
         ->actions([
             Tables\Actions\ActionGroup::make([
