@@ -46,8 +46,8 @@ class PoBillingService
         $totalBarang = 0.0;
 
         foreach ($items as $item) {
-            $qty = (float) ($item['qty'] ?? 0);
-            $harga = (float) ($item['harga'] ?? 0);
+            $qty = (float) (\App\Support\MoneyHelper::clean($item['qty'] ?? 0) ?? 0);
+            $harga = (float) (\App\Support\MoneyHelper::clean($item['harga'] ?? 0) ?? 0);
             $diskon = (float) ($item['diskon'] ?? 0);
 
             $subtotal = ($qty * $harga) - (($qty * $harga) * $diskon / 100);

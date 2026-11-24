@@ -273,6 +273,7 @@ class PoBillingResource extends Resource
                                             ->prefix('Rp')
                                             ->currencyMask(2)
                                             ->default(0)
+                                            ->helperText('Otomatis mengurangi Total Bruto (DPP + PPN + Ongkir)')
                                             ->live(onBlur: true)
                                             ->afterStateUpdated(function ($state, Get $get, Set $set) {
                                                 $totalBarang = (float) (MoneyHelper::clean($get('total_barang')) ?? 0);
@@ -284,13 +285,38 @@ class PoBillingResource extends Resource
                                             }),
 
                                         TextInput::make('grand_total')
-                                            ->label('Grand Total Tagihan')
+                                            ->label('Grand Total Tagihan (Setelah DP)')
                                             ->prefix('Rp')
                                             ->currencyMask(2)
                                             ->disabled()
                                             ->dehydrated()
                                             ->extraAttributes(['class' => 'font-bold text-primary-600']),
                                     ]),
+
+                                Forms\Components\Placeholder::make('kalkulasi_ringkasan')
+                                    ->label('Rincian Perhitungan')
+                                    ->content(function (Get $get): \Illuminate\Support\HtmlString {
+                                        $dpp = (float) (MoneyHelper::clean($get('total_barang')) ?? 0);
+                                        $ppn = (float) (MoneyHelper::clean($get('ppn')) ?? 0);
+                                        $ongkir = (float) (MoneyHelper::clean($get('ongkir')) ?? 0);
+                                        $dp = (float) (MoneyHelper::clean($get('dp')) ?? 0);
+                                        $bruto = round($dpp + $ppn + $ongkir, 2);
+                                        $netto = max(0.0, round($bruto - $dp, 2));
+
+                                        $fmt = fn (float $n) => 'Rp ' . number_format($n, 0, ',', '.');
+
+                                        $dpPart = $dp > 0
+                                            ? ' − <span class="text-amber-600 dark:text-amber-400 font-medium">DP ' . $fmt($dp) . '</span>'
+                                            : '';
+
+                                        return new \Illuminate\Support\HtmlString(
+                                            '<div class="rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/60 px-3.5 py-2.5 text-xs text-gray-700 dark:text-gray-200 leading-relaxed">'
+                                            . '<div>DPP <strong>' . $fmt($dpp) . '</strong> + PPN <strong>' . $fmt($ppn) . '</strong> + Ongkir <strong>' . $fmt($ongkir) . '</strong> = Total Bruto <strong>' . $fmt($bruto) . '</strong></div>'
+                                            . '<div class="mt-1">Total Bruto <strong>' . $fmt($bruto) . '</strong>' . $dpPart . ' = <span class="text-sm font-bold text-emerald-600 dark:text-emerald-400">Tagihan Netto ' . $fmt($netto) . '</span></div>'
+                                            . '</div>'
+                                        );
+                                    })
+                                    ->columnSpanFull(),
                             ]),
                     ]),
             ])
@@ -371,12 +397,26 @@ class PoBillingResource extends Resource
                     ->sortable(),
 
                 Tables\Columns\TextColumn::make('grand_total')
-                    ->label('Total Tagihan')
+                    ->label('Total Tagihan (Netto)')
                     ->money('IDR', locale: 'id')
+                    ->description(function (PoBilling $record): ?string {
+                        $dp = (float) ($record->dp ?? 0);
+                        if ($dp <= 0) {
+                            return null;
+                        }
+                        $bruto = round((float) $record->total_barang + (float) $record->ppn + (float) $record->ongkir, 2);
+
+                        return 'Bruto Rp ' . number_format($bruto, 0, ',', '.') . ' − DP Rp ' . number_format($dp, 0, ',', '.');
+                    })
                     ->sortable(),
 
+                Tables\Columns\TextColumn::make('dp')
+                    ->label('DP')
+                    ->money('IDR', locale: 'id')
+                    ->toggleable(isToggledHiddenByDefault: true),
+
                 Tables\Columns\TextColumn::make('total_payment')
-                    ->label('Dibayar')
+                    ->label('Dibayar (Pelunasan)')
                     ->money('IDR', locale: 'id'),
 
                 Tables\Columns\TextColumn::make('sisa_tagihan')
