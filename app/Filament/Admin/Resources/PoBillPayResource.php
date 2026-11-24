@@ -81,7 +81,7 @@ protected static ?int $navigationSort = 12;
                                 if (count($items) === 1) {
                                     $firstKey = array_key_first($items);
                                     if ($firstKey !== null && empty($items[$firstKey]['nominal_pembayaran'])) {
-                                        $items[$firstKey]['nominal_pembayaran'] = $bill->sisa_tagihan;
+                                        $items[$firstKey]['nominal_pembayaran'] = \App\Support\MoneyHelper::format($bill->sisa_tagihan, 2) ?? '0';
                                         $set('items', $items);
                                         $set('total_pembayaran', $bill->sisa_tagihan);
                                     }
@@ -175,7 +175,7 @@ protected static ?int $navigationSort = 12;
                                             $diff = round($sisaTagihan - $total, 2);
                                             $currVal = \App\Support\MoneyHelper::clean($state) ?? 0;
                                             $adjusted = round($currVal + $diff, 2);
-                                            $set('nominal_pembayaran', $adjusted);
+                                            $set('nominal_pembayaran', \App\Support\MoneyHelper::format($adjusted, 2) ?? '0');
                                             $total = $sisaTagihan;
 
                                             \Filament\Notifications\Notification::make()
@@ -249,27 +249,13 @@ protected static ?int $navigationSort = 12;
                         ),
 
                     ])
+                    ->afterStateUpdated(function ($state, Set $set) {
+                        $total = collect($state)->sum(
+                            fn ($item) => (float) (\App\Support\MoneyHelper::clean($item['nominal_pembayaran'] ?? 0) ?? 0)
+                        );
 
-                    ->live()
-
-                    ->afterStateUpdated(
-                        function (
-                            $state,
-                            Set $set
-                        ) {
-
-                            $total = collect(
-                                $state
-                            )->sum(
-                                'nominal_pembayaran'
-                            );
-
-                            $set(
-                                'total_pembayaran',
-                                $total
-                            );
-                        }
-                    ),
+                        $set('total_pembayaran', round($total, 2));
+                    }),
             ]),
 
             Section::make(

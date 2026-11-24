@@ -16,11 +16,23 @@ class EditPoBilling extends EditRecord
 
     protected function mutateFormDataBeforeFill(array $data): array
     {
-        $this->record->loadMissing(['supplier', 'purchaseOrder.supplier']);
+        $this->record->loadMissing(['supplier', 'purchaseOrder.supplier', 'items']);
         $data['supplier_name_display'] = $this->record->supplier?->nama_supplier
             ?? $this->record->purchaseOrder?->supplier?->nama_supplier
             ?? '-';
-        $data['items'] = $this->record->items->toArray();
+
+        $items = [];
+        foreach ($this->record->items as $item) {
+            $items[(string) \Illuminate\Support\Str::uuid()] = [
+                'item_id'   => $item->item_id,
+                'item_name' => $item->item_name,
+                'qty'       => \App\Support\MoneyHelper::format($item->qty, 2) ?? '0',
+                'harga'     => \App\Support\MoneyHelper::format($item->harga, 2) ?? '0',
+                'diskon'    => $item->diskon,
+                'subtotal'  => \App\Support\MoneyHelper::format($item->subtotal, 2) ?? '0',
+            ];
+        }
+        $data['items'] = $items;
 
         return $data;
     }

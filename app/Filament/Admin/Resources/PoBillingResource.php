@@ -107,13 +107,13 @@ class PoBillingResource extends Resource
                                             $subtotal = round(($qty * $harga) - (($qty * $harga) * $diskon / 100), 2);
                                             $totalBarang += $subtotal;
 
-                                            $items[] = [
+                                            $items[(string) \Illuminate\Support\Str::uuid()] = [
                                                 'item_id' => optional($item->purchaseOrderItem)->item_id,
                                                 'item_name' => optional(optional($item->purchaseOrderItem)->item)->nama_master_item ?? 'Item',
-                                                'qty' => $qty,
-                                                'harga' => $harga,
+                                                'qty' => MoneyHelper::format($qty, 2) ?? '0',
+                                                'harga' => MoneyHelper::format($harga, 2) ?? '0',
                                                 'diskon' => $diskon,
-                                                'subtotal' => $subtotal,
+                                                'subtotal' => MoneyHelper::format($subtotal, 2) ?? '0',
                                             ];
                                         }
 
@@ -129,11 +129,11 @@ class PoBillingResource extends Resource
                                         $set('purchase_order_id', $lpb->purchase_order_id);
                                         $set('supplier_id', optional($lpb->purchaseOrder)->supplier_id);
                                         $set('supplier_name_display', $lpb->purchaseOrder?->supplier?->nama_supplier ?? '-');
-                                        $set('total_barang', $totalBarang);
-                                        $set('ppn', $ppn);
-                                        $set('ongkir', $ongkir);
-                                        $set('dp', $dp);
-                                        $set('grand_total', $grandTotal);
+                                        $set('total_barang', MoneyHelper::format($totalBarang, 2) ?? '0');
+                                        $set('ppn', MoneyHelper::format($ppn, 2) ?? '0');
+                                        $set('ongkir', MoneyHelper::format($ongkir, 2) ?? '0');
+                                        $set('dp', MoneyHelper::format($dp, 2) ?? '0');
+                                        $set('grand_total', MoneyHelper::format($grandTotal, 2) ?? '0');
                                     }),
 
                                 TextInput::make('supplier_name_display')
@@ -144,8 +144,9 @@ class PoBillingResource extends Resource
 
                                 Select::make('karyawan_id')
                                     ->label('Karyawan Penanggung Jawab')
-                                    ->options(User::pluck('name', 'id'))
-                                    ->searchable(),
+                                    ->options(fn () => User::query()->orderBy('name')->pluck('name', 'id'))
+                                    ->searchable()
+                                    ->preload(),
 
                                 TextInput::make('invoice_vendor')
                                     ->label('No Invoice Vendor / Tagihan')
@@ -184,13 +185,13 @@ class PoBillingResource extends Resource
                         Section::make('Item Details (LPB)')
                             ->schema([
                                 Repeater::make('items')
+                                    ->defaultItems(0)
                                     ->collapsible()
                                     ->collapsed(false)
                                     ->cloneable(false)
                                     ->addable(false)
                                     ->deletable(false)
                                     ->reorderable(false)
-                                    ->live()
                                     ->itemLabel(fn (array $state): ?string => $state['item_name'] ?? 'Item')
                                     ->schema([
                                         Forms\Components\Hidden::make('item_id')->dehydrated(),
@@ -204,21 +205,24 @@ class PoBillingResource extends Resource
                                                 TextInput::make('qty')
                                                     ->label('Qty Terima')
                                                     ->quantityMask(2)
-                                                    ->live(onBlur: true),
+                                                    ->live(onBlur: true)
+                                                    ->afterStateUpdated(fn (Set $set, Get $get) => static::recalculateItemRowAndTotals($set, $get)),
 
                                                 TextInput::make('harga')
                                                     ->label('Harga Satuan')
                                                     ->prefix('Rp')
                                                     ->currencyMask(2)
                                                     ->placeholder('0.00')
-                                                    ->live(onBlur: true),
+                                                    ->live(onBlur: true)
+                                                    ->afterStateUpdated(fn (Set $set, Get $get) => static::recalculateItemRowAndTotals($set, $get)),
 
                                                 TextInput::make('diskon')
                                                     ->label('Diskon (%)')
                                                     ->numeric()
                                                     ->default(0)
                                                     ->suffix('%')
-                                                    ->live(onBlur: true),
+                                                    ->live(onBlur: true)
+                                                    ->afterStateUpdated(fn (Set $set, Get $get) => static::recalculateItemRowAndTotals($set, $get)),
 
                                                 TextInput::make('subtotal')
                                                     ->label('Subtotal')
@@ -228,32 +232,6 @@ class PoBillingResource extends Resource
                                                     ->prefix('Rp'),
                                             ]),
                                     ])
-                                    ->afterStateUpdated(function ($state, Set $set, Get $get) {
-                                        $totalBarang = 0;
-
-                                        foreach ($state as $key => $item) {
-                                            $qty = (float) (MoneyHelper::clean($item['qty'] ?? 0) ?? 0);
-                                            $harga = (float) (MoneyHelper::clean($item['harga'] ?? 0) ?? 0);
-                                            $diskon = (float) ($item['diskon'] ?? 0);
-                                            $subtotal = round(($qty * $harga) - (($qty * $harga) * $diskon / 100), 2);
-
-                                            $state[$key]['subtotal'] = $subtotal;
-                                            $totalBarang += $subtotal;
-                                        }
-
-                                        $poId = $get('purchase_order_id');
-                                        $poPpn = $poId ? \App\Models\PurchaseOrder::whereKey($poId)->value('ppn') : null;
-                                        $ppnRate = $poPpn !== null ? (float) $poPpn : 11.0;
-                                        $ppn = round($totalBarang * ($ppnRate / 100), 2);
-                                        $ongkir = (float) (MoneyHelper::clean($get('ongkir')) ?? 0);
-                                        $dp = (float) (MoneyHelper::clean($get('dp')) ?? 0);
-                                        $grandTotal = max(0.0, round($totalBarang + $ppn + $ongkir - $dp, 2));
-
-                                        $set('items', $state);
-                                        $set('total_barang', $totalBarang);
-                                        $set('ppn', $ppn);
-                                        $set('grand_total', $grandTotal);
-                                    })
                                     ->columns(1),
                             ]),
 
@@ -269,7 +247,7 @@ class PoBillingResource extends Resource
                                             ->dehydrated(),
 
                                         TextInput::make('ppn')
-                                            ->label('PPN (11%)')
+                                            ->label('PPN')
                                             ->prefix('Rp')
                                             ->currencyMask(2)
                                             ->disabled()
@@ -286,7 +264,8 @@ class PoBillingResource extends Resource
                                                 $ppn = (float) (MoneyHelper::clean($get('ppn')) ?? 0);
                                                 $ongkir = (float) (MoneyHelper::clean($state) ?? 0);
                                                 $dp = (float) (MoneyHelper::clean($get('dp')) ?? 0);
-                                                $set('grand_total', max(0.0, round($totalBarang + $ppn + $ongkir - $dp, 2)));
+                                                $grandTotal = max(0.0, round($totalBarang + $ppn + $ongkir - $dp, 2));
+                                                $set('grand_total', MoneyHelper::format($grandTotal, 2) ?? '0');
                                             }),
 
                                         TextInput::make('dp')
@@ -300,7 +279,8 @@ class PoBillingResource extends Resource
                                                 $ppn = (float) (MoneyHelper::clean($get('ppn')) ?? 0);
                                                 $ongkir = (float) (MoneyHelper::clean($get('ongkir')) ?? 0);
                                                 $dp = (float) (MoneyHelper::clean($state) ?? 0);
-                                                $set('grand_total', max(0.0, round($totalBarang + $ppn + $ongkir - $dp, 2)));
+                                                $grandTotal = max(0.0, round($totalBarang + $ppn + $ongkir - $dp, 2));
+                                                $set('grand_total', MoneyHelper::format($grandTotal, 2) ?? '0');
                                             }),
 
                                         TextInput::make('grand_total')
@@ -318,6 +298,36 @@ class PoBillingResource extends Resource
             ->columnSpanFull(),
         ]);
 }
+
+    protected static function recalculateItemRowAndTotals(Set $set, Get $get): void
+    {
+        $qty = (float) (MoneyHelper::clean($get('qty')) ?? 0);
+        $harga = (float) (MoneyHelper::clean($get('harga')) ?? 0);
+        $diskon = (float) ($get('diskon') ?? 0);
+        $rowSubtotal = round(($qty * $harga) - (($qty * $harga) * $diskon / 100), 2);
+        $set('subtotal', MoneyHelper::format($rowSubtotal, 2) ?? '0');
+
+        $items = $get('../../items') ?? [];
+        $totalBarang = 0.0;
+        foreach ($items as $item) {
+            $iqty = (float) (MoneyHelper::clean($item['qty'] ?? 0) ?? 0);
+            $iharga = (float) (MoneyHelper::clean($item['harga'] ?? 0) ?? 0);
+            $idiskon = (float) ($item['diskon'] ?? 0);
+            $totalBarang += round(($iqty * $iharga) - (($iqty * $iharga) * $idiskon / 100), 2);
+        }
+
+        $poId = $get('../../purchase_order_id');
+        $poPpn = $poId ? \App\Models\PurchaseOrder::whereKey($poId)->value('ppn') : null;
+        $ppnRate = $poPpn !== null ? (float) $poPpn : 11.0;
+        $ppn = round($totalBarang * ($ppnRate / 100), 2);
+        $ongkir = (float) (MoneyHelper::clean($get('../../ongkir')) ?? 0);
+        $dp = (float) (MoneyHelper::clean($get('../../dp')) ?? 0);
+        $grandTotal = max(0.0, round($totalBarang + $ppn + $ongkir - $dp, 2));
+
+        $set('../../total_barang', MoneyHelper::format($totalBarang, 2) ?? '0');
+        $set('../../ppn', MoneyHelper::format($ppn, 2) ?? '0');
+        $set('../../grand_total', MoneyHelper::format($grandTotal, 2) ?? '0');
+    }
 
     public static function getNavigationLabel(): string
 {
