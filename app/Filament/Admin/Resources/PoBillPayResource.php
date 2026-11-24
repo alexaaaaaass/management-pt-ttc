@@ -371,12 +371,7 @@ protected static ?int $navigationSort = 12;
                 })
                 ->sortable()
                 ->badge()
-                ->color('success')
-                ->summarize(
-                    Tables\Columns\Summarizers\Sum::make()
-                        ->label('Total Dibayar')
-                        ->money('IDR', locale: 'id')
-                ),
+                ->color('success'),
 
             // Sisa Tagihan setelah transaksi pembayaran ini
             Tables\Columns\TextColumn::make('sisa_setelah_bayar')
