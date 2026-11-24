@@ -28,10 +28,14 @@ public static function form(Form $form): Form
 
                     Forms\Components\Select::make('spk_id')
                         ->label('SPK')
-                        ->relationship('spk', 'no_spk')
+                        ->relationship(
+                            'spk',
+                            'no_spk',
+                            modifyQueryUsing: fn (\Illuminate\Database\Eloquent\Builder $query) => $query->orderByDesc('id')
+                        )
                         ->searchable()
                         ->preload()
-                        ->reactive()
+                        ->live()
                         ->required(),
 
                     Forms\Components\Hidden::make('kode_packaging'),
@@ -57,11 +61,24 @@ public static function form(Form $form): Form
                         ->default(now())
                         ->required(),
 
-                    Forms\Components\Section::make('Informasi Kebutuhan SPK')
+                    Forms\Components\Section::make('Informasi Kebutuhan & Hasil Produksi SPK')
                         ->schema([
                             Forms\Components\Placeholder::make('info_order_qty')
                                 ->label('Target Qty Order')
                                 ->content(fn ($get) => optional(\App\Models\MasterSpk::find($get('spk_id')))->order_qty ? number_format(\App\Models\MasterSpk::find($get('spk_id'))->order_qty, 0, ',', '.') . ' pcs' : '-'),
+
+                            Forms\Components\Placeholder::make('info_finishing_good')
+                                ->label('Hasil Baik Finishing / Die Making')
+                                ->content(function ($get) {
+                                    $spk = \App\Models\MasterSpk::with(['finishings', 'diemakings'])->find($get('spk_id'));
+                                    if (! $spk) {
+                                        return '-';
+                                    }
+                                    $fin = (int) $spk->finishings->sum('hasil_baik');
+                                    $die = (int) $spk->diemakings->sum('hasil_baik');
+
+                                    return 'Fin: ' . number_format($fin, 0, ',', '.') . ' · Die: ' . number_format($die, 0, ',', '.');
+                                }),
 
                             Forms\Components\Placeholder::make('info_already_packed')
                                 ->label('Sudah Ter-packing (Hasil Baik)')
@@ -76,7 +93,7 @@ public static function form(Form $form): Form
                                     return number_format($sisa, 0, ',', '.') . ' pcs';
                                 }),
                         ])
-                        ->columns(3)
+                        ->columns(4)
                         ->visible(fn ($get) => filled($get('spk_id'))),
 
                 ])
@@ -221,7 +238,42 @@ public static function form(Form $form): Form
                 ->color('primary'),
 
             Tables\Columns\TextColumn::make('tgl_transfer')
-                ->date(),
+                ->label('Tgl Transfer')
+                ->date('d M Y')
+                ->sortable(),
+        ])
+        ->filters([
+            Tables\Filters\SelectFilter::make('spk_id')
+                ->label('No SPK')
+                ->relationship('spk', 'no_spk')
+                ->searchable()
+                ->preload(),
+
+            Tables\Filters\SelectFilter::make('satuan_transfer')
+                ->label('Satuan Transfer')
+                ->options([
+                    'Box'     => 'Box',
+                    'Pallete' => 'Pallete',
+                    'Pack'    => 'Pack',
+                ]),
+
+            Tables\Filters\SelectFilter::make('jenis_transfer')
+                ->label('Jenis Transfer')
+                ->options([
+                    'barang_hasil_baik' => 'Barang Hasil Baik',
+                    'label_kuning'      => 'Label Kuning',
+                    'blokir'            => 'Blokir',
+                ]),
+
+            Tables\Filters\Filter::make('tgl_transfer')
+                ->label('Rentang Tanggal')
+                ->form([
+                    Forms\Components\DatePicker::make('dari_tanggal')->label('Dari Tanggal'),
+                    Forms\Components\DatePicker::make('sampai_tanggal')->label('Sampai Tanggal'),
+                ])
+                ->query(fn (\Illuminate\Database\Eloquent\Builder $query, array $data): \Illuminate\Database\Eloquent\Builder => $query
+                    ->when($data['dari_tanggal'] ?? null, fn ($q, $d) => $q->whereDate('tgl_transfer', '>=', $d))
+                    ->when($data['sampai_tanggal'] ?? null, fn ($q, $d) => $q->whereDate('tgl_transfer', '<=', $d))),
         ])
 
         ->actions([

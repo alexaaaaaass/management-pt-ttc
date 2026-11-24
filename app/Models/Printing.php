@@ -14,7 +14,9 @@ class Printing extends Model
     'operator_id',
     'tanggal_entri',
     'proses_printing',
+    'proses_list',
     'tahap_printing',
+    'status_laporan',
     'hasil_baik',
     'hasil_rusak',
     'semi_waste',
@@ -24,6 +26,12 @@ class Printing extends Model
 
     protected $casts = [
         'tanggal_entri' => 'date',
+        'proses_list'   => 'array',
+    ];
+
+    protected $attributes = [
+        'tahap_printing' => 'proses_cetak',
+        'status_laporan' => 'selesai',
     ];
 
     public function spk()
@@ -52,6 +60,34 @@ class Printing extends Model
         return $this->hasMany(PrintingWaste::class, 'printing_id');
     }
 
+    public function getProsesLabelsAttribute(): array
+    {
+        if (is_array($this->proses_list) && ! empty($this->proses_list)) {
+            return array_values(array_filter($this->proses_list));
+        }
+
+        if (! empty($this->proses_printing)) {
+            $map = [
+                'color-printing' => 'Color Printing',
+                'cold-foil'      => 'Cold Foil',
+                'spot-uv'        => 'Spot UV',
+                'furnish-uv'     => 'Furnish / Varnish UV',
+                'drip-off'       => 'Drip Off',
+            ];
+
+            return [$map[$this->proses_printing] ?? $this->proses_printing];
+        }
+
+        return [];
+    }
+
+    public function getProsesSummaryAttribute(): string
+    {
+        $labels = $this->proses_labels;
+
+        return ! empty($labels) ? implode(', ', $labels) : '-';
+    }
+
     public function syncWasteSummary(): void
     {
         $this->load('wastes');
@@ -61,6 +97,14 @@ class Printing extends Model
         $updates = [
             'error_production_id' => $firstWaste?->error_production_id,
         ];
+
+        if (is_array($this->proses_list) && ! empty($this->proses_list)) {
+            $updates['proses_printing'] = \Illuminate\Support\Str::limit(implode(', ', $this->proses_list), 190, '');
+        }
+
+        if (empty($this->tahap_printing)) {
+            $updates['tahap_printing'] = 'proses_cetak';
+        }
 
         if ($this->wastes->isNotEmpty() && $totalWaste > 0) {
             $updates['hasil_rusak'] = (int) round($totalWaste);

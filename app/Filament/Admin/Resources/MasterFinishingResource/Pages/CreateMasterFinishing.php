@@ -10,6 +10,11 @@ class CreateMasterFinishing extends CreateRecord
 {
     protected static string $resource = MasterFinishingResource::class;
 
+    protected function afterCreate(): void
+    {
+        $this->record->syncWasteSummary();
+    }
+
     protected function getRedirectUrl(): string
     {
         return $this->getResource()::getUrl('index');

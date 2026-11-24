@@ -28,11 +28,25 @@ class PrintingResource extends Resource
                     ->relationship(
                         'spk',
                         'no_spk',
-                        modifyQueryUsing: fn (\Illuminate\Database\Eloquent\Builder $query) => $query->orderByDesc('id')
+                        modifyQueryUsing: fn (\Illuminate\Database\Eloquent\Builder $query) => $query->with('printings')->orderByDesc('id')
                     )
+                    ->getOptionLabelFromRecordUsing(function (\App\Models\MasterSpk $record): string {
+                        $hasFinal = $record->printings->where('status_laporan', 'selesai')->isNotEmpty();
+
+                        return $record->no_spk . ($hasFinal ? ' (Sudah Lapor Selesai)' : '');
+                    })
                     ->searchable()
                     ->preload()
                     ->live()
+                    ->required(),
+
+                Forms\Components\Select::make('status_laporan')
+                    ->label('Status Laporan Printing')
+                    ->options([
+                        'selesai' => 'Selesai (Laporan Akhir Stasiun)',
+                        'parsial' => 'Parsial / Bertahap',
+                    ])
+                    ->default('selesai')
                     ->required(),
 
                 Forms\Components\Placeholder::make('plate_readiness_info')
@@ -88,26 +102,49 @@ class PrintingResource extends Resource
                     ->required(),
 
                 Forms\Components\DatePicker::make('tanggal_entri')
+                    ->label('Tanggal Laporan / Selesai')
                     ->default(now())
                     ->required(),
 
-                Forms\Components\Select::make('proses_printing')
-                    ->options([
-                        'color-printing' => 'Color Printing',
-                        'cold-foil' => 'Cold Foil',
-                        'spot-uv' => 'Spot UV',
-                        'furnish-uv' => 'Furnish UV',
-                        'drip-off' => 'Drip Off',
-                    ])
+                Forms\Components\TextInput::make('keterangan_spk')
+                    ->label('Keterangan SPK')
+                    ->default('REGULER')
                     ->required(),
 
-                Forms\Components\Select::make('tahap_printing')
-                    ->options([
-                        'potong' => 'Potong',
-                        'proses_cetak' => 'Proses Cetak',
-                        'proses_cetak_2' => 'Proses Cetak 2',
+                Forms\Components\Select::make('proses_list')
+                    ->label('Proses Printing yang Dikerjakan (Bisa Pilih Lebih dari 1)')
+                    ->multiple()
+                    ->options(fn () => \App\Models\MasterProsesProduksi::optionsFor(\App\Models\MasterProsesProduksi::STASIUN_PRINTING))
+                    ->searchable()
+                    ->preload()
+                    ->required()
+                    ->helperText('Pilih semua proses yang telah selesai dikerjakan di mesin Printing/Flexo (misal: Color Printing + Emboss Inline + Tempel Sticker sekaligus dalam 1 laporan).')
+                    ->createOptionForm([
+                        Forms\Components\TextInput::make('kode_proses')
+                            ->label('Kode Proses')
+                            ->default(fn () => \App\Models\MasterProsesProduksi::suggestKode(\App\Models\MasterProsesProduksi::STASIUN_PRINTING))
+                            ->required()
+                            ->unique('master_proses_produksi', 'kode_proses'),
+                        Forms\Components\TextInput::make('nama_proses')
+                            ->label('Nama Proses Printing')
+                            ->placeholder('Contoh: Emboss Inline (Flexo)')
+                            ->required(),
                     ])
-                    ->required(),
+                    ->createOptionUsing(function (array $data): string {
+                        $created = \App\Models\MasterProsesProduksi::create([
+                            'kode_proses' => $data['kode_proses'],
+                            'stasiun'     => \App\Models\MasterProsesProduksi::STASIUN_PRINTING,
+                            'nama_proses' => $data['nama_proses'],
+                            'urutan'      => (int) (\App\Models\MasterProsesProduksi::where('stasiun', \App\Models\MasterProsesProduksi::STASIUN_PRINTING)->max('urutan') ?? 0) + 1,
+                            'is_active'   => true,
+                        ]);
+
+                        return $created->nama_proses;
+                    })
+                    ->columnSpanFull(),
+
+                Forms\Components\Hidden::make('tahap_printing')
+                    ->default('proses_cetak'),
 
                 Forms\Components\TextInput::make('hasil_baik')
                     ->label('Hasil Baik Satuan (Meter)')
@@ -219,10 +256,6 @@ class PrintingResource extends Resource
                                 );
                             }),
                     ]),
-
-                Forms\Components\TextInput::make('keterangan_spk')
-                    ->columnSpanFull()
-                    ->required(),
             ])
     ]);
 }
@@ -231,7 +264,7 @@ class PrintingResource extends Resource
 {
     return $table
         ->defaultSort('id', 'desc')
-        ->searchPlaceholder('Cari No SPK, Mesin, Operator, Keterangan, Waste...')
+        ->searchPlaceholder('Cari No SPK, Mesin, Operator, Proses, Waste...')
         ->columns([
             Tables\Columns\TextColumn::make('spk.no_spk')
                 ->label('No SPK')
@@ -250,35 +283,21 @@ class PrintingResource extends Resource
                 ->sortable(),
 
             Tables\Columns\TextColumn::make('tanggal_entri')
-                ->label('Tanggal Entri')
+                ->label('Tanggal')
                 ->date('d M Y')
                 ->sortable(),
 
-            Tables\Columns\TextColumn::make('proses_printing')
+            Tables\Columns\TextColumn::make('proses_summary')
                 ->label('Proses Printing')
+                ->getStateUsing(fn (Printing $r) => $r->proses_labels)
                 ->badge()
-                ->color('info')
-                ->formatStateUsing(fn (?string $state): string => match ($state) {
-                    'color-printing' => 'Color Printing',
-                    'cold-foil'      => 'Cold Foil',
-                    'spot-uv'        => 'Spot UV',
-                    'furnish-uv'     => 'Furnish UV',
-                    'drip-off'       => 'Drip Off',
-                    default          => (string) $state,
-                })
-                ->sortable(),
+                ->color('info'),
 
-            Tables\Columns\TextColumn::make('tahap_printing')
-                ->label('Tahap Printing')
+            Tables\Columns\TextColumn::make('status_laporan')
+                ->label('Status')
                 ->badge()
-                ->color('gray')
-                ->formatStateUsing(fn (?string $state): string => match ($state) {
-                    'potong'         => 'Potong',
-                    'proses_cetak'   => 'Proses Cetak',
-                    'proses_cetak_2' => 'Proses Cetak 2',
-                    default          => (string) $state,
-                })
-                ->sortable(),
+                ->formatStateUsing(fn (?string $state) => $state === 'parsial' ? 'Parsial' : 'Selesai')
+                ->color(fn (?string $state) => $state === 'parsial' ? 'warning' : 'success'),
 
             Tables\Columns\TextColumn::make('hasil_baik')
                 ->label('Hasil Baik')
@@ -317,6 +336,7 @@ class PrintingResource extends Resource
                     return $query->where(function ($q) use ($search) {
                         $q->whereHas('wastes.errorProduction', fn ($wq) => $wq->where('nama_error', 'like', "%{$search}%"))
                             ->orWhereHas('errorProduction', fn ($eq) => $eq->where('nama_error', 'like', "%{$search}%"))
+                            ->orWhere('proses_printing', 'like', "%{$search}%")
                             ->orWhere('keterangan_spk', 'like', "%{$search}%");
                     });
                 })
@@ -349,20 +369,25 @@ class PrintingResource extends Resource
 
             Tables\Filters\SelectFilter::make('proses_printing')
                 ->label('Proses Printing')
-                ->options([
-                    'color-printing' => 'Color Printing',
-                    'cold-foil'      => 'Cold Foil',
-                    'spot-uv'        => 'Spot UV',
-                    'furnish-uv'     => 'Furnish UV',
-                    'drip-off'       => 'Drip Off',
-                ]),
+                ->options(fn () => \App\Models\MasterProsesProduksi::optionsFor(\App\Models\MasterProsesProduksi::STASIUN_PRINTING))
+                ->searchable()
+                ->query(function (\Illuminate\Database\Eloquent\Builder $query, array $data): \Illuminate\Database\Eloquent\Builder {
+                    $val = $data['value'] ?? null;
+                    if (! $val) {
+                        return $query;
+                    }
 
-            Tables\Filters\SelectFilter::make('tahap_printing')
-                ->label('Tahap Printing')
+                    return $query->where(function ($q) use ($val) {
+                        $q->whereJsonContains('proses_list', $val)
+                            ->orWhere('proses_printing', 'like', "%{$val}%");
+                    });
+                }),
+
+            Tables\Filters\SelectFilter::make('status_laporan')
+                ->label('Status Laporan')
                 ->options([
-                    'potong'         => 'Potong',
-                    'proses_cetak'   => 'Proses Cetak',
-                    'proses_cetak_2' => 'Proses Cetak 2',
+                    'selesai' => 'Selesai',
+                    'parsial' => 'Parsial',
                 ]),
 
             Tables\Filters\SelectFilter::make('note_waste')

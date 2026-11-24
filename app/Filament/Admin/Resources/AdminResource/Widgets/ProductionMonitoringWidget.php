@@ -29,6 +29,7 @@ class ProductionMonitoringWidget extends TableWidget
                     ->with([
                         'salesOrder.itemable',
                         'printings',
+                        'diemakings',
                         'finishings',
                         'packagings',
                         'suratJalans'
@@ -85,6 +86,9 @@ class ProductionMonitoringWidget extends TableWidget
                         if (str_contains($state, 'Finishing'))
                             return 'warning';
 
+                        if (str_contains($state, 'Die Making'))
+                            return 'info';
+
                         return 'danger';
                     })
                     ->getStateUsing(function ($record) {
@@ -107,8 +111,15 @@ class ProductionMonitoringWidget extends TableWidget
                             ->first();
 
                         if ($finishing) {
-                            return 'Finishing - ' .
-                                ucfirst($finishing->proses_finishing);
+                            return 'Finishing - ' . $finishing->proses_summary;
+                        }
+
+                        $diemaking = $record->diemakings
+                            ->sortByDesc('id')
+                            ->first();
+
+                        if ($diemaking) {
+                            return 'Die Making - ' . $diemaking->proses_summary;
                         }
 
                         $printing = $record->printings
@@ -116,8 +127,7 @@ class ProductionMonitoringWidget extends TableWidget
                             ->first();
 
                         if ($printing) {
-                            return 'Printing - ' .
-                                ucfirst($printing->tahap_printing);
+                            return 'Printing - ' . $printing->proses_summary;
                         }
 
                         return 'Belum Produksi';
@@ -159,57 +169,92 @@ class ProductionMonitoringWidget extends TableWidget
     ->schema([
 
         TextEntry::make('proses_printing')
+            ->label('Proses Dikerjakan')
             ->state(fn ($record) =>
-                $record->printings()->latest()->first()?->proses_printing
+                $record->printings()->latest()->first()?->proses_summary ?? '-'
             ),
 
-        TextEntry::make('tahap_printing')
+        TextEntry::make('status_printing')
+            ->label('Status Laporan')
             ->state(fn ($record) =>
-                $record->printings()->latest()->first()?->tahap_printing
+                ucfirst((string) ($record->printings()->latest()->first()?->status_laporan ?? '-'))
             ),
 
         TextEntry::make('hasil_baik')
             ->numeric()
             ->state(fn ($record) =>
-                $record->printings()->latest()->first()?->hasil_baik
+                $record->printings()->sum('hasil_baik')
             ),
 
         TextEntry::make('hasil_rusak')
             ->numeric()
             ->state(fn ($record) =>
-                $record->printings()->latest()->first()?->hasil_rusak
+                $record->printings()->sum('hasil_rusak')
             ),
 
     ])
     ->columns(2),
 
+    Section::make('Die Making')
+    ->schema([
+
+        TextEntry::make('proses_diemaking')
+            ->label('Proses Dikerjakan')
+            ->state(fn ($record) =>
+                $record->diemakings()->latest()->first()?->proses_summary ?? '-'
+            ),
+
+        TextEntry::make('status_diemaking')
+            ->label('Status Laporan')
+            ->state(fn ($record) =>
+                ucfirst((string) ($record->diemakings()->latest()->first()?->status_laporan ?? '-'))
+            ),
+
+        TextEntry::make('hasil_baik_diemaking')
+            ->label('Hasil Baik')
+            ->numeric()
+            ->state(fn ($record) =>
+                $record->diemakings()->sum('hasil_baik')
+            ),
+
+        TextEntry::make('hasil_rusak_diemaking')
+            ->label('Hasil Rusak')
+            ->numeric()
+            ->state(fn ($record) =>
+                $record->diemakings()->sum('hasil_rusak')
+            ),
+
+    ])
+    ->columns(2)
+    ->collapsible(),
+
    Section::make('Finishing')
     ->schema([
 
         TextEntry::make('proses_finishing')
-            ->label('Proses')
+            ->label('Proses Dikerjakan')
             ->state(fn ($record) =>
-                $record->finishings()->latest()->first()?->proses_finishing
+                $record->finishings()->latest()->first()?->proses_summary ?? '-'
             ),
 
-        TextEntry::make('tahap_finishing')
-            ->label('Tahap')
+        TextEntry::make('status_finishing')
+            ->label('Status Laporan')
             ->state(fn ($record) =>
-                $record->finishings()->latest()->first()?->tahap_finishing
+                ucfirst((string) ($record->finishings()->latest()->first()?->status_laporan ?? '-'))
             ),
 
         TextEntry::make('hasil_baik_finishing')
             ->label('Hasil Baik')
             ->numeric()
             ->state(fn ($record) =>
-                $record->finishings()->latest()->first()?->hasil_baik
+                $record->finishings()->sum('hasil_baik')
             ),
 
         TextEntry::make('hasil_rusak_finishing')
             ->label('Hasil Rusak')
             ->numeric()
             ->state(fn ($record) =>
-                $record->finishings()->latest()->first()?->hasil_rusak
+                $record->finishings()->sum('hasil_rusak')
             ),
 
     ])

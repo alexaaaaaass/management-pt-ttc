@@ -72,6 +72,9 @@ class AdminPanelProvider extends PanelProvider
                     ->label('Printing')
                     ->collapsed(),
                 NavigationGroup::make()
+                    ->label('Die Making')
+                    ->collapsed(),
+                NavigationGroup::make()
                     ->label('Finishing')
                     ->collapsed(),
                 NavigationGroup::make()

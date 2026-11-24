@@ -40,7 +40,7 @@ class MasterSpk extends Model
 
     public function diemakings()
     {
-        return $this->hasMany(Diemaking::class, 'spk_id');
+        return $this->hasMany(DieMaking::class, 'spk_id');
     }
 
     public function printings()
@@ -179,7 +179,7 @@ class MasterSpk extends Model
             if ($spk->packagings()->exists()) {
                 throw new \Exception("SPK {$spk->no_spk} tidak dapat dihapus karena sudah ada hasil produksi packaging.");
             }
-            if ($spk->finishings()->exists() || $spk->printings()->exists() || $spk->pracetaks()->exists()) {
+            if ($spk->finishings()->exists() || $spk->diemakings()->exists() || $spk->printings()->exists() || $spk->pracetaks()->exists()) {
                 throw new \Exception("SPK {$spk->no_spk} tidak dapat dihapus karena sudah masuk antrean proses kerja lantai pabrik.");
             }
         });

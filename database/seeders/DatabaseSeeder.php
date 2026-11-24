@@ -38,6 +38,7 @@ class DatabaseSeeder extends Seeder
             IndigamaCoaSeeder::class,
             MasterSupplierSeeder::class,
             MasterNoteWasteSeeder::class,
+            MasterProsesProduksiSeeder::class,
             BismillahMacroSalesSeeder::class,
             PracetakMaterialSeeder::class,
         ]);

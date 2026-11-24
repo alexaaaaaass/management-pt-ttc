@@ -2,7 +2,7 @@
 
 namespace App\Services\Production;
 
-use App\Models\Diemaking;
+use App\Models\DieMaking;
 use App\Models\FinishGoodItem;
 use App\Models\MasterFinishing;
 use App\Models\MasterSpk;
@@ -290,7 +290,7 @@ class ProductionService
                 ]);
             }
 
-            if ($spk->finishings()->exists() || $spk->printings()->exists() || $spk->pracetaks()->exists()) {
+            if ($spk->finishings()->exists() || $spk->diemakings()->exists() || $spk->printings()->exists() || $spk->pracetaks()->exists()) {
                 throw ValidationException::withMessages([
                     'spk' => "SPK {$spk->no_spk} tidak dapat dihapus karena sudah masuk antrean proses kerja lantai pabrik.",
                 ]);
@@ -555,6 +555,7 @@ class ProductionService
             'salesOrder.itemable',
             'pracetaks',
             'printings',
+            'diemakings',
             'finishings',
             'packagings',
             'suratJalans',
@@ -575,6 +576,10 @@ class ProductionService
         // Agregasi Printing
         $totalPrintingGood = (int) $spk->printings->sum('hasil_baik');
         $totalPrintingWaste = (int) $spk->printings->sum('hasil_rusak') + (int) $spk->printings->sum('semi_waste');
+
+        // Agregasi Die Making
+        $totalDiemakingGood = (int) $spk->diemakings->sum('hasil_baik');
+        $totalDiemakingWaste = (int) $spk->diemakings->sum('hasil_rusak') + (int) $spk->diemakings->sum('semi_waste');
 
         // Agregasi Finishing
         $totalFinishingGood = (int) $spk->finishings->sum('hasil_baik');
@@ -602,6 +607,8 @@ class ProductionService
             'pracetak_count'       => $pracetakCount,
             'printing_good'        => $totalPrintingGood,
             'printing_waste'       => $totalPrintingWaste,
+            'diemaking_good'       => $totalDiemakingGood,
+            'diemaking_waste'      => $totalDiemakingWaste,
             'finishing_good'       => $totalFinishingGood,
             'finishing_waste'      => $totalFinishingWaste,
             'packed_good'          => $totalGoodPacked,
