@@ -54,47 +54,64 @@ class PenerimaanBarangResource extends Resource
     ->preload()
     ->live()
     ->afterStateUpdated(function ($state, callable $set) {
+        // Reset bersih tanpa menyisakan baris kosong
+        $set('items', []);
 
-    // 🔥 reset dulu
-    $set('items', []);
+        if (! $state) {
+            return;
+        }
 
-    if (!$state) return;
+        $po = \App\Models\PurchaseOrder::with([
+            'items.item.satuan',
+            'items.item.materialPlate',
+        ])->find($state);
 
-    $po = \App\Models\PurchaseOrder::with([
-        'items.item.satuan',
-        'items.item.materialPlate',
-    ])->find($state);
+        if (! $po) {
+            return;
+        }
 
-    if (!$po) return;
+        $items = [];
+        foreach ($po->items as $item) {
+            $qtyPo = (float) ($item->qty_po ?? 0);
+            $qtyReceived = (float) ($item->qty_received ?? 0);
+            $remaining = max(0.0, round($qtyPo - $qtyReceived, 2));
 
-    $items = $po->items->map(function ($item) {
-        $routeTag = $item->item?->materialPlate ? ' [STOK PLATE PREPRESS]' : '';
+            // Lewati item PO yang sudah diterima seluruhnya
+            if ($remaining <= 0) {
+                continue;
+            }
 
-        return [
-            'purchase_order_item_id' => $item->id,
+            $routeTag = $item->item?->materialPlate ? ' [STOK PLATE PREPRESS]' : '';
+            $satuan = $item->item?->satuan?->nama_satuan ?? '-';
+            $key = (string) \Illuminate\Support\Str::uuid();
 
-            'nama_item_display' =>
-                ($item->item?->kode_master_item ?? '-')
-                . ' - ' .
-                ($item->item?->nama_master_item ?? '-')
-                . $routeTag,
+            $items[$key] = [
+                'purchase_order_item_id' => $item->id,
+                'qty_po_raw'             => $qtyPo,
+                'qty_received'           => $qtyReceived,
+                'nama_item_display'      => ($item->item?->kode_master_item ?? '-')
+                    . ' - ' . ($item->item?->nama_master_item ?? '-')
+                    . $routeTag,
+                'qty_po_display'         => $qtyPo . ' | ' . $satuan,
+                'qty_sebelumnya_display' => $qtyReceived . ' | ' . $satuan,
+                'qty_terima'             => $remaining,
+                'catatan_po_display'     => $item->catatan,
+                'catatan_item'           => null,
+                'tgl_exp'                => null,
+                'no_lot'                 => null,
+            ];
+        }
 
-            'qty_po_display' =>
-                $item->qty_po . ' | ' . ($item->item?->satuan?->nama_satuan ?? '-'),
+        if (empty($items)) {
+            \Filament\Notifications\Notification::make()
+                ->title('Semua item PO sudah diterima')
+                ->body('Seluruh kuantitas item pada Purchase Order ini sudah 100% diterima sebelumnya.')
+                ->warning()
+                ->send();
+        }
 
-            'qty_received' => $item->qty_received,
-
-            'qty_sebelumnya_display' =>
-                $item->qty_received . ' | ' . ($item->item?->satuan?->nama_satuan ?? '-'),
-
-            'qty_terima' => 0,
-
-            'catatan_po_display' => $item->catatan,
-        ];
-    })->toArray();
-
-    $set('items', $items);
-})
+        $set('items', $items);
+    })
     ->required(),
 
                         Forms\Components\TextInput::make('no_surat_jalan')
@@ -111,8 +128,6 @@ class PenerimaanBarangResource extends Resource
 
                         Forms\Components\TextInput::make('nama_pengirim')
                             ->label('Nama Pengirim'),
-                        
-                        Forms\Components\Hidden::make('qty_received'),
 
                         Forms\Components\Textarea::make('catatan_pengiriman')
                             ->label('Catatan Pengiriman')
@@ -132,7 +147,7 @@ class PenerimaanBarangResource extends Resource
 
       Forms\Components\Repeater::make('items')
        ->relationship()
-      ->statePath('items')
+      ->defaultItems(0)
       ->itemLabel(function ($state) {
     return $state['nama_item_display'] ?? 'Item';
 })
@@ -140,57 +155,58 @@ class PenerimaanBarangResource extends Resource
     ->schema([
 
         Forms\Components\Hidden::make('purchase_order_item_id')
-    ->dehydrated(true)
-    ->required(),
+            ->dehydrated(true)
+            ->required(),
+
+        Forms\Components\Hidden::make('qty_po_raw')
+            ->dehydrated(false),
+
+        Forms\Components\Hidden::make('qty_received')
+            ->dehydrated(false),
 
         Forms\Components\TextInput::make('nama_item_display')
             ->label('Type | Kode - Nama Item')
             ->disabled()
             ->dehydrated(false),
 
-     Forms\Components\TextInput::make(
-    'qty_sebelumnya_display'
-)
-    ->label(
-        'Qty | Satuan Penerimaan Sebelumnya'
-    ),
-
-       Forms\Components\TextInput::make('qty_po_display')
-    ->label('Qty | Satuan Purchase Order')
+        Forms\Components\TextInput::make('qty_sebelumnya_display')
+            ->label('Qty | Satuan Penerimaan Sebelumnya')
             ->disabled()
             ->dehydrated(false),
 
-      Forms\Components\TextInput::make('qty_terima')
-    ->label('Qty Penerimaan')
-    ->quantityMask(2)
-    ->required()
-    ->live()
-    ->afterStateUpdated(function ($state, $get, $set) {
+        Forms\Components\TextInput::make('qty_po_display')
+            ->label('Qty | Satuan Purchase Order')
+            ->disabled()
+            ->dehydrated(false),
 
-        $qtyPO = (float) explode('|', $get('qty_po_display'))[0];
+        Forms\Components\TextInput::make('qty_terima')
+            ->label('Qty Penerimaan')
+            ->quantityMask(2)
+            ->required()
+            ->live(onBlur: true)
+            ->afterStateUpdated(function ($state, $get, $set) {
+                $qtyPO = $get('qty_po_raw') !== null
+                    ? (float) $get('qty_po_raw')
+                    : (float) (explode('|', (string) ($get('qty_po_display') ?? '0'))[0] ?? 0);
 
-        $received = (float) ($get('qty_received') ?? 0);
+                $received = (float) ($get('qty_received') ?? 0);
+                $remaining = max(0.0, round($qtyPO - $received, 2));
+                $cleanState = (float) (\App\Support\MoneyHelper::clean($state) ?? 0);
 
-        $remaining = $qtyPO - $received;
+                if ($cleanState > $remaining) {
+                    $set('qty_terima', $remaining);
+                }
+            })
+            ->helperText(function ($get) {
+                $qtyPO = $get('qty_po_raw') !== null
+                    ? (float) $get('qty_po_raw')
+                    : (float) (explode('|', (string) ($get('qty_po_display') ?? '0'))[0] ?? 0);
 
-        $cleanState = \App\Support\MoneyHelper::clean($state) ?? 0;
+                $received = (float) ($get('qty_received') ?? 0);
+                $remaining = max(0.0, round($qtyPO - $received, 2));
 
-        if ($cleanState > $remaining) {
-
-            $set('qty_terima', $remaining);
-
-        }
-
-    })
-    ->helperText(function ($get){
-
-        $qtyPO = (float) explode('|', $get('qty_po_display'))[0];
-
-        $received = (float) ($get('qty_received') ?? 0);
-
-        return 'Sisa yang boleh diterima : '.($qtyPO-$received);
-
-    }),
+                return 'Sisa yang boleh diterima : ' . $remaining;
+            }),
 
         Forms\Components\TextInput::make('catatan_po_display')
             ->label('Catatan PO')
@@ -210,7 +226,7 @@ class PenerimaanBarangResource extends Resource
     ->columns(4)
     ->columnSpanFull()
     ->addable(false)
-    ->deletable(false)
+    ->deletable(fn (string $operation) => $operation === 'create')
     ->reorderable(false)
     ->collapsible()
 

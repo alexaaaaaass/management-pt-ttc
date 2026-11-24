@@ -1,4 +1,3 @@
-```html
 <!DOCTYPE html>
 <html>
 <head>
@@ -255,13 +254,14 @@ Rp {{ number_format($item->total,0,',','.') }}
 
 @php
 
-$subtotal = $po->items->sum('total');
+$subtotal = (float) $po->items->sum('total');
+$ppnPercent = (float) ($po->ppn ?? 0);
+$ppnNominal = round($subtotal * ($ppnPercent / 100), 2);
+$ongkir = (float) ($po->ongkir ?? 0);
+$dp = (float) ($po->dp ?? 0);
 
-$grandTotal =
-$subtotal
-+ ($po->ppn ?? 0)
-+ ($po->ongkir ?? 0)
-- ($po->dp ?? 0);
+$grandTotal = $subtotal + $ppnNominal + $ongkir - $dp;
+$ppnLabel = rtrim(rtrim(number_format($ppnPercent, 2, ',', '.'), '0'), ',');
 
 @endphp
 
@@ -281,11 +281,11 @@ Rp {{ number_format($subtotal,0,',','.') }}
 
 <tr>
 <td align="right">
-<b>PPN</b>
+<b>PPN ({{ $ppnLabel }}%)</b>
 </td>
 
 <td align="right">
-Rp {{ number_format($po->ppn,0,',','.') }}
+Rp {{ number_format($ppnNominal,0,',','.') }}
 </td>
 </tr>
 
@@ -295,7 +295,7 @@ Rp {{ number_format($po->ppn,0,',','.') }}
 </td>
 
 <td align="right">
-Rp {{ number_format($po->ongkir,0,',','.') }}
+Rp {{ number_format($ongkir,0,',','.') }}
 </td>
 </tr>
 
@@ -305,7 +305,7 @@ Rp {{ number_format($po->ongkir,0,',','.') }}
 </td>
 
 <td align="right">
-Rp {{ number_format($po->dp,0,',','.') }}
+Rp {{ number_format($dp,0,',','.') }}
 </td>
 </tr>
 
@@ -328,12 +328,6 @@ Rp {{ number_format($grandTotal,0,',','.') }}
 </td>
 
 </tr>
-
-</table>
-
-<br>
-
-
 
 </table>
 
@@ -406,8 +400,9 @@ Disetujui Oleh
 </td>
 
 </tr>
+
+</table>
 </div>
 
 </body>
 </html>
-```

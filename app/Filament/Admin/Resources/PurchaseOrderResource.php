@@ -349,7 +349,7 @@ class PurchaseOrderResource extends Resource
                                 ->label('PPN (%)')
                                 ->numeric()
                                 ->suffix('%')
-                                ->default(0)
+                                ->default(11)
                                 ->live(onBlur: true),
 
                             Forms\Components\TextInput::make('ongkir')

@@ -117,7 +117,10 @@ class PoBillingResource extends Resource
                                             ];
                                         }
 
-                                        $ppn = round($totalBarang * 0.11, 2);
+                                        $ppnRate = $lpb->purchaseOrder && $lpb->purchaseOrder->ppn !== null
+                                            ? (float) $lpb->purchaseOrder->ppn
+                                            : 11.0;
+                                        $ppn = round($totalBarang * ($ppnRate / 100), 2);
                                         $ongkir = (float) ($lpb->purchaseOrder?->ongkir ?? 0);
                                         $dp = (float) ($lpb->purchaseOrder?->dp ?? 0);
                                         $grandTotal = max(0.0, round($totalBarang + $ppn + $ongkir - $dp, 2));
@@ -238,7 +241,10 @@ class PoBillingResource extends Resource
                                             $totalBarang += $subtotal;
                                         }
 
-                                        $ppn = round($totalBarang * 0.11, 2);
+                                        $poId = $get('purchase_order_id');
+                                        $poPpn = $poId ? \App\Models\PurchaseOrder::whereKey($poId)->value('ppn') : null;
+                                        $ppnRate = $poPpn !== null ? (float) $poPpn : 11.0;
+                                        $ppn = round($totalBarang * ($ppnRate / 100), 2);
                                         $ongkir = (float) (MoneyHelper::clean($get('ongkir')) ?? 0);
                                         $dp = (float) (MoneyHelper::clean($get('dp')) ?? 0);
                                         $grandTotal = max(0.0, round($totalBarang + $ppn + $ongkir - $dp, 2));

@@ -29,49 +29,59 @@ class EditPenerimaanBarang extends EditRecord
 
         if (!$po) return;
 
-        $items = $po->items->map(function ($poItem) {
+        $items = $po->items->mapWithKeys(function ($poItem) {
             $routeTag = $poItem->item?->materialPlate ? ' [STOK PLATE PREPRESS]' : '';
 
             return [
-                'purchase_order_item_id' => $poItem->id,
-                'nama_item_display'      => ($poItem->item?->kode_master_item ?? '-') . ' - ' . ($poItem->item?->nama_master_item ?? '-') . $routeTag,
-                'qty_po_display'         => number_format((float) ($poItem->qty_po ?? 0), 2) . ' | ' . ($poItem->item?->satuan?->nama_satuan ?? '-'),
-                'qty_sebelumnya_display' => number_format((float) ($poItem->qty_received ?? 0), 2) . ' | ' . ($poItem->item?->satuan?->nama_satuan ?? '-'),
-                'qty_terima'             => 0,
-                'catatan_item'           => null,
-                'tgl_exp'                => null,
-                'no_lot'                 => null,
-                'catatan_po_display'     => $poItem->catatan ?? '-',
+                (string) \Illuminate\Support\Str::uuid() => [
+                    'purchase_order_item_id' => $poItem->id,
+                    'qty_po_raw'             => (float) ($poItem->qty_po ?? 0),
+                    'qty_received'           => (float) ($poItem->qty_received ?? 0),
+                    'nama_item_display'      => ($poItem->item?->kode_master_item ?? '-') . ' - ' . ($poItem->item?->nama_master_item ?? '-') . $routeTag,
+                    'qty_po_display'         => number_format((float) ($poItem->qty_po ?? 0), 2) . ' | ' . ($poItem->item?->satuan?->nama_satuan ?? '-'),
+                    'qty_sebelumnya_display' => number_format((float) ($poItem->qty_received ?? 0), 2) . ' | ' . ($poItem->item?->satuan?->nama_satuan ?? '-'),
+                    'qty_terima'             => 0,
+                    'catatan_item'           => null,
+                    'tgl_exp'                => null,
+                    'no_lot'                 => null,
+                    'catatan_po_display'     => $poItem->catatan ?? '-',
+                ],
             ];
         });
 
     } else {
 
-        // 🔥 mapping dari DB (INI YANG BENAR)
-        $items = $items->map(function ($item) {
+        // mapping dari DB dengan key UUID agar tidak menimbulkan baris kosong
+        $items = $items->mapWithKeys(function ($item) {
             $routeTag = $item->purchaseOrderItem?->item?->materialPlate ? ' [STOK PLATE PREPRESS]' : '';
+            $qtyPo = (float) ($item->purchaseOrderItem?->qty_po ?? 0);
+            $otherReceived = max(0.0, (float) ($item->purchaseOrderItem?->qty_received ?? 0) - (float) ($item->qty_terima ?? 0));
 
             return [
-                'purchase_order_item_id' => $item->purchase_order_item_id,
+                (string) \Illuminate\Support\Str::uuid() => [
+                    'purchase_order_item_id' => $item->purchase_order_item_id,
+                    'qty_po_raw'             => $qtyPo,
+                    'qty_received'           => $otherReceived,
 
-                'nama_item_display' =>
-                    ($item->purchaseOrderItem?->item?->kode_master_item ?? '-') . ' - ' .
-                    ($item->purchaseOrderItem?->item?->nama_master_item ?? '-') . $routeTag,
+                    'nama_item_display' =>
+                        ($item->purchaseOrderItem?->item?->kode_master_item ?? '-') . ' - ' .
+                        ($item->purchaseOrderItem?->item?->nama_master_item ?? '-') . $routeTag,
 
-                'qty_po_display' =>
-                    number_format($item->purchaseOrderItem?->qty_po ?? 0, 2) . ' | ' .
-                    ($item->purchaseOrderItem?->item?->satuan?->nama_satuan ?? '-'),
+                    'qty_po_display' =>
+                        number_format($qtyPo, 2) . ' | ' .
+                        ($item->purchaseOrderItem?->item?->satuan?->nama_satuan ?? '-'),
 
-                'qty_sebelumnya_display' =>
-                    number_format($item->qty_terima ?? 0, 2) . ' | ' .
-                    ($item->purchaseOrderItem?->item?->satuan?->nama_satuan ?? '-'),
+                    'qty_sebelumnya_display' =>
+                        number_format($otherReceived, 2) . ' | ' .
+                        ($item->purchaseOrderItem?->item?->satuan?->nama_satuan ?? '-'),
 
-                'qty_terima' => $item->qty_terima,
-                'catatan_item' => $item->catatan_item,
-                'tgl_exp' => $item->tgl_exp,
-                'no_lot' => $item->no_lot,
+                    'qty_terima' => $item->qty_terima,
+                    'catatan_item' => $item->catatan_item,
+                    'tgl_exp' => $item->tgl_exp,
+                    'no_lot' => $item->no_lot,
 
-                'catatan_po_display' => $item->purchaseOrderItem?->catatan ?? '-',
+                    'catatan_po_display' => $item->purchaseOrderItem?->catatan ?? '-',
+                ],
             ];
         });
     }
