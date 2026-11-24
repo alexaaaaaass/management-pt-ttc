@@ -10,6 +10,11 @@ class EditPrinting extends EditRecord
 {
     protected static string $resource = PrintingResource::class;
 
+    protected function afterSave(): void
+    {
+        $this->record->syncWasteSummary();
+    }
+
     protected function getHeaderActions(): array
     {
         return [

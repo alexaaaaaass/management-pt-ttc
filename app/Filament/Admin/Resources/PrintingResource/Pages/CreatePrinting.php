@@ -10,6 +10,11 @@ class CreatePrinting extends CreateRecord
 {
     protected static string $resource = PrintingResource::class;
 
+    protected function afterCreate(): void
+    {
+        $this->record->syncWasteSummary();
+    }
+
     protected function getRedirectUrl(): string
     {
         return $this->getResource()::getUrl('index');

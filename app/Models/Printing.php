@@ -46,4 +46,26 @@ class Printing extends Model
     {
         return $this->belongsTo(ErrorProduction::class);
     }
+
+    public function wastes()
+    {
+        return $this->hasMany(PrintingWaste::class, 'printing_id');
+    }
+
+    public function syncWasteSummary(): void
+    {
+        $this->load('wastes');
+        $firstWaste = $this->wastes->first();
+        $totalWaste = (float) $this->wastes->sum('qty_waste');
+
+        $updates = [
+            'error_production_id' => $firstWaste?->error_production_id,
+        ];
+
+        if ($this->wastes->isNotEmpty() && $totalWaste > 0) {
+            $updates['hasil_rusak'] = (int) round($totalWaste);
+        }
+
+        $this->updateQuietly($updates);
+    }
 }

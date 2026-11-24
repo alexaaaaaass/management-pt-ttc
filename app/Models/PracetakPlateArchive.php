@@ -19,6 +19,7 @@ class PracetakPlateArchive extends Model
         'jumlah_warna',
         'qty_total',
         'qty_dipakai',
+        'qty_rusak',
         'detail_warna',
         'dimensi_plate_mm',
         'lokasi_rak',
@@ -35,6 +36,7 @@ class PracetakPlateArchive extends Model
         'jumlah_warna'   => 'integer',
         'qty_total'      => 'integer',
         'qty_dipakai'    => 'integer',
+        'qty_rusak'      => 'integer',
         'max_pemakaian'  => 'integer',
         'jumlah_dipakai' => 'integer',
         'last_used_at'   => 'datetime',
@@ -44,6 +46,7 @@ class PracetakPlateArchive extends Model
         'status_kondisi' => 'tersimpan',
         'qty_total'      => 0,
         'qty_dipakai'    => 0,
+        'qty_rusak'      => 0,
         'jumlah_dipakai' => 0,
     ];
 
@@ -127,7 +130,7 @@ class PracetakPlateArchive extends Model
 
     public function getQtyDiRakAttribute(): int
     {
-        return max(0, $this->effective_qty_total - (int) ($this->qty_dipakai ?? 0));
+        return max(0, $this->effective_qty_total - (int) ($this->qty_dipakai ?? 0) - (int) ($this->qty_rusak ?? 0));
     }
 
     public function getIsUsableAttribute(): bool
