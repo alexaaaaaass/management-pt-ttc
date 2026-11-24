@@ -35,6 +35,12 @@ class AppServiceProvider extends ServiceProvider
             InvoiceObserver::class
         );
 
+        // Jalankan pengecekan skema & perbaikan data satu kali saja (hindari 40+ query DB di setiap request)
+        $bootFlagPath = storage_path('framework/cache/app_boot_schema_verified_v1.flag');
+        if (is_file($bootFlagPath)) {
+            return;
+        }
+
         try {
             if (\Illuminate\Support\Facades\Schema::hasTable('sales_orders')) {
                 if (! \Illuminate\Support\Facades\Schema::hasColumn('sales_orders', 'product_name')) {
@@ -176,6 +182,10 @@ class AppServiceProvider extends ServiceProvider
                     }
                     app(\Spatie\Permission\PermissionRegistrar::class)->forgetCachedPermissions();
                 }
+            }
+
+            if (\Illuminate\Support\Facades\Schema::hasTable('users')) {
+                @file_put_contents($bootFlagPath, now()->toDateTimeString());
             }
         } catch (\Throwable $e) {
             // Ignore during CLI/bootstrap if DB is not ready

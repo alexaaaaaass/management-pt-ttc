@@ -3,20 +3,25 @@
 namespace App\Filament\Admin\Resources;
 
 use App\Filament\Admin\Resources\TransKasBankResource\Pages;
+use App\Models\MasterCOA;
 use App\Models\TransKasBank;
 use App\Services\Finance\TreasuryService;
+use Carbon\Carbon;
+use Filament\Forms\Components\DatePicker;
+use Filament\Forms\Components\Grid;
+use Filament\Forms\Components\Hidden;
+use Filament\Forms\Components\Placeholder;
+use Filament\Forms\Components\Section;
+use Filament\Forms\Components\Select;
+use Filament\Forms\Components\Textarea;
+use Filament\Forms\Components\TextInput;
 use Filament\Forms\Form;
+use Filament\Forms\Get;
+use Filament\Forms\Set;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
-use Filament\Forms\Components\Grid;
-use Filament\Forms\Components\Hidden;
-use Filament\Forms\Components\Section;
-use Filament\Forms\Components\Select;
-use Filament\Forms\Components\TextInput;
-use Filament\Forms\Components\Textarea;
-use Filament\Forms\Components\DatePicker;
-use Filament\Forms\Components\Placeholder;
+use Illuminate\Database\Eloquent\Builder;
 
 class TransKasBankResource extends Resource
 {
@@ -30,6 +35,16 @@ class TransKasBankResource extends Resource
     public static function getNavigationLabel(): string
     {
         return 'Bank Masuk & Bank Keluar';
+    }
+
+    public static function extractBankLabel(MasterCOA $coa): string
+    {
+        $name = trim((string) $coa->nama_akun);
+        if (preg_match('/\(([^)]+)\)/', $name, $matches)) {
+            return trim($matches[1]);
+        }
+
+        return $name;
     }
 
     public static function getNavigationItems(): array
@@ -58,130 +73,200 @@ class TransKasBankResource extends Resource
     {
         return $form
             ->schema([
-                Section::make(fn ($get) => $get('tipe_transaksi') === 'BANK_KELUAR'
+                Section::make(fn (Get $get) => $get('tipe_transaksi') === 'BANK_KELUAR'
                     ? 'Transaksi Bank Keluar'
                     : 'Transaksi Bank Masuk'
                 )
-                ->extraAttributes(fn ($get) => [
-                    'class' => 'rounded-xl p-4 shadow-sm bg-white dark:bg-gray-900 border-l-[6px] ' .
-                        ($get('tipe_transaksi') === 'BANK_KELUAR' ? 'border-red-500' : 'border-green-500')
-                ])
-                ->schema([
-                    Hidden::make('tipe_transaksi')
-                        ->default(request()->query('type') ?? 'BANK_MASUK')
-                        ->dehydrated()
-                        ->required(),
+                    ->description(fn (Get $get) => $get('tipe_transaksi') === 'BANK_KELUAR'
+                        ? 'Catat transfer keluar / pembayaran dari rekening bank perusahaan.'
+                        : 'Catat transfer masuk / penerimaan ke rekening bank perusahaan.'
+                    )
+                    ->extraAttributes(fn (Get $get) => [
+                        'class' => 'rounded-xl p-4 shadow-sm bg-white dark:bg-gray-900 border-l-[6px] ' .
+                            ($get('tipe_transaksi') === 'BANK_KELUAR' ? 'border-red-500' : 'border-green-500'),
+                    ])
+                    ->schema([
+                        Hidden::make('tipe_transaksi')
+                            ->default(fn () => request()->query('type', 'BANK_MASUK'))
+                            ->dehydrated(true)
+                            ->required(),
 
-                    Placeholder::make('info_tipe')
-                        ->label('Tipe Transaksi')
-                        ->content(fn ($get) => $get('tipe_transaksi') === 'BANK_KELUAR'
-                            ? '🔴 Bank Keluar (Pengeluaran via Rekening Bank)'
-                            : '🟢 Bank Masuk (Penerimaan via Rekening Bank)'
-                        ),
+                        Hidden::make('periode')
+                            ->default(fn () => now()->format('F Y'))
+                            ->dehydrated(true),
 
-                    Grid::make(2)
-                        ->schema([
-                            TextInput::make('kode_transaksi')
-                                ->label('Kode Transaksi')
-                                ->disabled()
-                                ->default('AUTO'),
+                        Hidden::make('status')
+                            ->default('ACTIVE')
+                            ->dehydrated(true),
 
-                            TextInput::make('gudang')
-                                ->default('UGRMS'),
-                        ]),
+                        Placeholder::make('info_tipe')
+                            ->label('Tipe Transaksi')
+                            ->content(fn (Get $get) => $get('tipe_transaksi') === 'BANK_KELUAR'
+                                ? '🔴 Bank Keluar (Pengeluaran / Transfer via Rekening Bank)'
+                                : '🟢 Bank Masuk (Penerimaan / Transfer via Rekening Bank)'
+                            ),
 
-                    Grid::make(2)
-                        ->schema([
-                            DatePicker::make('tanggal_transaksi')
-                                ->label('Tanggal Transaksi')
-                                ->required()
-                                ->default(now()),
+                        Grid::make(3)
+                            ->schema([
+                                TextInput::make('kode_transaksi')
+                                    ->label('Kode Transaksi')
+                                    ->disabled()
+                                    ->dehydrated(true)
+                                    ->default('AUTO'),
 
-                            TextInput::make('periode')
-                                ->default(now()->format('F Y')),
-                        ]),
+                                DatePicker::make('tanggal_transaksi')
+                                    ->label('Tanggal Transaksi')
+                                    ->required()
+                                    ->default(now())
+                                    ->live()
+                                    ->afterStateUpdated(function ($state, Set $set) {
+                                        if ($state) {
+                                            $set('periode', Carbon::parse($state)->format('F Y'));
+                                        }
+                                    }),
 
-                    Grid::make(2)
-                        ->schema([
-                            Select::make('account_bank_id')
-                                ->label(fn ($get) => $get('tipe_transaksi') === 'BANK_KELUAR'
-                                    ? 'Akun Bank (Kredit / Rekening Asal Pengeluaran)'
-                                    : 'Akun Bank (Debit / Rekening Tujuan Masuk)'
-                                )
-                                ->relationship('accountBank', 'nama_akun')
-                                ->getOptionLabelFromRecordUsing(fn ($record) => trim($record->kode_akun) . ' - ' . $record->nama_akun)
-                                ->searchable(['kode_akun', 'nama_akun'])
-                                ->preload()
-                                ->required(),
+                                TextInput::make('gudang')
+                                    ->label('Gudang')
+                                    ->default('UGRMS')
+                                    ->datalist(['UGRMS', 'TTC'])
+                                    ->placeholder('Contoh: UGRMS / TTC'),
+                            ]),
 
-                            Select::make('account_lawan_id')
-                                ->label(fn ($get) => $get('tipe_transaksi') === 'BANK_KELUAR'
-                                    ? 'Akun Lawan (Debit / Tujuan Pengeluaran/Beban)'
-                                    : 'Akun Lawan (Kredit / Sumber Dana/Pendapatan)'
-                                )
-                                ->relationship('accountLawan', 'nama_akun')
-                                ->getOptionLabelFromRecordUsing(fn ($record) => trim($record->kode_akun) . ' - ' . $record->nama_akun)
-                                ->searchable(['kode_akun', 'nama_akun'])
-                                ->preload()
-                                ->required(),
-                        ]),
+                        Grid::make(2)
+                            ->schema([
+                                Select::make('account_bank_id')
+                                    ->label(fn (Get $get) => $get('tipe_transaksi') === 'BANK_KELUAR'
+                                        ? 'Rekening Bank Asal'
+                                        : 'Rekening Bank Penerima'
+                                    )
+                                    ->placeholder('Pilih rekening bank (BCA / BRI / dll)...')
+                                    ->helperText(fn (Get $get) => $get('tipe_transaksi') === 'BANK_KELUAR'
+                                        ? 'Khusus rekening bank pengirim/pembayar (Kredit).'
+                                        : 'Khusus rekening bank penerima dana masuk (Debit).'
+                                    )
+                                    ->relationship(
+                                        name: 'accountBank',
+                                        titleAttribute: 'nama_akun',
+                                        modifyQueryUsing: fn (Builder $query, ?TransKasBank $record) => $query
+                                            ->where(function (Builder $q) use ($record) {
+                                                $q->where(function (Builder $sub) {
+                                                    $sub->where('account_class', 'Current - Bank')
+                                                        ->where('posting', 'Yes');
+                                                });
 
-                    Grid::make(2)
-                        ->schema([
-                            TextInput::make('nominal')
-                                ->label('Nominal Transaksi')
-                                ->prefix('Rp')
-                                ->currencyMask(2)
-                                ->placeholder('0.00')
-                                ->required()
-                                ->helperText('💡 Otomatis diberi pemisah ribuan saat diketik. Mendukung pecahan sen (contoh: 503,219,386.91).'),
+                                                if ($record?->account_bank_id) {
+                                                    $q->orWhere('id', $record->account_bank_id);
+                                                }
+                                            })
+                                            ->orderBy('kode_akun')
+                                    )
+                                    ->getOptionLabelFromRecordUsing(fn ($record) => trim($record->kode_akun) . ' - ' . $record->nama_akun)
+                                    ->searchable(['kode_akun', 'nama_akun'])
+                                    ->preload()
+                                    ->live()
+                                    ->afterStateUpdated(function ($state, Set $set) {
+                                        if (! $state) {
+                                            return;
+                                        }
 
-                            Select::make('status')
-                                ->options([
-                                    'ACTIVE'   => 'ACTIVE',
-                                    'INACTIVE' => 'INACTIVE',
-                                ])
-                                ->default('ACTIVE'),
-                        ]),
+                                        $coa = MasterCOA::find($state);
+                                        if ($coa) {
+                                            $set('bank', static::extractBankLabel($coa));
+                                        }
+                                    })
+                                    ->required(),
 
-                    Textarea::make('keterangan')
-                        ->rows(3)
-                        ->placeholder('Keterangan transaksi bank...'),
+                                Select::make('account_lawan_id')
+                                    ->label(fn (Get $get) => $get('tipe_transaksi') === 'BANK_KELUAR'
+                                        ? 'Tujuan Pembayaran (Untuk Apa?)'
+                                        : 'Diterima Dari (Sumber Dana)'
+                                    )
+                                    ->placeholder(fn (Get $get) => $get('tipe_transaksi') === 'BANK_KELUAR'
+                                        ? 'Cari utang supplier, beban operasional, atau transfer ke Kas Kecil...'
+                                        : 'Cari pendapatan, pelunasan piutang/invoice, atau modal...'
+                                    )
+                                    ->helperText(fn (Get $get) => $get('tipe_transaksi') === 'BANK_KELUAR'
+                                        ? 'Akun lawan tujuan pembayaran/transfer (Debit).'
+                                        : 'Akun lawan sumber penerimaan dana (Kredit).'
+                                    )
+                                    ->relationship(
+                                        name: 'accountLawan',
+                                        titleAttribute: 'nama_akun',
+                                        modifyQueryUsing: fn (Builder $query, ?TransKasBank $record) => $query
+                                            ->where(function (Builder $q) use ($record) {
+                                                $q->where('posting', 'Yes');
+                                                if ($record?->account_lawan_id) {
+                                                    $q->orWhere('id', $record->account_lawan_id);
+                                                }
+                                            })
+                                            ->orderBy('kode_akun')
+                                    )
+                                    ->getOptionLabelFromRecordUsing(fn ($record) => trim($record->kode_akun) . ' - ' . $record->nama_akun)
+                                    ->searchable(['kode_akun', 'nama_akun'])
+                                    ->preload()
+                                    ->optionsLimit(50)
+                                    ->different('account_bank_id')
+                                    ->validationMessages([
+                                        'different' => 'Akun lawan tidak boleh sama dengan rekening bank.',
+                                    ])
+                                    ->required(),
+                            ]),
 
-                    Section::make('Informasi Rekening / Customer')
-                        ->collapsed()
-                        ->schema([
-                            Select::make('customer_id')
-                                ->label('Customer (Opsional)')
-                                ->relationship('customer', 'nama_customer')
-                                ->searchable()
-                                ->preload()
-                                ->placeholder('Pilih Customer jika ada'),
+                        TextInput::make('nominal')
+                            ->label('Nominal Transaksi')
+                            ->prefix('Rp')
+                            ->currencyMask(2)
+                            ->placeholder('0.00')
+                            ->required()
+                            ->helperText('💡 Otomatis diberi pemisah ribuan saat diketik. Mendukung pecahan sen (contoh: 1,000,000.00).'),
 
-                            Grid::make(2)
-                                ->schema([
-                                    TextInput::make('bank')
-                                        ->label('Nama Bank Penerima/Pengirim')
-                                        ->placeholder('BCA / Mandiri / BNI / dll'),
+                        Textarea::make('keterangan')
+                            ->label('Keterangan')
+                            ->rows(3)
+                            ->placeholder(fn (Get $get) => $get('tipe_transaksi') === 'BANK_KELUAR'
+                                ? 'Contoh: Transfer ke kasir untuk petty cash / pembayaran tagihan supplier...'
+                                : 'Contoh: Transfer masuk dari customer / setoran modal operasional...'
+                            ),
 
-                                    TextInput::make('atas_nama')
-                                        ->label('Atas Nama (A/N)'),
-                                ]),
+                        Section::make('Informasi Rekening / Customer (Opsional)')
+                            ->description('Nama bank otomatis terisi saat rekening bank dipilih. Lengkapi atas nama / no rekening jika diperlukan.')
+                            ->collapsed()
+                            ->schema([
+                                Select::make('customer_id')
+                                    ->label('Customer (Opsional)')
+                                    ->relationship('customer', 'nama_customer')
+                                    ->searchable()
+                                    ->preload()
+                                    ->placeholder('Pilih Customer jika ada'),
 
-                            TextInput::make('no_rekening')
-                                ->label('Nomor Rekening'),
-                        ])
-                ])
+                                Grid::make(2)
+                                    ->schema([
+                                        TextInput::make('bank')
+                                            ->label('Nama Bank')
+                                            ->placeholder('Otomatis terisi dari akun bank (BCA / BRI / dll)'),
+
+                                        TextInput::make('atas_nama')
+                                            ->label('Atas Nama (A/N)')
+                                            ->placeholder('Nama pemilik rekening tujuan/pengirim'),
+                                    ]),
+
+                                TextInput::make('no_rekening')
+                                    ->label('Nomor Rekening')
+                                    ->placeholder('Nomor rekening (opsional)'),
+                            ]),
+                    ]),
             ]);
     }
 
     public static function table(Table $table): Table
     {
         return $table
+            ->defaultSort('id', 'desc')
             ->columns([
                 Tables\Columns\TextColumn::make('kode_transaksi')
                     ->label('Kode')
                     ->searchable()
+                    ->sortable()
                     ->badge()
                     ->color('primary'),
 
@@ -190,12 +275,36 @@ class TransKasBankResource extends Resource
                     ->colors([
                         'success' => 'BANK_MASUK',
                         'danger'  => 'BANK_KELUAR',
-                    ]),
+                    ])
+                    ->formatStateUsing(fn ($state) => $state === 'BANK_KELUAR' ? 'Bank Keluar' : 'Bank Masuk'),
 
                 Tables\Columns\TextColumn::make('tanggal_transaksi')
                     ->label('Tanggal')
                     ->date('d/m/Y')
                     ->sortable(),
+
+                Tables\Columns\TextColumn::make('gudang')
+                    ->label('Gudang')
+                    ->placeholder('-')
+                    ->searchable()
+                    ->sortable()
+                    ->toggleable(),
+
+                Tables\Columns\TextColumn::make('accountBank.nama_akun')
+                    ->label('Rekening Bank')
+                    ->formatStateUsing(fn ($record) => $record->accountBank
+                        ? trim($record->accountBank->kode_akun) . ' - ' . $record->accountBank->nama_akun
+                        : '-')
+                    ->searchable()
+                    ->wrap(),
+
+                Tables\Columns\TextColumn::make('accountLawan.nama_akun')
+                    ->label('Sumber / Tujuan')
+                    ->formatStateUsing(fn ($record) => $record->accountLawan
+                        ? trim($record->accountLawan->kode_akun) . ' - ' . $record->accountLawan->nama_akun
+                        : '-')
+                    ->searchable()
+                    ->wrap(),
 
                 Tables\Columns\TextColumn::make('nominal')
                     ->label('Nominal')
@@ -203,21 +312,50 @@ class TransKasBankResource extends Resource
                         $val = (float) $state;
                         return 'Rp ' . (fmod(round($val, 2), 1.0) != 0.0 ? number_format($val, 2, ',', '.') : number_format($val, 0, ',', '.'));
                     })
+                    ->alignEnd()
+                    ->weight('bold')
                     ->sortable(),
 
-                Tables\Columns\TextColumn::make('accountBank.nama_akun')
-                    ->label('Akun Bank')
+                Tables\Columns\TextColumn::make('keterangan')
+                    ->label('Keterangan')
+                    ->limit(35)
+                    ->tooltip(fn ($record) => $record->keterangan)
+                    ->placeholder('-')
+                    ->searchable()
+                    ->toggleable(),
+            ])
+            ->filters([
+                Tables\Filters\Filter::make('tanggal_transaksi')
+                    ->form([
+                        DatePicker::make('dari')->label('Dari Tanggal'),
+                        DatePicker::make('sampai')->label('Sampai Tanggal'),
+                    ])
+                    ->query(function (Builder $query, array $data): Builder {
+                        return $query
+                            ->when($data['dari'], fn (Builder $q, $date) => $q->whereDate('tanggal_transaksi', '>=', $date))
+                            ->when($data['sampai'], fn (Builder $q, $date) => $q->whereDate('tanggal_transaksi', '<=', $date));
+                    }),
+
+                Tables\Filters\SelectFilter::make('account_bank_id')
+                    ->label('Rekening Bank')
+                    ->options(fn () => MasterCOA::query()
+                        ->where('account_class', 'Current - Bank')
+                        ->where('posting', 'Yes')
+                        ->orderBy('kode_akun')
+                        ->get()
+                        ->mapWithKeys(fn ($coa) => [$coa->id => trim($coa->kode_akun) . ' - ' . $coa->nama_akun])
+                        ->toArray())
                     ->searchable(),
 
-                Tables\Columns\TextColumn::make('accountLawan.nama_akun')
-                    ->label('Akun Lawan')
-                    ->searchable(),
-
-                Tables\Columns\BadgeColumn::make('status')
-                    ->colors([
-                        'success' => 'ACTIVE',
-                        'danger'  => 'INACTIVE',
-                    ]),
+                Tables\Filters\SelectFilter::make('gudang')
+                    ->label('Gudang')
+                    ->options(fn () => TransKasBank::query()
+                        ->whereNotNull('gudang')
+                        ->where('gudang', '!=', '')
+                        ->distinct()
+                        ->orderBy('gudang')
+                        ->pluck('gudang', 'gudang')
+                        ->toArray()),
             ])
             ->headerActions([
                 Tables\Actions\Action::make('bank_masuk')
