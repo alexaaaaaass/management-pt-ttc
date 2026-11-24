@@ -66,8 +66,17 @@ class ListCoaLedgers extends Page
         $this->selectedCoaId = '';
         $this->selectedRefType = '';
         $this->searchQuery = '';
-        $this->startDate = '2026-01-01';
-        $this->endDate = '2026-12-31';
+
+        $minDate = CoaMovement::min('tanggal');
+        $maxDate = CoaMovement::max('tanggal');
+
+        $this->startDate = $minDate
+            ? Carbon::parse($minDate)->startOfYear()->toDateString()
+            : now()->startOfYear()->toDateString();
+
+        $this->endDate = $maxDate
+            ? Carbon::parse($maxDate)->endOfMonth()->toDateString()
+            : now()->endOfMonth()->toDateString();
     }
 
     public function getLedgerDataProperty(): array
@@ -84,6 +93,8 @@ class ListCoaLedgers extends Page
 
         // Hitung saldo berjalan per akun secara akurat
         $runningByCoa = [];
+        $endingRunningByCoa = [];
+        $priorBalanceByCoa = [];
         foreach ($allMovementsInPeriod->groupBy('coa_id') as $coaId => $group) {
             $coa = $group->first()?->coa;
             $code = trim((string) ($coa?->kode_akun ?? ''));
@@ -100,6 +111,7 @@ class ListCoaLedgers extends Page
             $running = $isCreditNormal
                 ? (($openKredit - $openDebit) + ((float) ($prior->k ?? 0) - (float) ($prior->d ?? 0)))
                 : (($openDebit - $openKredit) + ((float) ($prior->d ?? 0) - (float) ($prior->k ?? 0)));
+            $priorBalanceByCoa[$coaId] = round($running, 2);
 
             foreach ($group as $m) {
                 $d = (float) $m->debit;
@@ -107,6 +119,7 @@ class ListCoaLedgers extends Page
                 $running += $isCreditNormal ? ($k - $d) : ($d - $k);
                 $runningByCoa[$m->id] = round($running, 2);
             }
+            $endingRunningByCoa[$coaId] = round($running, 2);
         }
 
         // Ringkasan per Akun yang aktif pada periode ini
@@ -120,7 +133,8 @@ class ListCoaLedgers extends Page
             $isCreditNormal = str_starts_with($code, '2') || str_starts_with($code, '3') || str_starts_with($code, '4');
             $sumD = round((float) $group->sum('debit'), 2);
             $sumK = round((float) $group->sum('kredit'), 2);
-            $ending = $isCreditNormal ? round($sumK - $sumD, 2) : round($sumD - $sumK, 2);
+            $ending = $endingRunningByCoa[$coaId]
+                ?? ($isCreditNormal ? round($sumK - $sumD, 2) : round($sumD - $sumK, 2));
 
             $accountSummaries[] = [
                 'coa_id'     => $coa->id,
@@ -157,6 +171,17 @@ class ListCoaLedgers extends Page
             }
             return true;
         })->values();
+
+        $refLabelMap = [
+            'INVOICE'          => 'Invoice Penjualan',
+            'INV_PAYMENT'      => 'Pembayaran Bon/Invoice',
+            'OPERASIONAL_PAY'  => 'Operasional / Komisi',
+            'JOURNAL_MEMORIAL' => 'Jurnal Memorial / HPP',
+            'TRANS_KAS'        => 'Kas Masuk/Keluar',
+            'TRANS_BANK'       => 'Bank Masuk/Keluar',
+            'PO_BILLING'       => 'Tagihan PO',
+            'PO_BILL_PAY'      => 'Pembayaran PO',
+        ];
 
         $rows = [];
         foreach ($filtered as $m) {
@@ -195,6 +220,49 @@ class ListCoaLedgers extends Page
         $totalKredit = round(collect($rows)->sum('kredit'), 2);
         $selisih = round(abs($totalDebit - $totalKredit), 2);
 
+        $accountFilterMeta = null;
+        if ($this->selectedCoaId !== '') {
+            $selCoaId = (int) $this->selectedCoaId;
+            $selCoaMovs = $allMovementsInPeriod->where('coa_id', $selCoaId)->values();
+            $selCoa = $selCoaMovs->first()?->coa ?? MasterCOA::find($selCoaId);
+
+            if ($selCoa) {
+                $selCode = trim((string) $selCoa->kode_akun);
+                $selCreditNormal = str_starts_with($selCode, '2') || str_starts_with($selCode, '3') || str_starts_with($selCode, '4');
+                $filteredNet = $selCreditNormal
+                    ? round($totalKredit - $totalDebit, 2)
+                    : round($totalDebit - $totalKredit, 2);
+                $accountEnding = $endingRunningByCoa[$selCoaId] ?? $filteredNet;
+                $priorBal = $priorBalanceByCoa[$selCoaId] ?? 0.0;
+
+                $shownIds = $filtered->pluck('id')->flip();
+                $hiddenMovs = $selCoaMovs->filter(fn (CoaMovement $m) => ! $shownIds->has($m->id));
+                $hiddenD = (float) $hiddenMovs->sum('debit');
+                $hiddenK = (float) $hiddenMovs->sum('kredit');
+                $hiddenNet = $selCreditNormal ? round($hiddenK - $hiddenD, 2) : round($hiddenD - $hiddenK, 2);
+
+                $hiddenRefParts = [];
+                foreach ($hiddenMovs->groupBy('reference_type') as $rt => $grp) {
+                    $lbl = $refLabelMap[$rt] ?? ($rt ?: 'Lainnya');
+                    $hiddenRefParts[] = $lbl . ' (' . $grp->count() . 'x)';
+                }
+
+                $accountFilterMeta = [
+                    'kode_akun'              => $selCode,
+                    'nama_akun'              => $selCoa->nama_akun,
+                    'posisi'                 => $selCreditNormal ? 'KREDIT' : 'DEBIT',
+                    'total_account_rows'     => $selCoaMovs->count(),
+                    'shown_rows'             => count($rows),
+                    'hidden_other_ref_count' => $hiddenMovs->count(),
+                    'hidden_other_ref_net'   => $hiddenNet,
+                    'hidden_ref_summary'     => implode(', ', $hiddenRefParts),
+                    'prior_balance'          => $priorBal,
+                    'filtered_net'           => $filteredNet,
+                    'account_ending_balance' => $accountEnding,
+                ];
+            }
+        }
+
         $coaOptions = MasterCOA::whereIn('id', $allMovementsInPeriod->pluck('coa_id')->unique())
             ->orderBy('kode_akun')
             ->get()
@@ -202,17 +270,18 @@ class ListCoaLedgers extends Page
             ->toArray();
 
         return [
-            'rows'              => $rows,
-            'account_summaries' => $accountSummaries,
-            'coa_options'       => $coaOptions,
-            'total_debit'       => $totalDebit,
-            'total_kredit'      => $totalKredit,
-            'selisih'           => $selisih,
-            'is_balanced'       => $selisih < 1.0,
-            'debit_count'       => collect($rows)->where('debit', '>', 0)->count(),
-            'kredit_count'      => collect($rows)->where('kredit', '>', 0)->count(),
-            'total_rows'        => count($rows),
-            'active_coa_count'  => count($accountSummaries),
+            'rows'                => $rows,
+            'account_summaries'   => $accountSummaries,
+            'coa_options'         => $coaOptions,
+            'total_debit'         => $totalDebit,
+            'total_kredit'        => $totalKredit,
+            'selisih'             => $selisih,
+            'is_balanced'         => $selisih < 1.0,
+            'debit_count'         => collect($rows)->where('debit', '>', 0)->count(),
+            'kredit_count'        => collect($rows)->where('kredit', '>', 0)->count(),
+            'total_rows'          => count($rows),
+            'active_coa_count'    => count($accountSummaries),
+            'account_filter_meta' => $accountFilterMeta,
         ];
     }
 }

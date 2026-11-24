@@ -725,12 +725,25 @@
             <div class="ttc-section-head">
                 <div>
                     <div class="ttc-section-title">2. Rincian Ayat Jurnal Umum &amp; Mutasi Buku Besar (Kronologis)</div>
-                    <div class="ttc-section-desc">Seluruh pencatatan akuntansi berpasangan (Double-Entry) dari Invoice Penjualan, Pembayaran DP/Pelunasan, Beban HPP (85%), dan Komisi Sales (2%).</div>
+                    <div class="ttc-section-desc">Seluruh pencatatan akuntansi berpasangan (Double-Entry) dari Kas/Bank, Invoice Penjualan, Pembayaran DP/Pelunasan, Beban HPP, dan Operasional.</div>
                 </div>
                 <div style="font-size: 12px; font-weight: 700; color: #1e40af;">
                     Menampilkan {{ count($data['rows']) }} Baris Jurnal
                 </div>
             </div>
+            @if(! empty($data['account_filter_meta']) && ($data['account_filter_meta']['hidden_other_ref_count'] > 0 || abs((float) $data['account_filter_meta']['prior_balance']) >= 0.01))
+                @php $afm = $data['account_filter_meta']; @endphp
+                <div style="margin: 12px 20px 4px 20px; padding: 12px 16px; border-radius: 10px; border: 1px solid #f59e0b; background: rgba(245, 158, 11, 0.12); font-size: 12.5px; line-height: 1.5;">
+                    <strong style="color: #d97706;">Informasi Filter Akun {{ $afm['kode_akun'] }} ({{ $afm['nama_akun'] }}):</strong>
+                    @if($afm['hidden_other_ref_count'] > 0)
+                        Terdapat <strong>{{ $afm['hidden_other_ref_count'] }} mutasi lain</strong> pada periode ini ({{ $afm['hidden_ref_summary'] }}, netto <strong>{{ $fmt($afm['hidden_other_ref_net'], 2) }}</strong>) yang tidak tampil karena filter Sumber Transaksi / Pencarian aktif.
+                    @endif
+                    @if(abs((float) $afm['prior_balance']) >= 0.01)
+                        Saldo bawaan sebelum periode ({{ $this->startDate }}): <strong>{{ $fmt($afm['prior_balance'], 2) }}</strong>.
+                    @endif
+                    Netto baris tampil: <strong>{{ $fmt($afm['filtered_net'], 2) }}</strong> | Saldo Akhir Akun Keseluruhan: <strong>{{ $fmt($afm['account_ending_balance'], 2) }}</strong>.
+                </div>
+            @endif
             <div class="ttc-table-wrap">
                 <table class="ttc-gl-table">
                     <thead>
@@ -796,7 +809,11 @@
                             <td class="ttc-gl-amount" style="color: #1d4ed8;">{{ $fmt($data['total_debit'], 2) }}</td>
                             <td class="ttc-gl-amount" style="color: #6d28d9;">{{ $fmt($data['total_kredit'], 2) }}</td>
                             <td class="ttc-gl-amount" style="color: #059669;">
-                                {{ $data['is_balanced'] ? '✓ BALANCE' : 'FILTER AKUN' }}
+                                @if(! empty($data['account_filter_meta']))
+                                    Netto: {{ $fmt($data['account_filter_meta']['filtered_net'], 2) }}
+                                @else
+                                    {{ $data['is_balanced'] ? '✓ BALANCE' : 'SELISIH' }}
+                                @endif
                             </td>
                         </tr>
                     </tfoot>
