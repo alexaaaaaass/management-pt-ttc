@@ -312,10 +312,14 @@ protected static ?int $navigationSort = 12;
     return $table
         ->defaultSort('created_at', 'desc')
         ->columns([
-            Tables\Columns\TextColumn::make('tanggal_pembayaran')
-                ->label('Tgl Pembayaran')
-                ->date('d M Y')
-                ->sortable(),
+            Tables\Columns\TextColumn::make('kode_pembayaran')
+                ->label('No. Bukti')
+                ->searchable()
+                ->sortable()
+                ->weight('bold')
+                ->description(fn (PoBillPay $record): string => $record->tanggal_pembayaran
+                    ? $record->tanggal_pembayaran->format('d M Y')
+                    : '-'),
 
             Tables\Columns\TextColumn::make('poBilling.kode_tagihan')
                 ->label('Billing Ref')
@@ -335,28 +339,63 @@ protected static ?int $navigationSort = 12;
 
             Tables\Columns\TextColumn::make('periode')
                 ->label('Periode')
-                ->sortable(),
+                ->sortable()
+                ->toggleable(isToggledHiddenByDefault: true),
 
-            // Tables\Columns\TextColumn::make('karyawan.nama')
-            //     ->label('PIC / Karyawan')
-            //     ->searchable(),
-
-            // Total Tagihan dari Billing Reference
+            // Total Tagihan sebelum pembayaran tahap ini
             Tables\Columns\TextColumn::make('total_tagihan')
-                ->label('Total Tagihan')
+                ->label('Tagihan Awal Tahap')
                 ->money('IDR', locale: 'id')
                 ->sortable(),
 
-            // Total Pembayaran yang diinput / dijumlahkan dari repeater
+            // Total Pembayaran yang dibayarkan pada tahap ini
             Tables\Columns\TextColumn::make('total_pembayaran')
-                ->label('Total Bayar')
+                ->label('Dibayar Tahap Ini')
                 ->formatStateUsing(function ($state) {
                     $val = (float) $state;
                     return 'Rp ' . (fmod(round($val, 2), 1.0) != 0.0 ? number_format($val, 2, ',', '.') : number_format($val, 0, ',', '.'));
                 })
                 ->sortable()
                 ->badge()
-                ->color(fn (string $state): string => 'success'),
+                ->color('success'),
+
+            // Sisa Tagihan setelah transaksi pembayaran ini
+            Tables\Columns\TextColumn::make('sisa_setelah_bayar')
+                ->label('Sisa Tagihan')
+                ->getStateUsing(function (PoBillPay $record): float {
+                    return max(0.0, round((float) $record->total_tagihan - (float) $record->total_pembayaran, 2));
+                })
+                ->formatStateUsing(function ($state): string {
+                    $val = (float) $state;
+                    if ($val <= 0) {
+                        return 'Rp 0 (Lunas)';
+                    }
+
+                    return 'Rp ' . (fmod(round($val, 2), 1.0) != 0.0 ? number_format($val, 2, ',', '.') : number_format($val, 0, ',', '.'));
+                })
+                ->badge()
+                ->color(fn ($state): string => (float) $state <= 0 ? 'success' : 'warning')
+                ->description(function (PoBillPay $record): ?string {
+                    $sisaTahap = max(0.0, round((float) $record->total_tagihan - (float) $record->total_pembayaran, 2));
+                    $sisaBillingKini = (float) ($record->poBilling?->sisa_tagihan ?? 0);
+
+                    if ($sisaTahap > 0 && $sisaBillingKini <= 0) {
+                        return 'Billing kini: Lunas';
+                    }
+
+                    return null;
+                }),
+
+            Tables\Columns\TextColumn::make('status_billing')
+                ->label('Status Billing')
+                ->getStateUsing(fn (PoBillPay $record): string => $record->poBilling?->status ?? '-')
+                ->badge()
+                ->color(fn (string $state): string => match ($state) {
+                    'Paid'    => 'success',
+                    'Partial' => 'warning',
+                    'Unpaid'  => 'danger',
+                    default   => 'gray',
+                }),
         ])
         ->filters([
             Tables\Filters\Filter::make('tanggal_pembayaran')
@@ -372,7 +411,88 @@ protected static ?int $navigationSort = 12;
         ])
         ->actions([
             Tables\Actions\ActionGroup::make([
+                Tables\Actions\Action::make('lihat_detail')
+                    ->label('Lihat Detail')
+                    ->icon('heroicon-o-information-circle')
+                    ->color('info')
+                    ->modalHeading(fn (PoBillPay $record) => 'Detail Pembayaran · ' . ($record->kode_pembayaran ?: 'PAY-' . $record->id))
+                    ->modalSubmitAction(false)
+                    ->modalCancelActionLabel('Tutup')
+                    ->modalContent(function (PoBillPay $record): \Illuminate\Support\HtmlString {
+                        $record->loadMissing(['poBilling.supplier', 'poBilling.purchaseOrder', 'karyawan', 'items.metodeBayar', 'items.coaDebit', 'items.coaKredit']);
+                        $fmt = fn (float $n) => 'Rp ' . number_format($n, 0, ',', '.');
+                        $bill = $record->poBilling;
+                        $sisaTahap = max(0.0, round((float) $record->total_tagihan - (float) $record->total_pembayaran, 2));
+                        $sisaKini = (float) ($bill?->sisa_tagihan ?? 0);
+
+                        $rowsHtml = '';
+                        foreach ($record->items as $idx => $item) {
+                            $metode = e($item->metodeBayar?->metode_pembayaran ?? '-');
+                            $bank = e(collect([$item->nama_bank, $item->no_rekening, $item->atas_nama])->filter()->implode(' / ') ?: '-');
+                            $coaD = e($item->coaDebit ? trim($item->coaDebit->kode_akun) . ' - ' . $item->coaDebit->nama_akun : '-');
+                            $coaK = e($item->coaKredit ? trim($item->coaKredit->kode_akun) . ' - ' . $item->coaKredit->nama_akun : '-');
+                            $memo = e($item->memo ?: '-');
+                            $nom = $fmt((float) $item->nominal_pembayaran);
+
+                            $rowsHtml .= "<tr style='border-bottom:1px solid rgba(148,163,184,0.2);'>"
+                                . "<td style='padding:6px 8px;'>" . ($idx + 1) . "</td>"
+                                . "<td style='padding:6px 8px;'><div><strong>{$metode}</strong></div><div style='font-size:11px;opacity:0.75;'>{$bank}</div></td>"
+                                . "<td style='padding:6px 8px;font-size:11px;'><div>D: {$coaD}</div><div>K: {$coaK}</div></td>"
+                                . "<td style='padding:6px 8px;font-size:12px;'>{$memo}</td>"
+                                . "<td style='padding:6px 8px;text-align:right;font-weight:600;color:#10b981;'>{$nom}</td>"
+                                . '</tr>';
+                        }
+
+                        $html = '<div style="font-size:13px;line-height:1.6;">'
+                            . '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:10px 12px;border-radius:8px;border:1px solid rgba(148,163,184,0.25);background:rgba(148,163,184,0.08);margin-bottom:12px;">'
+                            . '<div><span style="opacity:0.7;">Billing Ref:</span> <strong>' . e($bill?->kode_tagihan ?? '-') . '</strong></div>'
+                            . '<div><span style="opacity:0.7;">No PO:</span> <strong>' . e($bill?->purchaseOrder?->no_po ?? '-') . '</strong></div>'
+                            . '<div><span style="opacity:0.7;">Supplier:</span> <strong>' . e($bill?->supplier?->nama_supplier ?? '-') . '</strong></div>'
+                            . '<div><span style="opacity:0.7;">PIC:</span> <strong>' . e($record->karyawan?->nama ?? '-') . '</strong></div>'
+                            . '<div><span style="opacity:0.7;">Tagihan Awal Tahap:</span> <strong>' . $fmt((float) $record->total_tagihan) . '</strong></div>'
+                            . '<div><span style="opacity:0.7;">Dibayar Tahap Ini:</span> <strong style="color:#10b981;">' . $fmt((float) $record->total_pembayaran) . '</strong></div>'
+                            . '<div><span style="opacity:0.7;">Sisa Setelah Tahap Ini:</span> <strong style="color:' . ($sisaTahap <= 0 ? '#10b981' : '#f59e0b') . ';">' . $fmt($sisaTahap) . '</strong></div>'
+                            . '<div><span style="opacity:0.7;">Sisa Billing Saat Ini:</span> <strong style="color:' . ($sisaKini <= 0 ? '#10b981' : '#f59e0b') . ';">' . $fmt($sisaKini) . ' (' . e($bill?->status ?? '-') . ')</strong></div>'
+                            . '</div>'
+                            . '<table style="width:100%;border-collapse:collapse;font-size:12px;">'
+                            . '<thead><tr style="border-bottom:1px solid rgba(148,163,184,0.3);opacity:0.75;">'
+                            . '<th style="padding:6px 8px;text-align:left;">#</th>'
+                            . '<th style="padding:6px 8px;text-align:left;">Metode / Bank</th>'
+                            . '<th style="padding:6px 8px;text-align:left;">Akun COA</th>'
+                            . '<th style="padding:6px 8px;text-align:left;">Memo</th>'
+                            . '<th style="padding:6px 8px;text-align:right;">Nominal</th>'
+                            . '</tr></thead><tbody>' . $rowsHtml . '</tbody></table>'
+                            . '</div>';
+
+                        return new \Illuminate\Support\HtmlString($html);
+                    }),
+
+                Tables\Actions\Action::make('bayar_sisa')
+                    ->label('Bayar Sisa Tagihan')
+                    ->icon('heroicon-o-banknotes')
+                    ->color('success')
+                    ->visible(fn (PoBillPay $record): bool => (float) ($record->poBilling?->sisa_tagihan ?? 0) > 0)
+                    ->url(fn (PoBillPay $record): string => static::getUrl('create', ['po_billing_id' => $record->po_billing_id])),
+
+                Tables\Actions\Action::make('preview_pdf')
+                    ->label('Preview Bukti Bayar (PDF)')
+                    ->icon('heroicon-o-eye')
+                    ->url(fn (PoBillPay $record): string => route('finance.voucher.po-bill-pay.preview', $record))
+                    ->openUrlInNewTab(),
+
+                Tables\Actions\Action::make('download_pdf')
+                    ->label('Download Bukti Bayar (PDF)')
+                    ->icon('heroicon-o-arrow-down-tray')
+                    ->url(fn (PoBillPay $record): string => route('finance.voucher.po-bill-pay.download', $record)),
+
+                Tables\Actions\Action::make('lihat_billing')
+                    ->label('Lihat Tagihan (Billing)')
+                    ->icon('heroicon-o-document-text')
+                    ->visible(fn (PoBillPay $record): bool => (bool) $record->po_billing_id)
+                    ->url(fn (PoBillPay $record): string => PoBillingResource::getUrl('edit', ['record' => $record->po_billing_id])),
+
                 Tables\Actions\EditAction::make(),
+
                 Tables\Actions\DeleteAction::make()
                     ->using(fn ($record) => app(\App\Services\Finance\PoBillPayService::class)->deletePayment($record)),
             ])
@@ -402,6 +522,11 @@ protected static ?int $navigationSort = 12;
         return parent::getEloquentQuery()->with([
             'poBilling.supplier',
             'poBilling.purchaseOrder',
+            'poBilling.payments',
+            'karyawan',
+            'items.metodeBayar',
+            'items.coaDebit',
+            'items.coaKredit',
         ]);
     }
 

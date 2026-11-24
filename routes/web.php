@@ -316,6 +316,16 @@ Route::middleware('auth')->group(function () {
     )->name('finance.voucher.memorial.download');
 
     Route::get(
+        '/finance/voucher/po-bill-pay/{poBillPay}/preview',
+        [\App\Http\Controllers\FinancePdfController::class, 'previewVoucherPoBillPay']
+    )->name('finance.voucher.po-bill-pay.preview');
+
+    Route::get(
+        '/finance/voucher/po-bill-pay/{poBillPay}/download',
+        [\App\Http\Controllers\FinancePdfController::class, 'downloadVoucherPoBillPay']
+    )->name('finance.voucher.po-bill-pay.download');
+
+    Route::get(
         '/finance/report/laba-rugi/preview',
         [\App\Http\Controllers\FinancePdfController::class, 'previewLabaRugi']
     )->name('finance.report.laba-rugi.preview');

@@ -442,6 +442,13 @@ class PoBillingResource extends Resource
             ])
             ->actions([
                 Tables\Actions\ActionGroup::make([
+                    Tables\Actions\Action::make('bayar_tagihan')
+                        ->label('Bayar Tagihan')
+                        ->icon('heroicon-o-banknotes')
+                        ->color('success')
+                        ->visible(fn (PoBilling $record): bool => (float) $record->sisa_tagihan > 0)
+                        ->url(fn (PoBilling $record): string => PoBillPayResource::getUrl('create', ['po_billing_id' => $record->id])),
+
                     Tables\Actions\EditAction::make(),
                     Tables\Actions\DeleteAction::make()
                         ->hidden(fn ($record) => !app(\App\Services\Finance\PoBillingService::class)->canDelete($record))

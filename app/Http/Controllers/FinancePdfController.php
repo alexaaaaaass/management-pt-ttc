@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Invoice;
 use App\Models\JournalEntry;
 use App\Models\OperasionalPay;
+use App\Models\PoBillPay;
 use App\Models\TransKas;
 use App\Models\TransKasBank;
 use App\Services\Finance\FinancialReportService;
@@ -119,6 +120,91 @@ class FinancePdfController extends Controller
     public function downloadVoucherKas(TransKas $transKas)
     {
         return $this->buildKasPdf($transKas)->download('Voucher_Kas_' . $transKas->kode_transaksi . '.pdf');
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | 1B. VOUCHER PEMBAYARAN TAGIHAN SUPPLIER (PO BILL PAY)
+    |--------------------------------------------------------------------------
+    */
+
+    protected function buildPoBillPayPdf(PoBillPay $poBillPay)
+    {
+        $poBillPay->loadMissing([
+            'poBilling.supplier',
+            'poBilling.purchaseOrder',
+            'karyawan',
+            'items.metodeBayar',
+            'items.coaDebit',
+            'items.coaKredit',
+        ]);
+
+        $billing = $poBillPay->poBilling;
+        $supplierName = $billing?->supplier?->nama_supplier ?? '-';
+        $billCode = $billing?->kode_tagihan ?? '-';
+        $poNo = $billing?->purchaseOrder?->no_po ?? '-';
+
+        $lines = [];
+        foreach ($poBillPay->items as $item) {
+            $nominal = (float) ($item->nominal_pembayaran ?? 0);
+            $bankNote = collect([
+                $item->metodeBayar?->metode_pembayaran,
+                $item->nama_bank,
+                $item->no_rekening ? "Rek: {$item->no_rekening}" : null,
+                $item->atas_nama ? "a.n. {$item->atas_nama}" : null,
+                $item->memo,
+            ])->filter()->implode(' · ');
+
+            $lines[] = [
+                'kode_akun'  => trim((string) ($item->coaDebit?->kode_akun ?? '2111')),
+                'nama_akun'  => $item->coaDebit?->nama_akun ?? 'Utang Usaha Supplier',
+                'keterangan' => "Pelunasan {$billCode} (PO: {$poNo})" . ($bankNote ? " — {$bankNote}" : ''),
+                'debit'      => $nominal,
+                'kredit'     => 0.0,
+            ];
+
+            $lines[] = [
+                'kode_akun'  => trim((string) ($item->coaKredit?->kode_akun ?? '1112')),
+                'nama_akun'  => $item->coaKredit?->nama_akun ?? ($item->nama_bank ? "Kas / Bank ({$item->nama_bank})" : 'Kas / Bank Pembayar'),
+                'keterangan' => $bankNote ?: "Pembayaran ke {$supplierName}",
+                'debit'      => 0.0,
+                'kredit'     => $nominal,
+            ];
+        }
+
+        $sisaSetelahBayar = max(0.0, round((float) $poBillPay->total_tagihan - (float) $poBillPay->total_pembayaran, 2));
+        $statusText = $sisaSetelahBayar <= 0 ? 'LUNAS' : 'Sisa setelah bayar: Rp ' . number_format($sisaSetelahBayar, 0, ',', '.');
+
+        return Pdf::loadView('pdf.voucher-finance', [
+            'logoBase64'     => $this->getLogoBase64(),
+            'judul'          => 'BUKTI PEMBAYARAN SUPPLIER',
+            'subjudul'       => "PAYMENT ORDER · {$billCode} (PO: {$poNo})",
+            'no_bukti'       => $poBillPay->kode_pembayaran ?: ('PAY-' . $poBillPay->id),
+            'tanggal'        => $poBillPay->tanggal_pembayaran ? $poBillPay->tanggal_pembayaran->format('d/m/Y') : now()->format('d/m/Y'),
+            'periode'        => $poBillPay->periode ?? '-',
+            'gudang'         => $poBillPay->gudang ?? 'UGRMS',
+            'pihak_terkait'  => $supplierName,
+            'label_pihak'    => 'Dibayarkan Kepada',
+            'keterangan'     => trim(($poBillPay->keterangan ? $poBillPay->keterangan . ' · ' : '') . $statusText),
+            'nominal'        => (float) $poBillPay->total_pembayaran,
+            'terbilang'      => $this->terbilang((float) $poBillPay->total_pembayaran),
+            'lines'          => $lines,
+            'pic_nama'       => $poBillPay->karyawan?->nama ?? (auth()->user()?->name ?? 'Admin Finance'),
+        ])->setPaper('A4', 'portrait');
+    }
+
+    public function previewVoucherPoBillPay(PoBillPay $poBillPay)
+    {
+        $code = $poBillPay->kode_pembayaran ?: ('PAY-' . $poBillPay->id);
+
+        return $this->buildPoBillPayPdf($poBillPay)->stream("Bukti_Pembayaran_{$code}.pdf");
+    }
+
+    public function downloadVoucherPoBillPay(PoBillPay $poBillPay)
+    {
+        $code = $poBillPay->kode_pembayaran ?: ('PAY-' . $poBillPay->id);
+
+        return $this->buildPoBillPayPdf($poBillPay)->download("Bukti_Pembayaran_{$code}.pdf");
     }
 
     /*
