@@ -306,13 +306,13 @@ class PoBillingResource extends Resource
                                         $fmt = fn (float $n) => 'Rp ' . number_format($n, 0, ',', '.');
 
                                         $dpPart = $dp > 0
-                                            ? ' − <span class="text-amber-600 dark:text-amber-400 font-medium">DP ' . $fmt($dp) . '</span>'
+                                            ? ' − <span style="color:#f59e0b;font-weight:600;">DP ' . $fmt($dp) . '</span>'
                                             : '';
 
                                         return new \Illuminate\Support\HtmlString(
-                                            '<div class="rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/60 px-3.5 py-2.5 text-xs text-gray-700 dark:text-gray-200 leading-relaxed">'
+                                            '<div style="border-radius:0.5rem;border:1px solid rgba(148,163,184,0.28);background:rgba(148,163,184,0.08);padding:0.75rem 1rem;font-size:0.8125rem;line-height:1.6;">'
                                             . '<div>DPP <strong>' . $fmt($dpp) . '</strong> + PPN <strong>' . $fmt($ppn) . '</strong> + Ongkir <strong>' . $fmt($ongkir) . '</strong> = Total Bruto <strong>' . $fmt($bruto) . '</strong></div>'
-                                            . '<div class="mt-1">Total Bruto <strong>' . $fmt($bruto) . '</strong>' . $dpPart . ' = <span class="text-sm font-bold text-emerald-600 dark:text-emerald-400">Tagihan Netto ' . $fmt($netto) . '</span></div>'
+                                            . '<div style="margin-top:0.25rem;">Total Bruto <strong>' . $fmt($bruto) . '</strong>' . $dpPart . ' = <span style="font-size:0.9375rem;font-weight:700;color:#10b981;">Tagihan Netto ' . $fmt($netto) . '</span></div>'
                                             . '</div>'
                                         );
                                     })

@@ -92,19 +92,19 @@ class PurchaseOrderResource extends Resource
             $eta = e($item->eta ?? '-');
             $catatan = e($item->catatan ?? '-');
             $recName = isset($recSuppliers[$itemId])
-                ? '<span class="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-blue-50 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300">' . e($recSuppliers[$itemId]['name']) . '</span>'
+                ? '<span style="display:inline-flex;align-items:center;padding:0.125rem 0.5rem;border-radius:0.375rem;font-size:0.75rem;font-weight:500;background:rgba(59,130,246,0.16);color:#60a5fa;border:1px solid rgba(59,130,246,0.3);">' . e($recSuppliers[$itemId]['name']) . '</span>'
                 : '<span class="text-gray-400 text-xs">-</span>';
 
             $orderedCell = $ordered > 0
-                ? '<span class="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-amber-50 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300">' . static::formatQtyNumber($ordered) . '</span>'
+                ? '<span style="display:inline-flex;align-items:center;padding:0.125rem 0.5rem;border-radius:0.375rem;font-size:0.75rem;font-weight:500;background:rgba(245,158,11,0.16);color:#fbbf24;border:1px solid rgba(245,158,11,0.3);">' . static::formatQtyNumber($ordered) . '</span>'
                 : '<span class="text-gray-400">0</span>';
 
             $sisaCell = $sisa > 0
-                ? '<span class="font-semibold text-emerald-600 dark:text-emerald-400">' . static::formatQtyNumber($sisa) . '</span>'
-                : '<span class="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400">Full PO</span>';
+                ? '<span style="font-weight:600;color:#10b981;">' . static::formatQtyNumber($sisa) . '</span>'
+                : '<span style="display:inline-flex;align-items:center;padding:0.125rem 0.5rem;border-radius:0.375rem;font-size:0.75rem;font-weight:500;background:rgba(148,163,184,0.16);color:#9ca3af;">Full PO</span>';
 
             $rowsHtml .= "
-                <tr class='border-b dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800/60'>
+                <tr class='border-b dark:border-gray-700'>
                     <td class='p-3 font-medium'>{$itemName}</td>
                     <td class='p-3 text-right'>" . static::formatQtyNumber($qtyPr) . "</td>
                     <td class='p-3 text-right'>{$orderedCell}</td>
@@ -122,22 +122,22 @@ class PurchaseOrderResource extends Resource
             $badges = $linkedPos->map(function ($po) {
                 $sup = $po->supplier?->nama_supplier ?? '-';
 
-                return '<span class="inline-flex items-center px-2 py-0.5 rounded text-xs bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-200">'
+                return '<span style="display:inline-flex;align-items:center;padding:0.125rem 0.5rem;border-radius:0.25rem;font-size:0.75rem;background:rgba(148,163,184,0.14);border:1px solid rgba(148,163,184,0.28);">'
                     . e($po->no_po) . ' · ' . e($sup) . '</span>';
             })->implode(' ');
 
-            $existingPosHtml = '<div class="mt-2 flex flex-wrap items-center gap-1.5 text-xs text-gray-600 dark:text-gray-300">'
+            $existingPosHtml = '<div class="mt-2 flex flex-wrap items-center gap-1.5 text-xs">'
                 . '<span class="font-medium">PO Terkait Sebelumnya (' . $linkedPos->count() . '):</span> ' . $badges . '</div>';
         }
 
         $tipHtml = '';
         if ($isCreate) {
             if (! $hasRemaining) {
-                $tipHtml = '<div class="mt-2 rounded-lg border border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-950/40 px-3 py-2 text-xs text-amber-800 dark:text-amber-300">'
+                $tipHtml = '<div style="margin-top:0.5rem;border-radius:0.5rem;border:1px solid rgba(245,158,11,0.35);background:rgba(245,158,11,0.12);padding:0.5rem 0.75rem;font-size:0.75rem;color:#fbbf24;">'
                     . 'Seluruh kebutuhan item pada PR ini sudah diterbitkan PO sepenuhnya.'
                     . '</div>';
             } else {
-                $tipHtml = '<div class="mt-2 rounded-lg border border-blue-200 dark:border-blue-800/70 bg-blue-50/70 dark:bg-blue-950/30 px-3 py-2 text-xs text-blue-700 dark:text-blue-300">'
+                $tipHtml = '<div style="margin-top:0.5rem;border-radius:0.5rem;border:1px solid rgba(59,130,246,0.35);background:rgba(59,130,246,0.12);padding:0.5rem 0.75rem;font-size:0.75rem;color:#60a5fa;">'
                     . '<strong>Multi-Supplier Aktif:</strong> Pada Tahap 3 Anda dapat memilih supplier berbeda di setiap baris item, atau klik tombol <strong>Split Supplier</strong> untuk memecah 1 material ke beberapa supplier. Sistem otomatis menerbitkan 1 nomor PO resmi per supplier.'
                     . '</div>';
             }
@@ -697,7 +697,7 @@ class PurchaseOrderResource extends Resource
                                 foreach ($allocatedByItem as $itemId => $allocQty) {
                                     $quota = $quotaByItem[$itemId] ?? 0.0;
                                     if ($quota > 0 && round($allocQty, 4) > round($quota, 4) + 0.0001) {
-                                        $warningsHtml .= '<div class="mb-2 rounded-lg border border-red-300 dark:border-red-800 bg-red-50 dark:bg-red-950/40 px-3 py-2 text-xs text-red-700 dark:text-red-300">'
+                                        $warningsHtml .= '<div style="margin-bottom:0.5rem;border-radius:0.5rem;border:1px solid rgba(239,68,68,0.4);background:rgba(239,68,68,0.14);padding:0.5rem 0.75rem;font-size:0.75rem;color:#f87171;">'
                                             . '<strong>Melebihi Kuota PR:</strong> Total Qty PO untuk <strong>' . e($nameByItem[$itemId]) . '</strong> (' . static::formatQtyNumber($allocQty) . ') melebihi sisa kebutuhan PR (' . static::formatQtyNumber($quota) . ').'
                                             . '</div>';
                                     }
@@ -709,39 +709,39 @@ class PurchaseOrderResource extends Resource
 
                                 $validPoCount = collect($groups)->where('is_valid', true)->count();
                                 $headerBadge = $missingSupplierRows > 0
-                                    ? '<span class="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-semibold bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300">' . $missingSupplierRows . ' baris belum memiliki supplier</span>'
-                                    : '<span class="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-semibold bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300">Akan menerbitkan ' . $validPoCount . ' PO resmi</span>';
+                                    ? '<span style="display:inline-flex;align-items:center;padding:0.25rem 0.625rem;border-radius:0.375rem;font-size:0.75rem;font-weight:600;background:rgba(239,68,68,0.16);color:#f87171;border:1px solid rgba(239,68,68,0.3);">' . $missingSupplierRows . ' baris belum memiliki supplier</span>'
+                                    : '<span style="display:inline-flex;align-items:center;padding:0.25rem 0.625rem;border-radius:0.375rem;font-size:0.75rem;font-weight:600;background:rgba(16,185,129,0.16);color:#34d399;border:1px solid rgba(16,185,129,0.3);">Akan menerbitkan ' . $validPoCount . ' PO resmi</span>';
 
                                 $rowsHtml = '';
                                 foreach ($groups as $g) {
                                     $ppnAmt = $ppnPercent > 0 ? round($g['subtotal'] * ($ppnPercent / 100), 2) : 0.0;
                                     $estTotal = $g['subtotal'] + $ppnAmt;
                                     $nameBadge = $g['is_valid']
-                                        ? '<span class="font-medium text-gray-900 dark:text-gray-100">' . e($g['name']) . '</span>'
-                                        : '<span class="font-semibold text-red-600 dark:text-red-400">⚠ ' . e($g['name']) . '</span>';
+                                        ? '<span style="font-weight:500;">' . e($g['name']) . '</span>'
+                                        : '<span style="font-weight:600;color:#f87171;">⚠ ' . e($g['name']) . '</span>';
 
-                                    $rowsHtml .= '<tr class="border-b dark:border-gray-700 last:border-b-0">'
-                                        . '<td class="px-3 py-2">' . $nameBadge . '</td>'
-                                        . '<td class="px-3 py-2 text-right">' . $g['rows'] . ' baris (' . static::formatQtyNumber($g['qty']) . ' qty)</td>'
-                                        . '<td class="px-3 py-2 text-right font-medium">Rp ' . number_format($g['subtotal'], 0, ',', '.') . '</td>'
-                                        . ($ppnPercent > 0 ? '<td class="px-3 py-2 text-right font-semibold text-emerald-600 dark:text-emerald-400">Rp ' . number_format($estTotal, 0, ',', '.') . '</td>' : '')
+                                    $rowsHtml .= '<tr style="border-bottom:1px solid rgba(148,163,184,0.2);">'
+                                        . '<td style="padding:0.5rem 0.75rem;">' . $nameBadge . '</td>'
+                                        . '<td style="padding:0.5rem 0.75rem;text-align:right;">' . $g['rows'] . ' baris (' . static::formatQtyNumber($g['qty']) . ' qty)</td>'
+                                        . '<td style="padding:0.5rem 0.75rem;text-align:right;font-weight:500;">Rp ' . number_format($g['subtotal'], 0, ',', '.') . '</td>'
+                                        . ($ppnPercent > 0 ? '<td style="padding:0.5rem 0.75rem;text-align:right;font-weight:600;color:#34d399;">Rp ' . number_format($estTotal, 0, ',', '.') . '</td>' : '')
                                         . '</tr>';
                                 }
 
                                 $ppnColHeader = $ppnPercent > 0
-                                    ? '<th class="px-3 py-2 text-right">Est. Total (+PPN ' . static::formatQtyNumber($ppnPercent) . '%)</th>'
+                                    ? '<th style="padding:0.5rem 0.75rem;text-align:right;">Est. Total (+PPN ' . static::formatQtyNumber($ppnPercent) . '%)</th>'
                                     : '';
 
                                 return new HtmlString(
                                     $warningsHtml
-                                    . '<div class="rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden bg-white dark:bg-gray-900">'
-                                    . '<div class="flex items-center justify-between px-3 py-2 bg-gray-50 dark:bg-gray-800/80 border-b dark:border-gray-700">'
-                                    . '<span class="text-xs font-semibold uppercase tracking-wide text-gray-600 dark:text-gray-300">Auto-Split per Supplier</span>'
+                                    . '<div style="border-radius:0.75rem;border:1px solid rgba(148,163,184,0.25);overflow:hidden;background:rgba(148,163,184,0.06);">'
+                                    . '<div style="display:flex;align-items:center;justify-content:space-between;padding:0.5rem 0.75rem;background:rgba(148,163,184,0.12);border-bottom:1px solid rgba(148,163,184,0.22);">'
+                                    . '<span style="font-size:0.75rem;font-weight:600;text-transform:uppercase;letter-spacing:0.04em;">Auto-Split per Supplier</span>'
                                     . $headerBadge
                                     . '</div>'
-                                    . '<table class="w-full text-sm text-left text-gray-700 dark:text-gray-200">'
-                                    . '<thead class="text-xs text-gray-500 dark:text-gray-400 border-b dark:border-gray-700">'
-                                    . '<tr><th class="px-3 py-2">Supplier</th><th class="px-3 py-2 text-right">Cakupan Item</th><th class="px-3 py-2 text-right">Subtotal</th>' . $ppnColHeader . '</tr>'
+                                    . '<table style="width:100%;font-size:0.875rem;text-align:left;border-collapse:collapse;">'
+                                    . '<thead style="font-size:0.75rem;opacity:0.75;border-bottom:1px solid rgba(148,163,184,0.22);">'
+                                    . '<tr><th style="padding:0.5rem 0.75rem;">Supplier</th><th style="padding:0.5rem 0.75rem;text-align:right;">Cakupan Item</th><th style="padding:0.5rem 0.75rem;text-align:right;">Subtotal</th>' . $ppnColHeader . '</tr>'
                                     . '</thead>'
                                     . '<tbody>' . $rowsHtml . '</tbody>'
                                     . '</table>'
