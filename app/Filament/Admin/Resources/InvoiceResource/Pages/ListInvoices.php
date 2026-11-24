@@ -11,6 +11,11 @@ class ListInvoices extends ListRecords
 {
     protected static string $resource = InvoiceResource::class;
 
+    public function shouldShowPageTableSummary(): bool
+    {
+        return false;
+    }
+
     protected function getHeaderActions(): array
     {
         return [
