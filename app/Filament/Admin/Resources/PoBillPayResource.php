@@ -40,84 +40,101 @@ protected static ?int $navigationSort = 12;
 
             ->schema([
 
-                Grid::make(4)
-                    ->schema([
+                Select::make('po_billing_id')
+                    ->label('Billing Reference')
+                    ->placeholder('Pilih tagihan PO yang belum lunas...')
+                    ->options(function (?PoBillPay $record) {
+                        return PoBilling::with(['supplier', 'purchaseOrder'])
+                            ->withSum('payments', 'total_pembayaran')
+                            ->orderByDesc('created_at')
+                            ->orderByDesc('id')
+                            ->get()
+                            ->filter(function ($bill) use ($record) {
+                                // Tetap tampilkan billing milik record yang sedang diedit
+                                if ($record && (int) $bill->id === (int) $record->po_billing_id) {
+                                    return true;
+                                }
 
-                        DatePicker::make(
-                            'tanggal_pembayaran'
-                        )
+                                $grandTotal = (float) ($bill->grand_total ?? 0);
+                                $paid = (float) ($bill->payments_sum_total_pembayaran ?? 0);
+                                $sisa = round($grandTotal - $paid, 2);
+
+                                // Sembunyikan tagihan yang sudah lunas (sisa <= 0)
+                                return $sisa > 0;
+                            })
+                            ->mapWithKeys(function ($bill) {
+                                $grandTotal = (float) ($bill->grand_total ?? 0);
+                                $paid = (float) ($bill->payments_sum_total_pembayaran ?? 0);
+                                $sisa = max(0.0, round($grandTotal - $paid, 2));
+                                $poNo = $bill->purchaseOrder?->no_po;
+                                $poPart = $poNo ? "PO: {$poNo} · " : '';
+                                $statusPart = $sisa <= 0
+                                    ? 'LUNAS'
+                                    : 'Sisa: Rp ' . number_format($sisa, 0, ',', '.');
+                                $label = $bill->kode_tagihan . ' • ' . ($bill->supplier?->nama_supplier ?? '-') . ' (' . $poPart . $statusPart . ')';
+
+                                return [$bill->id => $label];
+                            });
+                    })
+                    ->disabled(fn (string $operation) => $operation === 'edit')
+                    ->dehydrated()
+                    ->searchable()
+                    ->preload()
+                    ->required()
+                    ->live()
+                    ->columnSpanFull()
+                    ->afterStateUpdated(function ($state, Get $get, Set $set) {
+                        $bill = PoBilling::find($state);
+                        if (! $bill) {
+                            return;
+                        }
+
+                        $sisaFormatted = \App\Support\MoneyHelper::format($bill->sisa_tagihan, 2) ?? '0';
+
+                        $set('gudang', 'UGRMS');
+                        $set('periode', $bill->periode);
+                        $set('total_tagihan', $sisaFormatted);
+
+                        $items = $get('items') ?? [];
+                        if (count($items) === 1) {
+                            $firstKey = array_key_first($items);
+                            if ($firstKey !== null && empty($items[$firstKey]['nominal_pembayaran'])) {
+                                $items[$firstKey]['nominal_pembayaran'] = $sisaFormatted;
+                                $set('items', $items);
+                                $set('total_pembayaran', $sisaFormatted);
+                            }
+                        }
+                    }),
+
+                Grid::make(3)
+                    ->schema([
+                        DatePicker::make('tanggal_pembayaran')
+                            ->label('Tanggal Pembayaran')
                             ->required()
                             ->default(now()),
 
-                        Select::make('po_billing_id')
-                            ->label('Billing Reference')
-                            ->options(function () {
-                                return PoBilling::with(['supplier', 'purchaseOrder'])
-                                    ->orderByDesc('created_at')
-                                    ->orderByDesc('id')
-                                    ->get()
-                                    ->mapWithKeys(function ($bill) {
-                                        $poNo = $bill->purchaseOrder?->no_po;
-                                        $poPart = $poNo ? "PO: {$poNo} · " : '';
-                                        $label = $bill->kode_tagihan . ' • ' . ($bill->supplier?->nama_supplier ?? '-') . ' (' . $poPart . 'Sisa: Rp ' . number_format($bill->sisa_tagihan, 0, ',', '.') . ')';
-                                        return [$bill->id => $label];
-                                    });
-                            })
-                            ->searchable()
-                            ->preload()
-                            ->required()
-                            ->live()
-                            ->afterStateUpdated(function ($state, Get $get, Set $set) {
-                                $bill = PoBilling::find($state);
-                                if (!$bill) {
-                                    return;
-                                }
+                        TextInput::make('gudang')
+                            ->label('Gudang'),
 
-                                $set('gudang', 'UGRMS');
-                                $set('periode', $bill->periode);
-                                $set('total_tagihan', $bill->sisa_tagihan);
-
-                                $items = $get('items') ?? [];
-                                if (count($items) === 1) {
-                                    $firstKey = array_key_first($items);
-                                    if ($firstKey !== null && empty($items[$firstKey]['nominal_pembayaran'])) {
-                                        $items[$firstKey]['nominal_pembayaran'] = \App\Support\MoneyHelper::format($bill->sisa_tagihan, 2) ?? '0';
-                                        $set('items', $items);
-                                        $set('total_pembayaran', $bill->sisa_tagihan);
-                                    }
-                                }
-                            }),
-
-                        TextInput::make(
-                            'gudang'
-                        ),
-
-                        TextInput::make(
-                            'periode'
-                        ),
+                        TextInput::make('periode')
+                            ->label('Periode'),
                     ]),
 
-                Select::make(
-                    'karyawan_id'
-                )
+                Grid::make(2)
+                    ->schema([
+                        Select::make('karyawan_id')
+                            ->label('PIC / Karyawan')
+                            ->options(fn () => Karyawan::orderBy('nama')->pluck('nama', 'id'))
+                            ->searchable()
+                            ->preload(),
 
-                    ->label('PIC / Karyawan')
-
-                    ->options(
-                        Karyawan::pluck(
-                            'nama',
-                            'id'
-                        )
-                    )
-
-                    ->searchable(),
-
-                TextInput::make(
-                    'total_tagihan'
-                )
-                    ->prefix('Rp')
-                    ->disabled()
-                    ->dehydrated(),
+                        TextInput::make('total_tagihan')
+                            ->label('Total Sisa Tagihan')
+                            ->prefix('Rp')
+                            ->currencyMask(2)
+                            ->disabled()
+                            ->dehydrated(),
+                    ]),
             ]),
 
             Section::make(
@@ -163,8 +180,8 @@ protected static ?int $navigationSort = 12;
                                     ->live(onBlur: true)
                                     ->afterStateUpdated(function ($state, Get $get, Set $set) {
                                         $items = $get('../../items') ?? [];
-                                        $total = collect($items)->sum(fn ($item) => \App\Support\MoneyHelper::clean($item['nominal_pembayaran'] ?? 0));
-                                        $sisaTagihan = (float) ($get('../../total_tagihan') ?? 0);
+                                        $total = collect($items)->sum(fn ($item) => (float) (\App\Support\MoneyHelper::clean($item['nominal_pembayaran'] ?? 0) ?? 0));
+                                        $sisaTagihan = (float) (\App\Support\MoneyHelper::clean($get('../../total_tagihan') ?? 0) ?? 0);
 
                                         if (
                                             $sisaTagihan > 0 &&
@@ -185,7 +202,7 @@ protected static ?int $navigationSort = 12;
                                                 ->send();
                                         }
 
-                                        $set('../../total_pembayaran', $total);
+                                        $set('../../total_pembayaran', \App\Support\MoneyHelper::format($total, 2) ?? '0');
                                     }),
                             ]),
 
@@ -254,7 +271,7 @@ protected static ?int $navigationSort = 12;
                             fn ($item) => (float) (\App\Support\MoneyHelper::clean($item['nominal_pembayaran'] ?? 0) ?? 0)
                         );
 
-                        $set('total_pembayaran', round($total, 2));
+                        $set('total_pembayaran', \App\Support\MoneyHelper::format($total, 2) ?? '0');
                     }),
             ]),
 
@@ -268,6 +285,7 @@ protected static ?int $navigationSort = 12;
                     'total_pembayaran'
                 )
                     ->prefix('Rp')
+                    ->currencyMask(2)
                     ->disabled()
                     ->dehydrated(),
             ]),
