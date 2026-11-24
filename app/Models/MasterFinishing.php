@@ -19,6 +19,7 @@ class MasterFinishing extends Model
         'proses_list',
         'tahap_finishing',
         'status_laporan',
+        'satuan_hasil',
         'hasil_baik',
         'hasil_rusak',
         'semi_waste',
@@ -35,8 +36,14 @@ class MasterFinishing extends Model
     protected $attributes = [
         'tahap_finishing' => 'reguler',
         'status_laporan'  => 'selesai',
+        'satuan_hasil'    => 'pcs',
         'keterangan_spk'  => 'reguler',
     ];
+
+    public function getSatuanUnitAttribute(): string
+    {
+        return MasterProsesProduksi::satuanSuffix($this->satuan_hasil, 'pcs');
+    }
 
     /*
     |--------------------------------------------------------------------------

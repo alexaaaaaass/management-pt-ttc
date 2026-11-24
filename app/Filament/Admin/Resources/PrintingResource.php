@@ -146,30 +146,38 @@ class PrintingResource extends Resource
                 Forms\Components\Hidden::make('tahap_printing')
                     ->default('proses_cetak'),
 
+                Forms\Components\Select::make('satuan_hasil')
+                    ->label('Satuan Hasil & Waste')
+                    ->options(\App\Models\MasterProsesProduksi::satuanHasilOptions())
+                    ->default('m')
+                    ->live()
+                    ->required()
+                    ->helperText('Pilih Meter (Flexo roll), Pcs (etiket/die-cut), Lembar (Offset plano), atau Roll'),
+
                 Forms\Components\TextInput::make('hasil_baik')
-                    ->label('Hasil Baik Satuan (Meter)')
+                    ->label(fn (Forms\Get $get) => 'Hasil Baik (' . \App\Models\MasterProsesProduksi::satuanLabel($get('satuan_hasil'), 'm') . ')')
                     ->numeric()
-                    ->suffix('m')
+                    ->suffix(fn (Forms\Get $get) => \App\Models\MasterProsesProduksi::satuanSuffix($get('satuan_hasil'), 'm'))
                     ->default(0)
                     ->required(),
 
                 Forms\Components\TextInput::make('hasil_rusak')
-                    ->label('Hasil Rusak / Total Waste (Meter)')
+                    ->label(fn (Forms\Get $get) => 'Hasil Rusak / Total Waste (' . \App\Models\MasterProsesProduksi::satuanLabel($get('satuan_hasil'), 'm') . ')')
                     ->numeric()
-                    ->suffix('m')
+                    ->suffix(fn (Forms\Get $get) => \App\Models\MasterProsesProduksi::satuanSuffix($get('satuan_hasil'), 'm'))
                     ->default(0)
                     ->helperText('Otomatis terisi dari total Qty Waste di bawah bila rincian Note Waste diisi')
                     ->required(),
 
                 Forms\Components\TextInput::make('semi_waste')
-                    ->label('Semi Waste Satuan (Meter)')
+                    ->label(fn (Forms\Get $get) => 'Semi Waste (' . \App\Models\MasterProsesProduksi::satuanLabel($get('satuan_hasil'), 'm') . ')')
                     ->numeric()
-                    ->suffix('m')
+                    ->suffix(fn (Forms\Get $get) => \App\Models\MasterProsesProduksi::satuanSuffix($get('satuan_hasil'), 'm'))
                     ->default(0)
                     ->required(),
 
                 Forms\Components\Section::make('Rincian Note Waste & Qty Waste')
-                    ->description('Pilih jenis waste dari Master Note Waste lalu masukkan jumlah qty waste (meter). Bisa lebih dari 1 penyebab waste.')
+                    ->description('Pilih jenis waste dari Master Note Waste lalu masukkan jumlah qty waste sesuai Satuan Hasil di atas. Bisa lebih dari 1 penyebab waste.')
                     ->columnSpanFull()
                     ->schema([
                         Forms\Components\Repeater::make('wastes')
@@ -179,12 +187,13 @@ class PrintingResource extends Resource
                             ->addActionLabel('Tambah Note Waste')
                             ->reorderable(false)
                             ->collapsible()
-                            ->itemLabel(function (array $state): string {
+                            ->itemLabel(function (array $state, $livewire): string {
                                 $errId = $state['error_production_id'] ?? null;
                                 $name = $errId ? (\App\Models\ErrorProduction::whereKey($errId)->value('nama_error') ?? 'Note Waste') : 'Pilih Note Waste';
                                 $qty = (float) ($state['qty_waste'] ?? 0);
+                                $unit = \App\Models\MasterProsesProduksi::satuanSuffix($livewire->data['satuan_hasil'] ?? 'm', 'm');
 
-                                return $qty > 0 ? "{$name} — " . rtrim(rtrim(number_format($qty, 2, ',', '.'), '0'), ',') . ' m' : $name;
+                                return $qty > 0 ? "{$name} — " . rtrim(rtrim(number_format($qty, 2, ',', '.'), '0'), ',') . " {$unit}" : $name;
                             })
                             ->deleteAction(
                                 fn (Forms\Components\Actions\Action $action) => $action->after(function (Forms\Get $get, Forms\Set $set) {
@@ -217,11 +226,11 @@ class PrintingResource extends Resource
                                     ]),
 
                                 Forms\Components\TextInput::make('qty_waste')
-                                    ->label('Qty Waste (Meter)')
+                                    ->label(fn (Forms\Get $get) => 'Qty Waste (' . \App\Models\MasterProsesProduksi::satuanLabel($get('../../satuan_hasil'), 'm') . ')')
                                     ->numeric()
                                     ->minValue(0)
                                     ->default(0)
-                                    ->suffix('m')
+                                    ->suffix(fn (Forms\Get $get) => \App\Models\MasterProsesProduksi::satuanSuffix($get('../../satuan_hasil'), 'm'))
                                     ->required()
                                     ->live(onBlur: true)
                                     ->afterStateUpdated(function (Forms\Get $get, Forms\Set $set) {
@@ -248,10 +257,11 @@ class PrintingResource extends Resource
 
                                 $total = collect($wastes)->sum(fn ($row) => (float) ($row['qty_waste'] ?? 0));
                                 $fmt = rtrim(rtrim(number_format($total, 2, ',', '.'), '0'), ',');
+                                $unit = \App\Models\MasterProsesProduksi::satuanSuffix($get('satuan_hasil'), 'm');
 
                                 return new \Illuminate\Support\HtmlString(
                                     '<div style="border-radius:0.5rem;border:1px solid rgba(239,68,68,0.35);background:rgba(239,68,68,0.1);padding:0.5rem 0.75rem;font-size:0.8125rem;">'
-                                    . 'Total dari ' . count($wastes) . ' jenis waste: <strong style="color:#f87171;">' . $fmt . ' m</strong> (otomatis disinkronkan ke Hasil Rusak).'
+                                    . 'Total dari ' . count($wastes) . ' jenis waste: <strong style="color:#f87171;">' . $fmt . ' ' . e($unit) . '</strong> (otomatis disinkronkan ke Hasil Rusak).'
                                     . '</div>'
                                 );
                             }),
@@ -301,20 +311,20 @@ class PrintingResource extends Resource
 
             Tables\Columns\TextColumn::make('hasil_baik')
                 ->label('Hasil Baik')
-                ->formatStateUsing(fn ($state) => number_format((float) $state, 0, ',', '.') . ' m')
+                ->formatStateUsing(fn ($state, Printing $record) => number_format((float) $state, 0, ',', '.') . ' ' . $record->satuan_unit)
                 ->color('success')
                 ->weight('bold')
                 ->sortable(),
 
             Tables\Columns\TextColumn::make('hasil_rusak')
                 ->label('Hasil Rusak')
-                ->formatStateUsing(fn ($state) => number_format((float) $state, 0, ',', '.') . ' m')
+                ->formatStateUsing(fn ($state, Printing $record) => number_format((float) $state, 0, ',', '.') . ' ' . $record->satuan_unit)
                 ->color(fn ($state) => (float) $state > 0 ? 'danger' : 'gray')
                 ->sortable(),
 
             Tables\Columns\TextColumn::make('semi_waste')
                 ->label('Semi Waste')
-                ->formatStateUsing(fn ($state) => number_format((float) $state, 0, ',', '.') . ' m')
+                ->formatStateUsing(fn ($state, Printing $record) => number_format((float) $state, 0, ',', '.') . ' ' . $record->satuan_unit)
                 ->color(fn ($state) => (float) $state > 0 ? 'warning' : 'gray')
                 ->sortable(),
 
@@ -322,11 +332,13 @@ class PrintingResource extends Resource
                 ->label('Note & Qty Waste')
                 ->getStateUsing(function (Printing $record): string {
                     if ($record->wastes->isNotEmpty()) {
-                        return $record->wastes->map(function ($w) {
+                        $unit = $record->satuan_unit;
+
+                        return $record->wastes->map(function ($w) use ($unit) {
                             $name = $w->errorProduction?->nama_error ?? '-';
                             $qty = rtrim(rtrim(number_format((float) $w->qty_waste, 2, ',', '.'), '0'), ',');
 
-                            return "{$name} ({$qty} m)";
+                            return "{$name} ({$qty} {$unit})";
                         })->implode(', ');
                     }
 

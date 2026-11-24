@@ -17,6 +17,7 @@ class Printing extends Model
     'proses_list',
     'tahap_printing',
     'status_laporan',
+    'satuan_hasil',
     'hasil_baik',
     'hasil_rusak',
     'semi_waste',
@@ -32,7 +33,13 @@ class Printing extends Model
     protected $attributes = [
         'tahap_printing' => 'proses_cetak',
         'status_laporan' => 'selesai',
+        'satuan_hasil'   => 'm',
     ];
+
+    public function getSatuanUnitAttribute(): string
+    {
+        return MasterProsesProduksi::satuanSuffix($this->satuan_hasil, 'm');
+    }
 
     public function spk()
     {

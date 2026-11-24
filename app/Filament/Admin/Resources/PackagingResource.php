@@ -51,8 +51,9 @@ public static function form(Form $form): Form
                     Forms\Components\Select::make('jenis_transfer')
                         ->options([
                             'barang_hasil_baik' => 'Barang Hasil Baik',
-                            'label_kuning' => 'Label Kuning',
-                            'blokir' => 'Blokir',
+                            'buffer_stock'      => 'Buffer Stock / Kelebihan Produksi',
+                            'label_kuning'      => 'Label Kuning',
+                            'blokir'            => 'Blokir',
                         ])
                         ->default('barang_hasil_baik')
                         ->required(),
@@ -68,30 +69,62 @@ public static function form(Form $form): Form
                                 ->content(fn ($get) => optional(\App\Models\MasterSpk::find($get('spk_id')))->order_qty ? number_format(\App\Models\MasterSpk::find($get('spk_id'))->order_qty, 0, ',', '.') . ' pcs' : '-'),
 
                             Forms\Components\Placeholder::make('info_finishing_good')
-                                ->label('Hasil Baik Finishing / Die Making')
+                                ->label('Hasil Baik Finishing')
                                 ->content(function ($get) {
                                     $spk = \App\Models\MasterSpk::with(['finishings', 'diemakings'])->find($get('spk_id'));
                                     if (! $spk) {
                                         return '-';
                                     }
                                     $fin = (int) $spk->finishings->sum('hasil_baik');
-                                    $die = (int) $spk->diemakings->sum('hasil_baik');
+                                    $finUnit = $spk->finishings->last()?->satuan_unit ?? 'pcs';
 
-                                    return 'Fin: ' . number_format($fin, 0, ',', '.') . ' · Die: ' . number_format($die, 0, ',', '.');
+                                    return number_format($fin, 0, ',', '.') . ' ' . $finUnit;
                                 }),
 
                             Forms\Components\Placeholder::make('info_already_packed')
-                                ->label('Sudah Ter-packing (Hasil Baik)')
+                                ->label('Sudah Di-Packing (Masuk FG)')
                                 ->content(fn ($get) => optional(\App\Models\MasterSpk::find($get('spk_id')))->total_good_packed !== null ? number_format(\App\Models\MasterSpk::find($get('spk_id'))->total_good_packed, 0, ',', '.') . ' pcs' : '-'),
 
-                            Forms\Components\Placeholder::make('info_sisa')
-                                ->label('Sisa Target Belum Packing')
+                            Forms\Components\Placeholder::make('info_sisa_finishing')
+                                ->label('Sisa Finishing Belum Di-Packing')
                                 ->content(function ($get) {
-                                    $spk = \App\Models\MasterSpk::find($get('spk_id'));
-                                    if (!$spk) return '-';
-                                    $sisa = max(0, $spk->order_qty - $spk->total_good_packed);
-                                    return number_format($sisa, 0, ',', '.') . ' pcs';
+                                    $spk = \App\Models\MasterSpk::with('finishings')->find($get('spk_id'));
+                                    if (! $spk) {
+                                        return '-';
+                                    }
+                                    $unpacked = $spk->unpacked_finishing_qty;
+                                    if ($unpacked <= 0) {
+                                        return new \Illuminate\Support\HtmlString('<span style="color:#10b981;font-weight:600;">0 pcs (Semua sudah masuk FG)</span>');
+                                    }
+
+                                    return new \Illuminate\Support\HtmlString('<span style="color:#f59e0b;font-weight:700;">' . number_format($unpacked, 0, ',', '.') . ' pcs (Belum masuk FG)</span>');
                                 }),
+
+                            Forms\Components\Placeholder::make('info_overproduction_alert')
+                                ->hiddenLabel()
+                                ->visible(function ($get): bool {
+                                    $spk = \App\Models\MasterSpk::with('finishings')->find($get('spk_id'));
+
+                                    return $spk !== null && $spk->unpacked_finishing_qty > 0;
+                                })
+                                ->content(function ($get) {
+                                    $spk = \App\Models\MasterSpk::with('finishings')->find($get('spk_id'));
+                                    if (! $spk || $spk->unpacked_finishing_qty <= 0) {
+                                        return '';
+                                    }
+                                    $unpacked = number_format($spk->unpacked_finishing_qty, 0, ',', '.');
+                                    $sisaOrder = max(0, $spk->order_qty - $spk->total_good_packed);
+                                    $extraMsg = $sisaOrder === 0
+                                        ? "Target order sudah terpenuhi — silakan transfer sisa <strong>{$unpacked} pcs</strong> dengan jenis <strong>Buffer Stock / Kelebihan Produksi</strong> agar masuk ke Gudang Finish Good."
+                                        : "Masih ada <strong>{$unpacked} pcs</strong> hasil baik Finishing yang belum ditransfer ke Gudang Finish Good (sisa target order: " . number_format($sisaOrder, 0, ',', '.') . ' pcs).';
+
+                                    return new \Illuminate\Support\HtmlString(
+                                        '<div style="border-radius:0.5rem;border:1px solid rgba(245,158,11,0.35);background:rgba(245,158,11,0.1);padding:0.55rem 0.85rem;font-size:0.8rem;color:#fbbf24;">'
+                                        . $extraMsg
+                                        . '</div>'
+                                    );
+                                })
+                                ->columnSpanFull(),
                         ])
                         ->columns(4)
                         ->visible(fn ($get) => filled($get('spk_id'))),
@@ -217,10 +250,18 @@ public static function form(Form $form): Form
                 ]),
 
             Tables\Columns\BadgeColumn::make('jenis_transfer')
+                ->formatStateUsing(fn (?string $state): string => match ($state) {
+                    'barang_hasil_baik' => 'Barang Hasil Baik',
+                    'buffer_stock'      => 'Buffer Stock',
+                    'label_kuning'      => 'Label Kuning',
+                    'blokir'            => 'Blokir',
+                    default             => (string) $state,
+                })
                 ->colors([
                     'success' => 'barang_hasil_baik',
+                    'info'    => 'buffer_stock',
                     'warning' => 'label_kuning',
-                    'danger' => 'blokir',
+                    'danger'  => 'blokir',
                 ]),
 
             Tables\Columns\TextColumn::make('total_satuan_penuh')
@@ -261,6 +302,7 @@ public static function form(Form $form): Form
                 ->label('Jenis Transfer')
                 ->options([
                     'barang_hasil_baik' => 'Barang Hasil Baik',
+                    'buffer_stock'      => 'Buffer Stock / Kelebihan Produksi',
                     'label_kuning'      => 'Label Kuning',
                     'blokir'            => 'Blokir',
                 ]),
@@ -279,6 +321,17 @@ public static function form(Form $form): Form
         ->actions([
 
             Tables\Actions\ActionGroup::make([
+
+                Tables\Actions\Action::make('transfer_sisa_buffer')
+                    ->label(fn (Packaging $record) => 'Transfer Sisa ke Buffer (+' . number_format((int) ($record->spk?->unpacked_finishing_qty ?? 0), 0, ',', '.') . ' pcs)')
+                    ->icon('heroicon-o-arrow-up-on-square-stack')
+                    ->color('info')
+                    ->visible(fn (Packaging $record): bool => (int) ($record->spk?->unpacked_finishing_qty ?? 0) > 0)
+                    ->url(fn (Packaging $record): string => static::getUrl('create', [
+                        'spk_id'         => $record->spk_id,
+                        'jenis_transfer' => 'buffer_stock',
+                        'qty'            => $record->spk?->unpacked_finishing_qty,
+                    ])),
 
                 Tables\Actions\EditAction::make(),
 

@@ -37,6 +37,36 @@ class MasterProsesProduksi extends Model
         ];
     }
 
+    public static function satuanHasilOptions(): array
+    {
+        return [
+            'm'    => 'Meter (m)',
+            'pcs'  => 'Pcs',
+            'lbr'  => 'Lembar / Sheet (lbr)',
+            'roll' => 'Roll',
+        ];
+    }
+
+    public static function satuanLabel(?string $code, string $fallback = 'm'): string
+    {
+        return match ($code ?: $fallback) {
+            'pcs'   => 'Pcs',
+            'lbr'   => 'Lembar',
+            'roll'  => 'Roll',
+            default => 'Meter',
+        };
+    }
+
+    public static function satuanSuffix(?string $code, string $fallback = 'm'): string
+    {
+        return match ($code ?: $fallback) {
+            'pcs'   => 'pcs',
+            'lbr'   => 'lbr',
+            'roll'  => 'roll',
+            default => 'm',
+        };
+    }
+
     /**
      * Ambil pilihan proses aktif untuk stasiun tertentu [nama_proses => nama_proses].
      */

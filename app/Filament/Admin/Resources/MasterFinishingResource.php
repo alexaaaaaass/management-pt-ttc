@@ -78,13 +78,15 @@ class MasterFinishingResource extends Resource
                                 $produk = e($spk->salesOrder?->itemable?->nama_barang ?? '-');
                                 $orderQty = number_format((int) $spk->order_qty, 0, ',', '.');
                                 $printGood = number_format((int) $spk->printings->sum('hasil_baik'), 0, ',', '.');
+                                $printUnit = $spk->printings->last()?->satuan_unit ?? 'm';
                                 $dieGood = number_format((int) $spk->diemakings->sum('hasil_baik'), 0, ',', '.');
+                                $dieUnit = $spk->diemakings->last()?->satuan_unit ?? 'lbr';
 
                                 return new HtmlString(
                                     '<div style="padding:8px 12px;border-radius:8px;border:1px solid rgba(59,130,246,0.35);background:rgba(59,130,246,0.1);font-size:12px;color:#60a5fa;">'
                                     . "Produk: <strong>{$produk}</strong> · Target Order: <strong>{$orderQty} pcs</strong>"
-                                    . " · Printing Baik: <strong>{$printGood} m</strong>"
-                                    . " · Die Making Baik: <strong>{$dieGood}</strong>"
+                                    . " · Printing Baik: <strong>{$printGood} " . e($printUnit) . '</strong>'
+                                    . " · Die Making Baik: <strong>{$dieGood} " . e($dieUnit) . '</strong>'
                                     . '</div>'
                                 );
                             })
@@ -165,24 +167,35 @@ class MasterFinishingResource extends Resource
                 Forms\Components\Section::make('Hasil Akhir & Rincian Waste Finishing')
                     ->columns(3)
                     ->schema([
+                        Forms\Components\Select::make('satuan_hasil')
+                            ->label('Satuan Hasil & Waste')
+                            ->options(MasterProsesProduksi::satuanHasilOptions())
+                            ->default('pcs')
+                            ->live()
+                            ->required()
+                            ->columnSpanFull(),
+
                         Forms\Components\TextInput::make('hasil_baik')
-                            ->label('Hasil Baik (Pcs / Lembar)')
+                            ->label(fn (Forms\Get $get) => 'Hasil Baik (' . MasterProsesProduksi::satuanLabel($get('satuan_hasil'), 'pcs') . ')')
                             ->numeric()
+                            ->suffix(fn (Forms\Get $get) => MasterProsesProduksi::satuanSuffix($get('satuan_hasil'), 'pcs'))
                             ->default(0)
                             ->minValue(0)
                             ->required(),
 
                         Forms\Components\TextInput::make('hasil_rusak')
-                            ->label('Hasil Rusak / Total Waste')
+                            ->label(fn (Forms\Get $get) => 'Hasil Rusak / Total Waste (' . MasterProsesProduksi::satuanLabel($get('satuan_hasil'), 'pcs') . ')')
                             ->numeric()
+                            ->suffix(fn (Forms\Get $get) => MasterProsesProduksi::satuanSuffix($get('satuan_hasil'), 'pcs'))
                             ->default(0)
                             ->minValue(0)
                             ->helperText('Otomatis terisi dari total Qty Waste di bawah bila rincian Note Waste diisi')
                             ->required(),
 
                         Forms\Components\TextInput::make('semi_waste')
-                            ->label('Semi Waste')
+                            ->label(fn (Forms\Get $get) => 'Semi Waste (' . MasterProsesProduksi::satuanLabel($get('satuan_hasil'), 'pcs') . ')')
                             ->numeric()
+                            ->suffix(fn (Forms\Get $get) => MasterProsesProduksi::satuanSuffix($get('satuan_hasil'), 'pcs'))
                             ->default(0)
                             ->minValue(0),
 
@@ -194,12 +207,13 @@ class MasterFinishingResource extends Resource
                             ->reorderable(false)
                             ->collapsible()
                             ->columnSpanFull()
-                            ->itemLabel(function (array $state): string {
+                            ->itemLabel(function (array $state, $livewire): string {
                                 $errId = $state['error_production_id'] ?? null;
                                 $name = $errId ? (ErrorProduction::whereKey($errId)->value('nama_error') ?? 'Note Waste') : 'Pilih Note Waste';
                                 $qty = (float) ($state['qty_waste'] ?? 0);
+                                $unit = MasterProsesProduksi::satuanSuffix($livewire->data['satuan_hasil'] ?? 'pcs', 'pcs');
 
-                                return $qty > 0 ? "{$name} — " . rtrim(rtrim(number_format($qty, 2, ',', '.'), '0'), ',') : $name;
+                                return $qty > 0 ? "{$name} — " . rtrim(rtrim(number_format($qty, 2, ',', '.'), '0'), ',') . " {$unit}" : $name;
                             })
                             ->deleteAction(
                                 fn (Forms\Components\Actions\Action $action) => $action->after(function (Forms\Get $get, Forms\Set $set) {
@@ -231,10 +245,11 @@ class MasterFinishingResource extends Resource
                                     ]),
 
                                 Forms\Components\TextInput::make('qty_waste')
-                                    ->label('Qty Waste')
+                                    ->label(fn (Forms\Get $get) => 'Qty Waste (' . MasterProsesProduksi::satuanLabel($get('../../satuan_hasil'), 'pcs') . ')')
                                     ->numeric()
                                     ->minValue(0)
                                     ->default(0)
+                                    ->suffix(fn (Forms\Get $get) => MasterProsesProduksi::satuanSuffix($get('../../satuan_hasil'), 'pcs'))
                                     ->required()
                                     ->live(onBlur: true)
                                     ->afterStateUpdated(function (Forms\Get $get, Forms\Set $set) {
@@ -301,14 +316,14 @@ class MasterFinishingResource extends Resource
 
                 Tables\Columns\TextColumn::make('hasil_baik')
                     ->label('Hasil Baik')
-                    ->formatStateUsing(fn ($state) => number_format((float) $state, 0, ',', '.'))
+                    ->formatStateUsing(fn ($state, MasterFinishing $record) => number_format((float) $state, 0, ',', '.') . ' ' . $record->satuan_unit)
                     ->badge()
                     ->color('success')
                     ->sortable(),
 
                 Tables\Columns\TextColumn::make('hasil_rusak')
                     ->label('Hasil Rusak')
-                    ->formatStateUsing(fn ($state) => number_format((float) $state, 0, ',', '.'))
+                    ->formatStateUsing(fn ($state, MasterFinishing $record) => number_format((float) $state, 0, ',', '.') . ' ' . $record->satuan_unit)
                     ->badge()
                     ->color(fn ($state) => (float) $state > 0 ? 'danger' : 'gray')
                     ->sortable(),
@@ -317,11 +332,13 @@ class MasterFinishingResource extends Resource
                     ->label('Note & Qty Waste')
                     ->getStateUsing(function (MasterFinishing $record): string {
                         if ($record->wastes->isNotEmpty()) {
-                            return $record->wastes->map(function ($w) {
+                            $unit = $record->satuan_unit;
+
+                            return $record->wastes->map(function ($w) use ($unit) {
                                 $name = $w->errorProduction?->nama_error ?? '-';
                                 $qty = rtrim(rtrim(number_format((float) $w->qty_waste, 2, ',', '.'), '0'), ',');
 
-                                return "{$name} ({$qty})";
+                                return "{$name} ({$qty} {$unit})";
                             })->implode(', ');
                         }
 

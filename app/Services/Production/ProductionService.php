@@ -429,13 +429,17 @@ class ProductionService
                         remarks: 'Hasil Packaging (Blokir) - ' . $packaging->kode_packaging
                     );
                 } else {
+                    $remarkPrefix = $packaging->jenis_transfer === 'buffer_stock'
+                        ? 'Transfer Buffer Stock / Kelebihan Produksi - '
+                        : 'Hasil Packaging Produksi - ';
+
                     $fgStockService->increaseStock(
                         finishGoodItemId: (int) $fgId,
                         qty: (float) $packaging->grand_total,
                         reference: $packaging,
                         source: 'PACKAGING',
                         spkId: $spk->id,
-                        remarks: 'Hasil Packaging Produksi - ' . $packaging->kode_packaging
+                        remarks: $remarkPrefix . $packaging->kode_packaging
                     );
                 }
             }
@@ -490,13 +494,17 @@ class ProductionService
                         remarks: 'Update Packaging (Blokir) - ' . $packaging->kode_packaging
                     );
                 } else {
+                    $remark = $packaging->jenis_transfer === 'buffer_stock'
+                        ? 'Update Transfer Buffer Stock / Kelebihan Produksi - ' . $packaging->kode_packaging
+                        : 'Update Packaging Produksi - ' . $packaging->kode_packaging;
+
                     $fgStockService->increaseStock(
                         finishGoodItemId: (int) $newFgId,
                         qty: $newGrandTotal,
                         reference: $packaging,
                         source: 'PACKAGING',
                         spkId: $packaging->spk_id,
-                        remarks: 'Update Packaging Produksi - ' . $packaging->kode_packaging
+                        remarks: $remark
                     );
                 }
             }

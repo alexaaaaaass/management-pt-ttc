@@ -18,6 +18,7 @@ class DieMaking extends Model
         'proses_list',
         'tahap_diemaking',
         'status_laporan',
+        'satuan_hasil',
         'hasil_baik',
         'hasil_rusak',
         'semi_waste',
@@ -35,8 +36,14 @@ class DieMaking extends Model
     protected $attributes = [
         'tahap_diemaking' => 'Laporan Akhir',
         'status_laporan'  => 'selesai',
+        'satuan_hasil'    => 'lbr',
         'keterangan_spk'  => 'Reguler',
     ];
+
+    public function getSatuanUnitAttribute(): string
+    {
+        return MasterProsesProduksi::satuanSuffix($this->satuan_hasil, 'lbr');
+    }
 
     public function spk()
     {

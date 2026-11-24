@@ -76,6 +76,7 @@ class DieMakingResource extends Resource
                             $produk = e($spk->salesOrder?->itemable?->nama_barang ?? '-');
                             $orderQty = number_format((int) $spk->order_qty, 0, ',', '.');
                             $printGood = number_format((int) $spk->printings->sum('hasil_baik'), 0, ',', '.');
+                            $printUnit = $spk->printings->last()?->satuan_unit ?? 'm';
                             $printProses = $spk->printings->map(fn ($p) => $p->proses_summary)->filter(fn ($s) => $s !== '-')->unique()->implode(' | ');
 
                             if ($spk->printings->isEmpty()) {
@@ -88,7 +89,7 @@ class DieMakingResource extends Resource
 
                             return new HtmlString(
                                 '<div style="padding:8px 12px;border-radius:8px;border:1px solid rgba(59,130,246,0.35);background:rgba(59,130,246,0.1);font-size:12px;color:#60a5fa;">'
-                                . "Produk: <strong>{$produk}</strong> · Target Order: <strong>{$orderQty} pcs</strong> · Hasil Baik Printing: <strong>{$printGood} m</strong>"
+                                . "Produk: <strong>{$produk}</strong> · Target Order: <strong>{$orderQty} pcs</strong> · Hasil Baik Printing: <strong>{$printGood} " . e($printUnit) . '</strong>'
                                 . ($printProses ? ' · Proses Printing: <strong>' . e($printProses) . '</strong>' : '')
                                 . '</div>'
                             );
@@ -159,24 +160,35 @@ class DieMakingResource extends Resource
             Forms\Components\Section::make('Hasil Akhir & Rincian Waste Die Making')
                 ->columns(3)
                 ->schema([
+                    Forms\Components\Select::make('satuan_hasil')
+                        ->label('Satuan Hasil & Waste')
+                        ->options(MasterProsesProduksi::satuanHasilOptions())
+                        ->default('lbr')
+                        ->live()
+                        ->required()
+                        ->columnSpanFull(),
+
                     Forms\Components\TextInput::make('hasil_baik')
-                        ->label('Hasil Baik (Lembar / Pcs)')
+                        ->label(fn (Forms\Get $get) => 'Hasil Baik (' . MasterProsesProduksi::satuanLabel($get('satuan_hasil'), 'lbr') . ')')
                         ->numeric()
+                        ->suffix(fn (Forms\Get $get) => MasterProsesProduksi::satuanSuffix($get('satuan_hasil'), 'lbr'))
                         ->default(0)
                         ->minValue(0)
                         ->required(),
 
                     Forms\Components\TextInput::make('hasil_rusak')
-                        ->label('Hasil Rusak / Total Waste')
+                        ->label(fn (Forms\Get $get) => 'Hasil Rusak / Total Waste (' . MasterProsesProduksi::satuanLabel($get('satuan_hasil'), 'lbr') . ')')
                         ->numeric()
+                        ->suffix(fn (Forms\Get $get) => MasterProsesProduksi::satuanSuffix($get('satuan_hasil'), 'lbr'))
                         ->default(0)
                         ->minValue(0)
                         ->helperText('Otomatis terisi dari total Qty Waste di bawah bila rincian Note Waste diisi')
                         ->required(),
 
                     Forms\Components\TextInput::make('semi_waste')
-                        ->label('Semi Waste')
+                        ->label(fn (Forms\Get $get) => 'Semi Waste (' . MasterProsesProduksi::satuanLabel($get('satuan_hasil'), 'lbr') . ')')
                         ->numeric()
+                        ->suffix(fn (Forms\Get $get) => MasterProsesProduksi::satuanSuffix($get('satuan_hasil'), 'lbr'))
                         ->default(0)
                         ->minValue(0)
                         ->required(),
@@ -189,12 +201,13 @@ class DieMakingResource extends Resource
                         ->reorderable(false)
                         ->collapsible()
                         ->columnSpanFull()
-                        ->itemLabel(function (array $state): string {
+                        ->itemLabel(function (array $state, $livewire): string {
                             $errId = $state['error_production_id'] ?? null;
                             $name = $errId ? (ErrorProduction::whereKey($errId)->value('nama_error') ?? 'Note Waste') : 'Pilih Note Waste';
                             $qty = (float) ($state['qty_waste'] ?? 0);
+                            $unit = MasterProsesProduksi::satuanSuffix($livewire->data['satuan_hasil'] ?? 'lbr', 'lbr');
 
-                            return $qty > 0 ? "{$name} — " . rtrim(rtrim(number_format($qty, 2, ',', '.'), '0'), ',') : $name;
+                            return $qty > 0 ? "{$name} — " . rtrim(rtrim(number_format($qty, 2, ',', '.'), '0'), ',') . " {$unit}" : $name;
                         })
                         ->deleteAction(
                             fn (Forms\Components\Actions\Action $action) => $action->after(function (Forms\Get $get, Forms\Set $set) {
@@ -226,10 +239,11 @@ class DieMakingResource extends Resource
                                 ]),
 
                             Forms\Components\TextInput::make('qty_waste')
-                                ->label('Qty Waste')
+                                ->label(fn (Forms\Get $get) => 'Qty Waste (' . MasterProsesProduksi::satuanLabel($get('../../satuan_hasil'), 'lbr') . ')')
                                 ->numeric()
                                 ->minValue(0)
                                 ->default(0)
+                                ->suffix(fn (Forms\Get $get) => MasterProsesProduksi::satuanSuffix($get('../../satuan_hasil'), 'lbr'))
                                 ->required()
                                 ->live(onBlur: true)
                                 ->afterStateUpdated(function (Forms\Get $get, Forms\Set $set) {
@@ -294,20 +308,20 @@ class DieMakingResource extends Resource
 
                 Tables\Columns\TextColumn::make('hasil_baik')
                     ->label('Hasil Baik')
-                    ->formatStateUsing(fn ($state) => number_format((float) $state, 0, ',', '.'))
+                    ->formatStateUsing(fn ($state, DieMaking $record) => number_format((float) $state, 0, ',', '.') . ' ' . $record->satuan_unit)
                     ->color('success')
                     ->weight('bold')
                     ->sortable(),
 
                 Tables\Columns\TextColumn::make('hasil_rusak')
                     ->label('Hasil Rusak')
-                    ->formatStateUsing(fn ($state) => number_format((float) $state, 0, ',', '.'))
+                    ->formatStateUsing(fn ($state, DieMaking $record) => number_format((float) $state, 0, ',', '.') . ' ' . $record->satuan_unit)
                     ->color(fn ($state) => (float) $state > 0 ? 'danger' : 'gray')
                     ->sortable(),
 
                 Tables\Columns\TextColumn::make('semi_waste')
                     ->label('Semi Waste')
-                    ->formatStateUsing(fn ($state) => number_format((float) $state, 0, ',', '.'))
+                    ->formatStateUsing(fn ($state, DieMaking $record) => number_format((float) $state, 0, ',', '.') . ' ' . $record->satuan_unit)
                     ->color(fn ($state) => (float) $state > 0 ? 'warning' : 'gray')
                     ->sortable(),
 
@@ -315,11 +329,13 @@ class DieMakingResource extends Resource
                     ->label('Note & Qty Waste')
                     ->getStateUsing(function (DieMaking $record): string {
                         if ($record->wastes->isNotEmpty()) {
-                            return $record->wastes->map(function ($w) {
+                            $unit = $record->satuan_unit;
+
+                            return $record->wastes->map(function ($w) use ($unit) {
                                 $name = $w->errorProduction?->nama_error ?? '-';
                                 $qty = rtrim(rtrim(number_format((float) $w->qty_waste, 2, ',', '.'), '0'), ',');
 
-                                return "{$name} ({$qty})";
+                                return "{$name} ({$qty} {$unit})";
                             })->implode(', ');
                         }
 

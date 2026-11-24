@@ -131,6 +131,25 @@ class MasterSpk extends Model
             ->sum('grand_total');
     }
 
+    public function getTotalFinishingGoodAttribute(): int
+    {
+        if ($this->relationLoaded('finishings')) {
+            return (int) $this->finishings->sum('hasil_baik');
+        }
+
+        return (int) $this->finishings()->sum('hasil_baik');
+    }
+
+    public function getUnpackedFinishingQtyAttribute(): int
+    {
+        return max(0, $this->total_finishing_good - $this->total_good_packed);
+    }
+
+    public function getBufferExcessQtyAttribute(): int
+    {
+        return max(0, $this->total_good_packed - $this->order_qty);
+    }
+
     public function getTotalShippedAttribute(): int
     {
         return (int) $this->suratJalans()->sum('qty_pengiriman');

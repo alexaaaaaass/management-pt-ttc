@@ -2,7 +2,9 @@
 
 namespace App\Filament\Admin\Resources\SuratPerintahKerjaResource\Pages;
 
+use App\Filament\Admin\Resources\PackagingResource;
 use App\Filament\Admin\Resources\SuratPerintahKerjaResource;
+use Filament\Actions;
 use Filament\Resources\Pages\ViewRecord;
 use Filament\Infolists\Infolist;
 use Filament\Infolists\Components\Section;
@@ -13,6 +15,24 @@ use Filament\Infolists\Components\RepeatableEntry;
 class ViewSuratPerintahKerja extends ViewRecord
 {
     protected static string $resource = SuratPerintahKerjaResource::class;
+
+    protected function getHeaderActions(): array
+    {
+        $unpacked = (int) $this->record->unpacked_finishing_qty;
+
+        return [
+            Actions\Action::make('transfer_sisa_buffer')
+                ->label('Transfer Sisa ke Buffer Stock (+' . number_format($unpacked, 0, ',', '.') . ' pcs)')
+                ->icon('heroicon-o-arrow-up-on-square-stack')
+                ->color('warning')
+                ->visible($unpacked > 0)
+                ->url(fn () => PackagingResource::getUrl('create', [
+                    'spk_id'         => $this->record->id,
+                    'jenis_transfer' => 'buffer_stock',
+                    'qty'            => $unpacked,
+                ])),
+        ];
+    }
 
     public function infolist(Infolist $infolist): Infolist
     {
@@ -28,7 +48,7 @@ class ViewSuratPerintahKerja extends ViewRecord
                         'style' => 'border-left: 5px solid #10b981; border-radius: 10px; padding: 12px;',
                     ])
                     ->schema([
-                        Grid::make(5)
+                        Grid::make(6)
                             ->schema([
                                 TextEntry::make('order_qty')
                                     ->label('Target Qty Order')
@@ -36,11 +56,23 @@ class ViewSuratPerintahKerja extends ViewRecord
                                     ->badge()
                                     ->color('primary'),
 
+                                TextEntry::make('total_finishing_good')
+                                    ->label('Hasil Baik Finishing')
+                                    ->numeric()
+                                    ->badge()
+                                    ->color('warning'),
+
                                 TextEntry::make('total_good_packed')
-                                    ->label('Barang Jadi Selesai')
+                                    ->label('Masuk Gudang (Packed)')
                                     ->numeric()
                                     ->badge()
                                     ->color('info'),
+
+                                TextEntry::make('unpacked_finishing_qty')
+                                    ->label('Sisa Belum Di-Packing')
+                                    ->numeric()
+                                    ->badge()
+                                    ->color(fn ($state) => (int) $state > 0 ? 'warning' : 'success'),
 
                                 TextEntry::make('total_shipped')
                                     ->label('Terkirim ke Customer')
@@ -53,12 +85,6 @@ class ViewSuratPerintahKerja extends ViewRecord
                                     ->numeric()
                                     ->badge()
                                     ->color(fn ($state) => $state <= 0 ? 'danger' : 'success'),
-
-                                TextEntry::make('completion_rate')
-                                    ->label('Progres Pemenuhan')
-                                    ->formatStateUsing(fn ($state) => $state . '%')
-                                    ->badge()
-                                    ->color(fn ($state) => $state >= 100 ? 'success' : ($state > 0 ? 'warning' : 'danger')),
                             ]),
                     ]),
 
@@ -214,26 +240,76 @@ class ViewSuratPerintahKerja extends ViewRecord
                                             ->label('Tanggal Cetak')
                                             ->date(),
 
-                                        TextEntry::make('proses_printing')
+                                        TextEntry::make('proses_summary')
+                                            ->label('Proses Printing')
                                             ->badge(),
 
-                                        TextEntry::make('tahap_printing')
+                                        TextEntry::make('status_laporan')
+                                            ->label('Status')
                                             ->badge(),
 
                                         TextEntry::make('hasil_baik')
+                                            ->formatStateUsing(fn ($state, $record) => number_format((float) $state, 0, ',', '.') . ' ' . $record->satuan_unit)
                                             ->badge()
                                             ->color('success'),
 
                                         TextEntry::make('hasil_rusak')
+                                            ->formatStateUsing(fn ($state, $record) => number_format((float) $state, 0, ',', '.') . ' ' . $record->satuan_unit)
                                             ->badge()
                                             ->color('danger'),
 
                                         TextEntry::make('semi_waste')
+                                            ->formatStateUsing(fn ($state, $record) => number_format((float) $state, 0, ',', '.') . ' ' . $record->satuan_unit)
                                             ->badge()
                                             ->color('warning'),
                                     ])
                             ])
                             ->placeholder('Belum ada data pengerjaan Printing.')
+                    ]),
+
+                /*
+                |--------------------------------------------------------------------------
+                | STASIUN 2B: INFORMASI PRODUKSI DIE MAKING
+                |--------------------------------------------------------------------------
+                */
+                Section::make('2B. Informasi Produksi Die Making')
+                    ->extraAttributes([
+                        'style' => 'border-left: 5px solid #0ea5e9; border-radius: 10px; padding: 12px;',
+                    ])
+                    ->schema([
+                        RepeatableEntry::make('diemakings')
+                            ->schema([
+                                Grid::make(6)
+                                    ->schema([
+                                        TextEntry::make('tanggal_entri')
+                                            ->label('Tanggal')
+                                            ->date(),
+
+                                        TextEntry::make('proses_summary')
+                                            ->label('Proses Die Making')
+                                            ->badge(),
+
+                                        TextEntry::make('status_laporan')
+                                            ->label('Status')
+                                            ->badge(),
+
+                                        TextEntry::make('hasil_baik')
+                                            ->formatStateUsing(fn ($state, $record) => number_format((float) $state, 0, ',', '.') . ' ' . $record->satuan_unit)
+                                            ->badge()
+                                            ->color('success'),
+
+                                        TextEntry::make('hasil_rusak')
+                                            ->formatStateUsing(fn ($state, $record) => number_format((float) $state, 0, ',', '.') . ' ' . $record->satuan_unit)
+                                            ->badge()
+                                            ->color('danger'),
+
+                                        TextEntry::make('semi_waste')
+                                            ->formatStateUsing(fn ($state, $record) => number_format((float) $state, 0, ',', '.') . ' ' . $record->satuan_unit)
+                                            ->badge()
+                                            ->color('warning'),
+                                    ])
+                            ])
+                            ->placeholder('Belum ada data pengerjaan Die Making.')
                     ]),
 
                 /*
@@ -253,21 +329,26 @@ class ViewSuratPerintahKerja extends ViewRecord
                                         TextEntry::make('kode_finishing')
                                             ->label('Kode Finishing'),
 
-                                        TextEntry::make('proses_finishing')
+                                        TextEntry::make('proses_summary')
+                                            ->label('Proses Finishing')
                                             ->badge(),
 
-                                        TextEntry::make('tahap_finishing')
+                                        TextEntry::make('status_laporan')
+                                            ->label('Status')
                                             ->badge(),
 
                                         TextEntry::make('hasil_baik')
+                                            ->formatStateUsing(fn ($state, $record) => number_format((float) $state, 0, ',', '.') . ' ' . $record->satuan_unit)
                                             ->badge()
                                             ->color('success'),
 
                                         TextEntry::make('hasil_rusak')
+                                            ->formatStateUsing(fn ($state, $record) => number_format((float) $state, 0, ',', '.') . ' ' . $record->satuan_unit)
                                             ->badge()
                                             ->color('danger'),
 
                                         TextEntry::make('semi_waste')
+                                            ->formatStateUsing(fn ($state, $record) => number_format((float) $state, 0, ',', '.') . ' ' . $record->satuan_unit)
                                             ->badge()
                                             ->color('warning'),
                                     ])
@@ -296,8 +377,20 @@ class ViewSuratPerintahKerja extends ViewRecord
                                         TextEntry::make('satuan_transfer'),
 
                                         TextEntry::make('jenis_transfer')
+                                            ->formatStateUsing(fn (?string $state): string => match ($state) {
+                                                'barang_hasil_baik' => 'Barang Hasil Baik',
+                                                'buffer_stock'      => 'Buffer Stock',
+                                                'label_kuning'      => 'Label Kuning',
+                                                'blokir'            => 'Blokir',
+                                                default             => (string) $state,
+                                            })
                                             ->badge()
-                                            ->color(fn ($state) => $state === 'barang_hasil_baik' ? 'success' : ($state === 'blokir' ? 'danger' : 'warning')),
+                                            ->color(fn ($state) => match ($state) {
+                                                'barang_hasil_baik' => 'success',
+                                                'buffer_stock'      => 'info',
+                                                'blokir'            => 'danger',
+                                                default             => 'warning',
+                                            }),
 
                                         TextEntry::make('total_satuan_penuh')
                                             ->badge()
