@@ -100,9 +100,13 @@ HEADER
 
 <div class="title">
 
+<div style="font-size:10px; font-weight:bold; letter-spacing:1px; color:#2352e5;">
+    IMR {{ strtoupper($imr->stasiun_label ?? 'PRINTING') }}
+</div>
+
 <div
 style="
-margin-top:8px;
+margin-top:4px;
 font-size:20px;
 font-weight:bold;
 ">

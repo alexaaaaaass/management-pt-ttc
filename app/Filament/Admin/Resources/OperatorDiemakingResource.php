@@ -16,7 +16,7 @@ class OperatorDiemakingResource extends Resource
 
     protected static ?string $navigationGroup = 'Die Making';
 
-    protected static ?int $navigationSort = 3;
+    protected static ?int $navigationSort = 4;
 
     protected static ?string $navigationIcon = 'heroicon-o-user';
 

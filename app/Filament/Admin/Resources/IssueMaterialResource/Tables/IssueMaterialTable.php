@@ -50,7 +50,7 @@ class IssueMaterialTable
 
                     ->badge()
 
-                    ->color('primary'),
+                    ->color(fn ($record): string => $record->stasiun === \App\Models\IMRPrinting::STASIUN_DIEMAKING ? 'info' : 'primary'),
 
                 /*
                 |--------------------------------------------------------------------------
@@ -264,6 +264,15 @@ class IssueMaterialTable
 
                     }),
 
+            ])
+
+            ->filters([
+                Tables\Filters\SelectFilter::make('stasiun')
+                    ->label('Stasiun / Divisi')
+                    ->options([
+                        \App\Models\IMRPrinting::STASIUN_PRINTING  => 'Printing',
+                        \App\Models\IMRPrinting::STASIUN_DIEMAKING => 'Die Making',
+                    ]),
             ])
 
             ->actions([

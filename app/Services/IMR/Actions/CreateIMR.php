@@ -2,8 +2,9 @@
 
 namespace App\Services\IMR\Actions;
 
-use App\Models\ImrPrinting;
+use App\Models\IMRPrinting;
 use App\Models\MasterDepartemen;
+use App\Models\MasterItem;
 use App\Models\PracetakPlateArchive;
 use App\Models\PracetakProcess;
 use Illuminate\Support\Facades\DB;
@@ -11,16 +12,22 @@ use Illuminate\Validation\ValidationException;
 
 class CreateIMR
 {
-    public function handle(array $data): ImrPrinting
+    public function handle(array $data): IMRPrinting
     {
-        $items = $data['imr_items'] ?? [];
-        unset($data['imr_items']);
+        $stasiun = $data['stasiun'] ?? IMRPrinting::STASIUN_PRINTING;
+        $data['stasiun'] = $stasiun;
+        $isDieMaking = $stasiun === IMRPrinting::STASIUN_DIEMAKING;
 
-        $requestPlate = (bool) ($data['request_plate'] ?? false);
+        $items = $data['imr_items'] ?? [];
+        unset($data['imr_items'], $data['no_imr']);
+
+        $requestPlate = ! $isDieMaking && (bool) ($data['request_plate'] ?? false);
         $validItems = [];
         foreach ($items as $item) {
+            $itemId = (int) ($item['item_id'] ?? 0);
             $qtyReq = max(0, (float) ($item['qty_input'] ?? $item['qty_request'] ?? 0));
-            if ($qtyReq > 0) {
+            if ($itemId > 0 && $qtyReq > 0) {
+                $item['item_id'] = $itemId;
                 $item['qty_request'] = $qtyReq;
                 $validItems[] = $item;
             }
@@ -28,7 +35,9 @@ class CreateIMR
 
         if (empty($validItems) && ! $requestPlate) {
             throw ValidationException::withMessages([
-                'imr_items' => 'Minimal isi Qty Request pada 1 material atau aktifkan Permintaan Plate Cetak dari Rak Pra Cetak.',
+                'imr_items' => $isDieMaking
+                    ? 'Minimal isi Qty Request lebih dari 0 pada 1 material (muat dari BOM SPK atau tambah material manual).'
+                    : 'Minimal isi Qty Request pada 1 material atau aktifkan Permintaan Plate Cetak dari Rak Pra Cetak.',
             ]);
         }
 
@@ -81,21 +90,37 @@ class CreateIMR
             $data['plate_notes'] = null;
         }
 
-        $departemen = MasterDepartemen::where('kode', 'PRNT')->first()
-            ?? MasterDepartemen::where('nama_departemen', 'like', '%Print%')->first()
-            ?? MasterDepartemen::firstOrFail();
+        if (empty($data['departemen_id'])) {
+            if ($isDieMaking) {
+                $departemen = MasterDepartemen::where('kode', 'DIEM')->first()
+                    ?? MasterDepartemen::where('nama_departemen', 'like', '%Die%')->first()
+                    ?? MasterDepartemen::firstOrFail();
+            } else {
+                $departemen = MasterDepartemen::where('kode', 'PRNT')->first()
+                    ?? MasterDepartemen::where('kode', 'PRT')->first()
+                    ?? MasterDepartemen::where('nama_departemen', 'like', '%Print%')->first()
+                    ?? MasterDepartemen::firstOrFail();
+            }
+            $data['departemen_id'] = $departemen->id;
+        }
 
-        $data['departemen_id'] = $departemen->id;
         $data['status'] = 'Pending';
 
         return DB::transaction(function () use ($data, $validItems) {
-            $imr = ImrPrinting::create($data);
+            $imr = IMRPrinting::create($data);
+
+            $itemIds = array_unique(array_column($validItems, 'item_id'));
+            $masterItems = MasterItem::with('satuan')->whereIn('id', $itemIds)->get()->keyBy('id');
 
             foreach ($validItems as $item) {
+                $masterItem = $masterItems->get($item['item_id']);
+                $satuan = trim((string) ($item['satuan'] ?? ''))
+                    ?: ($masterItem?->satuan?->nama_satuan ?? '-');
+
                 $imr->items()->create([
                     'item_id'        => $item['item_id'],
-                    'satuan'         => $item['satuan'],
-                    'total_pesanan'  => $item['total_pesanan'],
+                    'satuan'         => $satuan,
+                    'total_pesanan'  => (float) ($item['total_pesanan'] ?? 0),
                     'qty_request'    => $item['qty_request'],
                     'qty_approved'   => 0,
                     'qty_issued'     => 0,

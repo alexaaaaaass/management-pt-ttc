@@ -26,6 +26,7 @@ class IMRPrintingResource extends Resource
     public static function getEloquentQuery(): Builder
     {
         return parent::getEloquentQuery()
+            ->where('stasiun', ImrPrinting::STASIUN_PRINTING)
             ->with(['spk', 'departemen', 'items', 'pracetakProcess', 'plateArchive'])
             ->orderByDesc('created_at')
             ->orderByDesc('id');
