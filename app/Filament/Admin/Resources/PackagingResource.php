@@ -139,14 +139,19 @@ public static function form(Form $form): Form
             */
 
             Forms\Components\Section::make('Satuan Penuh')
+                ->description('Kemasan yang isinya penuh/standar (contoh: 5 Box × 10.000 pcs).')
                 ->schema([
 
                     Forms\Components\TextInput::make('jumlah_satuan_penuh')
+                        ->label('Jumlah Satuan Penuh')
+                        ->helperText('Jumlah kemasan penuh (Box / Pallete / Pack)')
                         ->quantityMask(0)
                         ->default(0)
                         ->live(),
 
                     Forms\Components\TextInput::make('qty_per_satuan_penuh')
+                        ->label('Qty per Satuan Penuh')
+                        ->helperText('Isi pcs di dalam 1 kemasan penuh')
                         ->quantityMask(0)
                         ->default(0)
                         ->live(),
@@ -161,14 +166,19 @@ public static function form(Form $form): Form
             */
 
             Forms\Components\Section::make('Satuan Sisa')
+                ->description('Kemasan tambahan yang tidak penuh bila ada sisa ganjil (biarkan 0 jika semua sudah pas penuh).')
                 ->schema([
 
                     Forms\Components\TextInput::make('jumlah_satuan_sisa')
+                        ->label('Jumlah Satuan Sisa')
+                        ->helperText('Jumlah kemasan sisa (biasanya 1 atau 0)')
                         ->quantityMask(0)
                         ->default(0)
                         ->live(),
 
                     Forms\Components\TextInput::make('qty_per_satuan_sisa')
+                        ->label('Qty per Satuan Sisa')
+                        ->helperText('Isi pcs di dalam kemasan sisa')
                         ->quantityMask(0)
                         ->default(0)
                         ->live(),
