@@ -460,7 +460,11 @@ class InvoiceResource extends Resource
     public static function table(Table $table): Table
     {
         return $table
-            ->defaultSort('tanggal_invoice', 'asc')
+            ->defaultSort(function (Builder $query, string $direction): Builder {
+                return $query
+                    ->orderBy('invoices.tanggal_invoice', $direction)
+                    ->orderBy('invoices.id', $direction);
+            }, 'desc')
             ->columns([
                 Tables\Columns\TextColumn::make('kode_invoice')
                     ->label('No. Invoice')

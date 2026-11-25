@@ -167,7 +167,7 @@ class MasterMaterialPlateResource extends Resource
     public static function table(Table $table): Table
     {
         return $table
-            ->defaultSort('kode_material', 'asc')
+            ->defaultSort('id', 'desc')
             ->columns([
                 Tables\Columns\TextColumn::make('kode_material')
                     ->label('Kode')

@@ -31,6 +31,17 @@ class AppServiceProvider extends ServiceProvider
             return \App\Support\MoneyHelper::applyQuantityMask($this, $precision);
         });
 
+        // Default urutan terbaru di halaman pertama untuk seluruh tabel Filament
+        \Filament\Tables\Table::configureUsing(function (\Filament\Tables\Table $table): void {
+            $table->defaultSort(function (\Illuminate\Database\Eloquent\Builder $query, string $direction): \Illuminate\Database\Eloquent\Builder {
+                if (filled($query->toBase()->orders)) {
+                    return $query;
+                }
+
+                return $query->orderBy($query->getModel()->getQualifiedKeyName(), $direction);
+            }, 'desc');
+        });
+
         Invoice::observe(
             InvoiceObserver::class
         );

@@ -30,6 +30,10 @@ class ApprovalForm extends Model
         'tanggal' => 'date',
     ];
 
+    protected $attributes = [
+        'status' => 'draft',
+    ];
+
     public function customer(): BelongsTo
     {
         return $this->belongsTo(Customer::class);

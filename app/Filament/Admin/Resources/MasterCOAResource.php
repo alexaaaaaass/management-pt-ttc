@@ -142,11 +142,12 @@ class MasterCOAResource extends Resource
     public static function table(Table $table): Table
     {
         return $table
-            ->defaultSort('kode_akun', 'asc')
+            ->defaultSort('id', 'desc')
             ->columns([
                 Tables\Columns\TextColumn::make('kode_akun')
                     ->label('Kode')
                     ->searchable()
+                    ->sortable()
                     ->badge()
                     ->color('primary'),
 

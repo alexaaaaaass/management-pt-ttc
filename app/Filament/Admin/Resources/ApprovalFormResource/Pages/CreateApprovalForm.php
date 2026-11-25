@@ -11,7 +11,9 @@ class CreateApprovalForm extends CreateRecord
 
     protected function mutateFormDataBeforeCreate(array $data): array
     {
+        $data['status'] = 'draft';
         $data['created_by'] = auth()->id();
+
         return $data;
     }
 

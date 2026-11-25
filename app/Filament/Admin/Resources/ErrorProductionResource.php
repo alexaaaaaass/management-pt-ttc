@@ -56,7 +56,7 @@ class ErrorProductionResource extends Resource
     public static function table(Table $table): Table
     {
         return $table
-            ->defaultSort('kode_error', 'asc')
+            ->defaultSort('id', 'desc')
             ->columns([
                 Tables\Columns\TextColumn::make('kode_error')
                     ->label('Kode Waste')

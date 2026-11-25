@@ -89,6 +89,11 @@ class ApprovalFormResource extends Resource
                                         'cancelled'          => 'Batal',
                                     ])
                                     ->default('draft')
+                                    ->disabled(fn (string $operation): bool => $operation === 'create')
+                                    ->dehydrated(true)
+                                    ->helperText(fn (string $operation): ?string => $operation === 'create'
+                                        ? 'Dokumen baru otomatis berstatus Draft.'
+                                        : null)
                                     ->required(),
                             ]),
                         ]),
@@ -264,6 +269,7 @@ class ApprovalFormResource extends Resource
     public static function table(Table $table): Table
     {
         return $table
+            ->defaultSort('id', 'desc')
             ->columns([
                 Tables\Columns\TextColumn::make('form_no')
                     ->label('Form No')

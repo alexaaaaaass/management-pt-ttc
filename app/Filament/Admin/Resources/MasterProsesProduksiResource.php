@@ -81,7 +81,7 @@ class MasterProsesProduksiResource extends Resource
     public static function table(Table $table): Table
     {
         return $table
-            ->defaultSort('stasiun', 'asc')
+            ->defaultSort('id', 'desc')
             ->columns([
                 Tables\Columns\TextColumn::make('kode_proses')
                     ->label('Kode')

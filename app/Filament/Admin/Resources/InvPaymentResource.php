@@ -19,6 +19,7 @@ use Filament\Forms\Set;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
 
 
 class InvPaymentResource extends Resource
@@ -340,7 +341,11 @@ class InvPaymentResource extends Resource
     public static function table(Table $table): Table
     {
         return $table
-            ->defaultSort('tanggal_bayar', 'asc')
+            ->defaultSort(function (Builder $query, string $direction): Builder {
+                return $query
+                    ->orderBy('inv_payments.tanggal_bayar', $direction)
+                    ->orderBy('inv_payments.id', $direction);
+            }, 'desc')
             ->columns([
                 Tables\Columns\TextColumn::make('invoice.kode_invoice')
                     ->label('No. Invoice')
