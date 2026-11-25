@@ -935,6 +935,23 @@ class PracetakProcessResource extends Resource
                         ->visible(fn (PracetakProcess $record) => $record->status === 'selesai' && filled($record->spk_id))
                         ->url(fn (PracetakProcess $record) => IMRPrintingResource::getUrl('create', ['spk_id' => $record->spk_id])),
 
+                    Tables\Actions\Action::make('detailKerusakan')
+                        ->label('Detail Kerusakan & Biaya Plate')
+                        ->icon('heroicon-o-exclamation-triangle')
+                        ->color('danger')
+                        ->modalHeading(fn (PracetakProcess $record) => 'Detail Kerusakan & Biaya Plate — ' . ($record->nama_plat ?: 'Pra Cetak'))
+                        ->modalWidth('3xl')
+                        ->modalSubmitAction(false)
+                        ->modalCancelActionLabel('Tutup')
+                        ->modalContent(function (PracetakProcess $record) {
+                            $summary = app(PracetakCostingService::class)->calculateProcessDamageSummary($record);
+
+                            return view('filament.pracetak.damage-detail-modal', [
+                                'process' => $record,
+                                'summary' => $summary,
+                            ]);
+                        }),
+
                     Tables\Actions\EditAction::make(),
                 ])
                 ->label('Aksi')
@@ -951,7 +968,7 @@ class PracetakProcessResource extends Resource
     public static function getEloquentQuery(): Builder
     {
         return parent::getEloquentQuery()
-            ->with(['spk', 'approvalForm', 'operator', 'mesin', 'materialUsages']);
+            ->with(['spk', 'approvalForm', 'operator', 'mesin', 'materialUsages.masterPlate', 'generatedArchive', 'plateArchive']);
     }
 
     public static function getRelations(): array

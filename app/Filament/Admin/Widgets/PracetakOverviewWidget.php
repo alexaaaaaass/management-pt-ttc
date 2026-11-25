@@ -39,10 +39,10 @@ class PracetakOverviewWidget extends BaseWidget
         $activeQueue = (int) ($counts->active_queue ?? 0);
         $plateMaking = (int) ($counts->plate_making_count ?? 0);
         $totalBaik = (int) ($counts->total_baik ?? 0);
-        $totalRusak = (int) ($counts->total_rusak ?? 0);
-        $wasteRate = ($totalBaik + $totalRusak) > 0
-            ? round(($totalRusak / ($totalBaik + $totalRusak)) * 100, 1)
-            : 0.0;
+        $damageOverall = app(\App\Services\Pracetak\PracetakCostingService::class)->calculateOverallDamageSummary();
+        $totalRusak = (int) $damageOverall['total_rusak'];
+        $wasteRate = (float) $damageOverall['waste_rate'];
+        $totalDamageCost = (float) $damageOverall['total_damage_cost'];
 
         $activeArchives = PracetakPlateArchive::whereIn('status_kondisi', ['tersimpan', 'dipakai_printing'])->count();
 
@@ -67,8 +67,12 @@ class PracetakOverviewWidget extends BaseWidget
                 ->color($totalSheet <= 5 ? 'danger' : 'primary'),
 
             Stat::make('Arsip Plate Aktif (Rak)', $activeArchives . ' Set')
-                ->description("Rasio Kerusakan Plate: {$wasteRate}% ({$totalRusak} rusak)")
-                ->color($wasteRate > 15 ? 'danger' : 'success'),
+                ->description("Rusak: {$totalRusak} lbr ({$wasteRate}%) · Biaya Rusak: Rp " . number_format($totalDamageCost, 0, ',', '.') . ' (Klik untuk rekap)')
+                ->color($totalRusak > 0 ? 'danger' : 'success')
+                ->extraAttributes([
+                    'class' => 'cursor-pointer transition hover:ring-2 hover:ring-danger-500/40',
+                    'x-on:click' => "\$dispatch('open-damage-recap-modal')",
+                ]),
 
             Stat::make('Variance HPP Plate', ($variance >= 0 ? '+' : '') . 'Rp ' . number_format($variance, 0, ',', '.'))
                 ->description('Aktual Rp ' . number_format($totalAct, 0, ',', '.') . ' vs Est. Rp ' . number_format($totalEst, 0, ',', '.'))

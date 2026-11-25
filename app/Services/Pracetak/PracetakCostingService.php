@@ -393,4 +393,185 @@ class PracetakCostingService
             ->orderByDesc('id')
             ->get();
     }
+
+    /**
+     * Hitung rincian total plate rusak & total biaya kerusakannya untuk 1 Proses Pra Cetak.
+     */
+    public function calculateProcessDamageSummary(PracetakProcess $process): array
+    {
+        $process->loadMissing([
+            'spk',
+            'approvalForm',
+            'materialUsages.masterPlate',
+            'generatedArchive',
+            'plateArchive',
+            'mesin',
+        ]);
+
+        $hasilBaik = max(0, (int) ($process->hasil_baik ?? 0));
+        $rusakProses = max(
+            0,
+            (int) ($process->hasil_rusak ?? 0),
+            (int) ($process->kerusakan_plate ?? 0)
+        );
+
+        $archive = $process->generatedArchive ?: $process->plateArchive;
+        $rusakArsip = max(0, (int) ($archive?->qty_rusak ?? 0));
+        $totalRusak = $rusakProses + $rusakArsip;
+
+        $jumlahWarna = max(0, (int) ($process->jumlah_warna_plate ?: ($process->qty ?: 0)));
+        $totalProduced = $hasilBaik + $totalRusak;
+        $wasteRate = $totalProduced > 0 ? round(($totalRusak / $totalProduced) * 100, 1) : 0.0;
+
+        $remakeUsages = $process->materialUsages
+            ->filter(fn ($u) => $u->jenis_pemakaian === 'remake_rusak')
+            ->values();
+
+        $remakeCost = (float) $remakeUsages->sum('total_biaya');
+        $remakePlateQty = (int) $remakeUsages->sum('jumlah_plate');
+
+        $actualTotal = (float) ($process->actual_total_cost ?? 0);
+        $actualMaterial = (float) ($process->actual_material_cost ?? 0);
+        $estimasiPlate = (float) ($process->estimasi_biaya_plate ?? 0);
+
+        // Tentukan biaya satuan per lembar plate berdasarkan ketersediaan data aktual vs estimasi OC
+        $costPerPlate = 0.0;
+        $costSourceLabel = 'Belum Ada Data Biaya';
+        $costSourceShort = 'Belum Ada Data';
+        $formulaNote = 'Biaya aktual maupun estimasi HPP plate masih Rp 0. Posting pemakaian material plate atau lengkapi estimasi HPP plate untuk menghitung biaya kerusakan.';
+
+        $productionUsages = $process->materialUsages->filter(fn ($u) => $u->jenis_pemakaian === 'produksi');
+        $prodUsageCost = (float) $productionUsages->sum('total_biaya');
+        $prodUsageQty = (int) $productionUsages->sum('jumlah_plate');
+
+        if ($remakeCost > 0 && $remakePlateQty > 0) {
+            $costPerPlate = round($remakeCost / $remakePlateQty, 2);
+            $costSourceLabel = 'Aktual Pemakaian Remake Plate';
+            $costSourceShort = 'Aktual Remake';
+            $formulaNote = 'Biaya dihitung dari log pemakaian material plate aktual bertipe Remake / Plate Rusak.';
+        } elseif ($actualTotal > 0) {
+            $basisQty = max(1, $hasilBaik + $rusakProses, $jumlahWarna);
+            $costPerPlate = round($actualTotal / $basisQty, 2);
+            $costSourceLabel = 'Biaya Aktual Pra Cetak (Proporsional)';
+            $costSourceShort = 'Aktual Pra Cetak';
+            $formulaNote = 'Biaya/plate = Total Biaya Aktual Pra Cetak (Rp ' . number_format($actualTotal, 0, ',', '.') . ") ÷ {$basisQty} lembar plate.";
+        } elseif ($prodUsageCost > 0 && $prodUsageQty > 0) {
+            $costPerPlate = round($prodUsageCost / $prodUsageQty, 2);
+            $costSourceLabel = 'Pemakaian Material Plate (Draft/Aktual)';
+            $costSourceShort = 'Material Plate';
+            $formulaNote = 'Biaya/plate = Total Pemakaian Material Plate (Rp ' . number_format($prodUsageCost, 0, ',', '.') . ") ÷ {$prodUsageQty} lembar plate.";
+        } elseif ($estimasiPlate > 0) {
+            $basisQty = max(1, $jumlahWarna ?: $hasilBaik);
+            $costPerPlate = round($estimasiPlate / $basisQty, 2);
+            $costSourceLabel = 'Estimasi HPP Plate (OC)';
+            $costSourceShort = 'Estimasi OC';
+            $formulaNote = 'Pemakaian material aktual belum diposting — biaya dihitung proporsional dari Estimasi HPP Plate OC (Rp '
+                . number_format($estimasiPlate, 0, ',', '.') . ") ÷ {$basisQty} warna/plate = Rp "
+                . number_format($costPerPlate, 0, ',', '.') . '/lembar.';
+        }
+
+        // Hitung biaya rusak proses & rusak arsip
+        if ($remakeCost > 0 && $rusakProses > 0) {
+            $extraProsesQty = max(0, $rusakProses - $remakePlateQty);
+            $biayaRusakProses = round($remakeCost + ($extraProsesQty * $costPerPlate), 2);
+        } else {
+            $biayaRusakProses = round($rusakProses * $costPerPlate, 2);
+        }
+
+        $biayaRusakArsip = round($rusakArsip * $costPerPlate, 2);
+        $totalDamageCost = round($biayaRusakProses + $biayaRusakArsip, 2);
+
+        $catatanList = array_filter([
+            trim((string) ($process->catatan_kerusakan_plate ?? '')),
+            ($rusakArsip > 0 && $archive?->catatan) ? trim((string) $archive->catatan) : '',
+        ]);
+
+        return [
+            'hasil_baik'        => $hasilBaik,
+            'jumlah_warna'      => $jumlahWarna,
+            'rusak_proses'      => $rusakProses,
+            'rusak_arsip'       => $rusakArsip,
+            'total_rusak'       => $totalRusak,
+            'waste_rate'        => $wasteRate,
+            'cost_per_plate'    => $costPerPlate,
+            'biaya_rusak_proses'=> $biayaRusakProses,
+            'biaya_rusak_arsip' => $biayaRusakArsip,
+            'total_damage_cost' => $totalDamageCost,
+            'cost_source_label' => $costSourceLabel,
+            'cost_source_short' => $costSourceShort,
+            'formula_note'      => $formulaNote,
+            'archive_kode'      => $archive?->kode_arsip,
+            'catatan_kerusakan' => implode(' | ', $catatanList),
+            'remake_usages'     => $remakeUsages->map(fn ($u) => [
+                'material'     => $u->masterPlate?->nama_material ?? '-',
+                'jumlah_plate' => (int) $u->jumlah_plate,
+                'qty_sheet'    => (float) $u->qty_sheet_terpakai,
+                'alasan'       => $u->alasan_kerusakan,
+                'total_biaya'  => (float) $u->total_biaya,
+            ])->all(),
+        ];
+    }
+
+    /**
+     * Hitung rekap keseluruhan total plate rusak & total biaya kerusakan dari seluruh Proses Pra Cetak.
+     */
+    public function calculateOverallDamageSummary(): array
+    {
+        $processes = PracetakProcess::with([
+            'spk',
+            'approvalForm',
+            'materialUsages.masterPlate',
+            'generatedArchive',
+            'plateArchive',
+            'mesin',
+        ])->orderByDesc('id')->get();
+
+        $totalBaik = 0;
+        $totalRusakProses = 0;
+        $totalRusakArsip = 0;
+        $totalRusak = 0;
+        $totalDamageCost = 0.0;
+        $prosesBermasalah = 0;
+        $rows = [];
+
+        foreach ($processes as $process) {
+            $s = $this->calculateProcessDamageSummary($process);
+            $totalBaik += $s['hasil_baik'];
+            $totalRusakProses += $s['rusak_proses'];
+            $totalRusakArsip += $s['rusak_arsip'];
+            $totalRusak += $s['total_rusak'];
+            $totalDamageCost += $s['total_damage_cost'];
+            if ($s['total_rusak'] > 0) {
+                $prosesBermasalah++;
+            }
+
+            $rows[] = [
+                'id'                => $process->id,
+                'ref'               => $process->spk?->no_spk ?: ('PRE-' . ($process->approvalForm?->form_no ?: $process->id)),
+                'nama_plat'         => $process->nama_plat ?: '-',
+                'hasil_baik'        => $s['hasil_baik'],
+                'rusak_proses'      => $s['rusak_proses'],
+                'rusak_arsip'       => $s['rusak_arsip'],
+                'total_rusak'       => $s['total_rusak'],
+                'cost_per_plate'    => $s['cost_per_plate'],
+                'total_damage_cost' => $s['total_damage_cost'],
+                'cost_source_short' => $s['cost_source_short'],
+            ];
+        }
+
+        $totalProduced = $totalBaik + $totalRusak;
+        $wasteRate = $totalProduced > 0 ? round(($totalRusak / $totalProduced) * 100, 1) : 0.0;
+
+        return [
+            'total_proses'       => $processes->count(),
+            'proses_bermasalah'  => $prosesBermasalah,
+            'total_baik'         => $totalBaik,
+            'total_rusak_proses' => $totalRusakProses,
+            'total_rusak_arsip'  => $totalRusakArsip,
+            'total_rusak'        => $totalRusak,
+            'waste_rate'         => $wasteRate,
+            'total_damage_cost'  => round($totalDamageCost, 2),
+            'rows'               => $rows,
+        ];
+    }
 }

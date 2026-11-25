@@ -13,14 +13,38 @@ use Filament\Actions;
 use Filament\Resources\Components\Tab;
 use Filament\Resources\Pages\ListRecords;
 use Illuminate\Database\Eloquent\Builder;
+use Livewire\Attributes\On;
 
 class ListPracetakProcesses extends ListRecords
 {
     protected static string $resource = PracetakProcessResource::class;
 
+    #[On('open-damage-recap-modal')]
+    public function openDamageRecapModal(): void
+    {
+        $this->mountAction('rekap_kerusakan_plate');
+    }
+
     protected function getHeaderActions(): array
     {
         return [
+            Actions\Action::make('rekap_kerusakan_plate')
+                ->label('Rekap Kerusakan & Biaya Plate')
+                ->icon('heroicon-o-exclamation-triangle')
+                ->color('danger')
+                ->outlined()
+                ->modalHeading('Rekap Total Plate Rusak & Biaya Kerusakan')
+                ->modalWidth('5xl')
+                ->modalSubmitAction(false)
+                ->modalCancelActionLabel('Tutup')
+                ->modalContent(function () {
+                    $overall = app(\App\Services\Pracetak\PracetakCostingService::class)->calculateOverallDamageSummary();
+
+                    return view('filament.pracetak.damage-recap-modal', [
+                        'overall' => $overall,
+                    ]);
+                }),
+
             Actions\ActionGroup::make([
                 Actions\Action::make('kelola_mesin')
                     ->label('Master Mesin Pra Cetak')
