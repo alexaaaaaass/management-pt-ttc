@@ -729,75 +729,96 @@ class PracetakProcessResource extends Resource
             ->defaultSort('created_at', 'desc')
             ->columns([
                 Tables\Columns\TextColumn::make('spk.no_spk')
-                    ->label('No SPK / Pre-Order')
+                    ->label('SPK & Nama Plat')
                     ->formatStateUsing(fn ($state, PracetakProcess $record) => $state ?: ('PRE-' . ($record->approvalForm?->form_no ?: $record->id)))
-                    ->searchable()
+                    ->description(fn (PracetakProcess $record) => trim((string) ($record->nama_plat ?: '-')) . ' · ' . ($record->is_repeat_order ? 'Repeat' : 'Plate Baru'))
+                    ->searchable(query: function (Builder $query, string $search): Builder {
+                        return $query->where('nama_plat', 'like', "%{$search}%")
+                            ->orWhereHas('spk', fn (Builder $q) => $q->where('no_spk', 'like', "%{$search}%"));
+                    })
                     ->sortable()
-                    ->weight('bold'),
+                    ->weight('semibold'),
 
-                Tables\Columns\BadgeColumn::make('status')
-                    ->label('Tahapan Alur')
-                    ->colors([
-                        'warning' => fn ($state) => in_array($state, ['design', 'trial_design'], true),
-                        'info'    => 'prove_print',
-                        'primary' => 'plat_making',
-                        'success' => 'selesai',
-                        'gray'    => 'handed_over',
-                    ])
+                Tables\Columns\TextColumn::make('status')
+                    ->label('Tahap')
+                    ->badge()
+                    ->color(fn (?string $state): string => match ($state) {
+                        'design', 'trial_design' => 'warning',
+                        'prove_print'            => 'info',
+                        'plat_making'            => 'primary',
+                        'selesai'                => 'success',
+                        default                  => 'gray',
+                    })
                     ->formatStateUsing(fn ($state) => match ($state) {
-                        'design', 'trial_design' => 'A. Trial Design',
-                        'prove_print'            => 'B. Prove Print',
-                        'plat_making'            => 'C. Plate Making',
-                        'selesai'                => 'D. Tersimpan di Rak',
-                        'handed_over'            => 'Diserahkan Printing',
+                        'design', 'trial_design' => 'Design',
+                        'prove_print'            => 'Prove Print',
+                        'plat_making'            => 'Plate Making',
+                        'selesai'                => 'Di Rak',
+                        'handed_over'            => 'Printing',
                         default                  => ucfirst((string) $state),
                     }),
 
-                Tables\Columns\TextColumn::make('nama_plat')
-                    ->label('Nama Plat')
-                    ->description(fn (PracetakProcess $record) => $record->is_repeat_order ? 'Repeat Order (Arsip)' : 'Plate Baru')
-                    ->searchable()
-                    ->wrap(),
-
-                Tables\Columns\TextColumn::make('jumlah_warna_plate')
-                    ->label('Warna')
-                    ->formatStateUsing(fn ($state) => $state ? "{$state} Warna" : '-'),
-
                 Tables\Columns\TextColumn::make('hasil_baik')
-                    ->label('Baik / Rusak')
-                    ->formatStateUsing(fn ($state, PracetakProcess $record) => ((int) $state) . ' / ' . ((int) ($record->hasil_rusak ?? 0)))
+                    ->label('Plate (Baik / Rusak)')
+                    ->formatStateUsing(function ($state, PracetakProcess $record): string {
+                        $rusak = (int) ($record->hasil_rusak ?? 0) + (int) (($record->generatedArchive ?: $record->plateArchive)?->qty_rusak ?? 0);
+
+                        return $rusak > 0
+                            ? ((int) $state) . ' Baik · ' . $rusak . ' Rusak'
+                            : ((int) $state) . ' Baik';
+                    })
+                    ->description(fn (PracetakProcess $record) => $record->jumlah_warna_plate ? "{$record->jumlah_warna_plate} Warna" : '-')
+                    ->color(fn (PracetakProcess $record): string => ((int) ($record->hasil_rusak ?? 0) + (int) (($record->generatedArchive ?: $record->plateArchive)?->qty_rusak ?? 0)) > 0 ? 'danger' : 'success')
                     ->sortable(),
 
                 Tables\Columns\TextColumn::make('actual_total_cost')
-                    ->label('Biaya Aktual Plate')
-                    ->money('IDR')
-                    ->description(function (PracetakProcess $record) {
-                        if ((float) $record->estimasi_biaya_plate <= 0) {
-                            return 'Est. OC: -';
+                    ->label('Biaya Plate')
+                    ->formatStateUsing(function ($state, PracetakProcess $record): string {
+                        $actual = (float) ($state ?? 0);
+                        if ($actual > 0) {
+                            return 'Rp ' . number_format($actual, 0, ',', '.');
                         }
-                        $var = (float) $record->cost_variance;
-                        $sign = $var >= 0 ? '+' : '';
+                        $est = (float) ($record->estimasi_biaya_plate ?? 0);
 
-                        return 'Est: Rp ' . number_format((float) $record->estimasi_biaya_plate, 0, ',', '.') . " ({$sign}" . number_format($var, 0, ',', '.') . ')';
+                        return $est > 0 ? ('Est. Rp ' . number_format($est, 0, ',', '.')) : 'Rp 0';
+                    })
+                    ->description(function (PracetakProcess $record): ?string {
+                        $dmg = app(PracetakCostingService::class)->calculateProcessDamageSummary($record);
+                        if ($dmg['total_rusak'] > 0 && $dmg['total_damage_cost'] > 0) {
+                            return 'Rusak: Rp ' . number_format($dmg['total_damage_cost'], 0, ',', '.');
+                        }
+                        if ((float) $record->actual_total_cost > 0 && (float) $record->estimasi_biaya_plate > 0) {
+                            return 'Est. Rp ' . number_format((float) $record->estimasi_biaya_plate, 0, ',', '.');
+                        }
+
+                        return null;
                     })
                     ->alignEnd()
                     ->sortable(),
 
                 Tables\Columns\TextColumn::make('lokasi_simpan_plate')
-                    ->label('Lokasi Rak')
+                    ->label('Rak & Operator')
                     ->placeholder('Belum disimpan')
+                    ->description(function (PracetakProcess $record): string {
+                        $parts = array_filter([
+                            $record->tgl_entry?->format('d M Y'),
+                            $record->operator?->nama_operator,
+                        ]);
+
+                        return ! empty($parts) ? implode(' · ', $parts) : '-';
+                    })
                     ->searchable(),
 
                 Tables\Columns\TextColumn::make('operator.nama_operator')
                     ->label('Operator')
                     ->placeholder('-')
-                    ->toggleable(),
+                    ->toggleable(isToggledHiddenByDefault: true),
 
                 Tables\Columns\TextColumn::make('tgl_entry')
                     ->label('Tanggal')
                     ->date('d M Y')
                     ->sortable()
-                    ->toggleable(),
+                    ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
                 Tables\Filters\SelectFilter::make('status')
@@ -954,11 +975,9 @@ class PracetakProcessResource extends Resource
 
                     Tables\Actions\EditAction::make(),
                 ])
-                ->label('Aksi')
-                ->icon('heroicon-m-ellipsis-vertical')
+                ->icon('heroicon-m-ellipsis-horizontal')
                 ->size('sm')
-                ->color('primary')
-                ->button(),
+                ->color('gray'),
             ])
             ->bulkActions([
                 Tables\Actions\DeleteBulkAction::make(),

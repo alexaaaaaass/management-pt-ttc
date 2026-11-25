@@ -38,7 +38,6 @@ class PracetakOverviewWidget extends BaseWidget
 
         $activeQueue = (int) ($counts->active_queue ?? 0);
         $plateMaking = (int) ($counts->plate_making_count ?? 0);
-        $totalBaik = (int) ($counts->total_baik ?? 0);
         $damageOverall = app(\App\Services\Pracetak\PracetakCostingService::class)->calculateOverallDamageSummary();
         $totalRusak = (int) $damageOverall['total_rusak'];
         $wasteRate = (float) $damageOverall['waste_rate'];
@@ -53,30 +52,30 @@ class PracetakOverviewWidget extends BaseWidget
         $totalSheet = (float) ($stockAgg->total_sheet ?? 0);
         $totalNilaiStok = (float) ($stockAgg->total_nilai ?? 0);
 
-        $totalEst = (float) ($counts->total_estimasi ?? 0);
-        $totalAct = (float) ($counts->total_aktual ?? 0);
-        $variance = $totalEst > 0 ? ($totalEst - $totalAct) : 0.0;
-
         return [
-            Stat::make('Antrean Aktif Pra Cetak', $activeQueue . ' SPK')
-                ->description("{$plateMaking} sedang di Tahap C (Plate Making)")
-                ->color($activeQueue > 0 ? 'warning' : 'success'),
+            Stat::make('Antrean Aktif', $activeQueue . ' SPK')
+                ->description("{$plateMaking} di tahap Plate Making")
+                ->descriptionIcon('heroicon-m-clock')
+                ->color($activeQueue > 0 ? 'warning' : 'gray'),
 
-            Stat::make('Stok Material Plate', number_format($totalSheet, 2, '.', ',') . ' Sheet')
-                ->description('Nilai Persediaan: Rp ' . number_format($totalNilaiStok, 0, ',', '.'))
-                ->color($totalSheet <= 5 ? 'danger' : 'primary'),
+            Stat::make('Stok Plate', number_format($totalSheet, 2, ',', '.') . ' Sheet')
+                ->description('Nilai Rp ' . number_format($totalNilaiStok, 0, ',', '.'))
+                ->descriptionIcon('heroicon-m-cube')
+                ->color($totalSheet <= 5 ? 'danger' : 'gray'),
 
-            Stat::make('Arsip Plate Aktif (Rak)', $activeArchives . ' Set')
-                ->description("Rusak: {$totalRusak} lbr ({$wasteRate}%) · Biaya Rusak: Rp " . number_format($totalDamageCost, 0, ',', '.') . ' (Klik untuk rekap)')
+            Stat::make('Arsip di Rak', $activeArchives . ' Set')
+                ->description('Siap cetak & repeat order')
+                ->descriptionIcon('heroicon-m-archive-box')
+                ->color('success'),
+
+            Stat::make('Biaya Kerusakan Plate', 'Rp ' . number_format($totalDamageCost, 0, ',', '.'))
+                ->description("{$totalRusak} lbr rusak (" . number_format($wasteRate, 1, ',', '.') . '%) · Rincian')
+                ->descriptionIcon('heroicon-m-arrow-up-right')
                 ->color($totalRusak > 0 ? 'danger' : 'success')
                 ->extraAttributes([
-                    'class' => 'cursor-pointer transition hover:ring-2 hover:ring-danger-500/40',
+                    'class' => 'cursor-pointer transition hover:opacity-90',
                     'x-on:click' => "\$dispatch('open-damage-recap-modal')",
                 ]),
-
-            Stat::make('Variance HPP Plate', ($variance >= 0 ? '+' : '') . 'Rp ' . number_format($variance, 0, ',', '.'))
-                ->description('Aktual Rp ' . number_format($totalAct, 0, ',', '.') . ' vs Est. Rp ' . number_format($totalEst, 0, ',', '.'))
-                ->color($variance >= 0 ? 'success' : 'danger'),
         ];
     }
 }

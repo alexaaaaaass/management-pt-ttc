@@ -3,114 +3,95 @@
     $hasDamage = ($summary['total_rusak'] ?? 0) > 0;
 @endphp
 
-<div style="display:flex; flex-direction:column; gap:16px; font-size:13px;">
-    {{-- Header identitas proses --}}
-    <div style="display:flex; flex-wrap:wrap; justify-content:space-between; gap:8px; padding:12px 14px; border-radius:10px; border:1px solid rgba(148,163,184,0.22); background:rgba(148,163,184,0.08);">
+<div style="display:flex; flex-direction:column; gap:18px; font-size:13px; font-variant-numeric:tabular-nums;">
+    {{-- Identity Strip --}}
+    <div style="display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:12px; padding-bottom:14px; border-bottom:1px solid rgba(148,163,184,0.16);">
         <div>
-            <div style="font-size:11px; opacity:0.7; text-transform:uppercase; letter-spacing:0.04em;">Proses Pra Cetak</div>
-            <div style="font-weight:700; font-size:15px; margin-top:2px;">{{ $process->nama_plat ?: '-' }}</div>
-            <div style="font-size:12px; opacity:0.8; margin-top:2px;">
-                SPK: <strong>{{ $process->spk?->no_spk ?: ('PRE-' . ($process->approvalForm?->form_no ?: $process->id)) }}</strong>
-                &middot; Warna: <strong>{{ (int) ($process->jumlah_warna_plate ?: 0) }} Warna</strong>
-                &middot; Rak: <strong>{{ $process->lokasi_simpan_plate ?: '-' }}</strong>
+            <div style="font-size:15px; font-weight:600; letter-spacing:-0.01em;">{{ $process->nama_plat ?: '-' }}</div>
+            <div style="font-size:12px; opacity:0.68; margin-top:3px;">
+                {{ $process->spk?->no_spk ?: ('PRE-' . ($process->approvalForm?->form_no ?: $process->id)) }}
+                &nbsp;&middot;&nbsp; {{ (int) ($process->jumlah_warna_plate ?: 0) }} Warna
+                &nbsp;&middot;&nbsp; {{ $process->lokasi_simpan_plate ?: 'Belum di rak' }}
             </div>
         </div>
-        <div style="text-align:right;">
-            <span style="display:inline-block; padding:4px 10px; border-radius:999px; font-size:11px; font-weight:700; {{ $hasDamage ? 'background:rgba(239,68,68,0.16); color:#f87171; border:1px solid rgba(239,68,68,0.35);' : 'background:rgba(16,185,129,0.16); color:#34d399; border:1px solid rgba(16,185,129,0.35);' }}">
-                {{ $hasDamage ? 'Ada Kerusakan Plate' : 'Nol Kerusakan (0 Lbr)' }}
-            </span>
-            <div style="font-size:11px; opacity:0.75; margin-top:6px;">
-                Basis Hitung: <strong>{{ $summary['cost_source_label'] }}</strong>
-            </div>
+        <div style="display:inline-flex; align-items:center; gap:6px; padding:4px 11px; border-radius:999px; font-size:11px; font-weight:600; border:1px solid {{ $hasDamage ? 'rgba(248,113,113,0.32)' : 'rgba(52,211,153,0.32)' }}; background:{{ $hasDamage ? 'rgba(248,113,113,0.08)' : 'rgba(52,211,153,0.08)' }}; color:{{ $hasDamage ? '#f87171' : '#34d399' }};">
+            <span style="width:6px; height:6px; border-radius:999px; background:currentColor;"></span>
+            {{ $hasDamage ? $summary['total_rusak'] . ' Plate Rusak (' . number_format($summary['waste_rate'], 1, ',', '.') . '%)' : 'Nol Kerusakan' }}
         </div>
     </div>
 
-    {{-- 4 KPI Cards --}}
-    <div style="display:grid; grid-template-columns:repeat(4, minmax(0, 1fr)); gap:10px;">
-        <div style="padding:12px; border-radius:10px; border:1px solid rgba(16,185,129,0.3); background:rgba(16,185,129,0.08);">
-            <div style="font-size:11px; opacity:0.8;">Plate Baik</div>
-            <div style="font-size:20px; font-weight:700; color:#34d399; margin-top:4px;">{{ number_format($summary['hasil_baik'], 0, ',', '.') }} Lbr</div>
-            <div style="font-size:11px; opacity:0.7; margin-top:2px;">Target warna: {{ $summary['jumlah_warna'] }}</div>
+    {{-- Minimalist Metric Grid --}}
+    <div style="display:grid; grid-template-columns:repeat(4, minmax(0, 1fr)); gap:12px;">
+        <div style="padding:14px 16px; border-radius:12px; border:1px solid rgba(148,163,184,0.16); background:rgba(148,163,184,0.04);">
+            <div style="font-size:11px; opacity:0.65;">Plate Baik</div>
+            <div style="font-size:20px; font-weight:600; letter-spacing:-0.02em; margin-top:6px;">{{ number_format($summary['hasil_baik'], 0, ',', '.') }} <span style="font-size:12px; font-weight:400; opacity:0.65;">lbr</span></div>
         </div>
 
-        <div style="padding:12px; border-radius:10px; border:1px solid {{ $hasDamage ? 'rgba(239,68,68,0.35)' : 'rgba(148,163,184,0.25)' }}; background:{{ $hasDamage ? 'rgba(239,68,68,0.10)' : 'rgba(148,163,184,0.08)' }};">
-            <div style="font-size:11px; opacity:0.8;">Total Plate Rusak</div>
-            <div style="font-size:20px; font-weight:700; color:{{ $hasDamage ? '#f87171' : 'inherit' }}; margin-top:4px;">{{ number_format($summary['total_rusak'], 0, ',', '.') }} Lbr</div>
-            <div style="font-size:11px; opacity:0.75; margin-top:2px;">Rasio rusak: {{ number_format($summary['waste_rate'], 1, ',', '.') }}%</div>
+        <div style="padding:14px 16px; border-radius:12px; border:1px solid {{ $hasDamage ? 'rgba(248,113,113,0.28)' : 'rgba(148,163,184,0.16)' }}; background:rgba(148,163,184,0.04);">
+            <div style="font-size:11px; opacity:0.65;">Total Rusak</div>
+            <div style="font-size:20px; font-weight:600; letter-spacing:-0.02em; color:{{ $hasDamage ? '#f87171' : 'inherit' }}; margin-top:6px;">{{ number_format($summary['total_rusak'], 0, ',', '.') }} <span style="font-size:12px; font-weight:400; opacity:0.7;">lbr</span></div>
         </div>
 
-        <div style="padding:12px; border-radius:10px; border:1px solid rgba(59,130,246,0.3); background:rgba(59,130,246,0.08);">
-            <div style="font-size:11px; opacity:0.8;">Biaya / Lembar Plate</div>
-            <div style="font-size:17px; font-weight:700; color:#60a5fa; margin-top:4px;">{{ $fmtRp($summary['cost_per_plate']) }}</div>
-            <div style="font-size:11px; opacity:0.7; margin-top:2px;">{{ $summary['cost_source_short'] }}</div>
+        <div style="padding:14px 16px; border-radius:12px; border:1px solid rgba(148,163,184,0.16); background:rgba(148,163,184,0.04);">
+            <div style="font-size:11px; opacity:0.65;">Biaya / Lembar</div>
+            <div style="font-size:17px; font-weight:600; letter-spacing:-0.02em; margin-top:7px;">{{ $fmtRp($summary['cost_per_plate']) }}</div>
         </div>
 
-        <div style="padding:12px; border-radius:10px; border:1px solid {{ $hasDamage ? 'rgba(245,158,11,0.4)' : 'rgba(148,163,184,0.25)' }}; background:{{ $hasDamage ? 'rgba(245,158,11,0.12)' : 'rgba(148,163,184,0.08)' }};">
-            <div style="font-size:11px; opacity:0.8;">Total Biaya Kerusakan</div>
-            <div style="font-size:17px; font-weight:800; color:{{ $hasDamage ? '#fbbf24' : 'inherit' }}; margin-top:4px;">{{ $fmtRp($summary['total_damage_cost']) }}</div>
-            <div style="font-size:11px; opacity:0.75; margin-top:2px;">{{ $summary['total_rusak'] }} lbr rusak</div>
+        <div style="padding:14px 16px; border-radius:12px; border:1px solid {{ $hasDamage ? 'rgba(251,191,36,0.32)' : 'rgba(148,163,184,0.16)' }}; background:{{ $hasDamage ? 'rgba(251,191,36,0.06)' : 'rgba(148,163,184,0.04)' }};">
+            <div style="font-size:11px; opacity:0.65;">Total Biaya Rusak</div>
+            <div style="font-size:17px; font-weight:700; letter-spacing:-0.02em; color:{{ $hasDamage ? '#fbbf24' : 'inherit' }}; margin-top:7px;">{{ $fmtRp($summary['total_damage_cost']) }}</div>
         </div>
     </div>
 
-    {{-- Breakdown sumber kerusakan --}}
-    <div style="padding:12px 14px; border-radius:10px; border:1px solid rgba(148,163,184,0.22); background:rgba(148,163,184,0.05);">
-        <div style="font-weight:700; margin-bottom:8px;">Rincian Sumber Kerusakan Plate</div>
-        <table style="width:100%; border-collapse:collapse; font-size:12px;">
+    {{-- Clean Breakdown Table --}}
+    <div style="border-radius:12px; border:1px solid rgba(148,163,184,0.16); overflow:hidden;">
+        <table style="width:100%; border-collapse:collapse; font-size:12.5px;">
             <thead>
-                <tr style="border-bottom:1px solid rgba(148,163,184,0.25); text-align:left; opacity:0.8;">
-                    <th style="padding:6px 8px;">Sumber Kerusakan</th>
-                    <th style="padding:6px 8px; text-align:right;">Qty Rusak</th>
-                    <th style="padding:6px 8px; text-align:right;">Estimasi / Aktual Biaya</th>
+                <tr style="border-bottom:1px solid rgba(148,163,184,0.16); background:rgba(148,163,184,0.05); text-align:left;">
+                    <th style="padding:10px 14px; font-weight:500; font-size:11px; text-transform:uppercase; letter-spacing:0.04em; opacity:0.65;">Sumber Kerusakan</th>
+                    <th style="padding:10px 14px; font-weight:500; font-size:11px; text-transform:uppercase; letter-spacing:0.04em; opacity:0.65; text-align:right;">Qty</th>
+                    <th style="padding:10px 14px; font-weight:500; font-size:11px; text-transform:uppercase; letter-spacing:0.04em; opacity:0.65; text-align:right;">Biaya</th>
                 </tr>
             </thead>
             <tbody>
-                <tr style="border-bottom:1px solid rgba(148,163,184,0.14);">
-                    <td style="padding:7px 8px;">Kerusakan saat Plate Making (Pra Cetak)</td>
-                    <td style="padding:7px 8px; text-align:right; font-weight:600;">{{ number_format($summary['rusak_proses'], 0, ',', '.') }} Lbr</td>
-                    <td style="padding:7px 8px; text-align:right; font-weight:600;">{{ $fmtRp($summary['biaya_rusak_proses']) }}</td>
+                <tr style="border-bottom:1px solid rgba(148,163,184,0.10);">
+                    <td style="padding:11px 14px;">Plate Making (Pra Cetak)</td>
+                    <td style="padding:11px 14px; text-align:right;">{{ number_format($summary['rusak_proses'], 0, ',', '.') }} lbr</td>
+                    <td style="padding:11px 14px; text-align:right;">{{ $fmtRp($summary['biaya_rusak_proses']) }}</td>
                 </tr>
-                <tr style="border-bottom:1px solid rgba(148,163,184,0.14);">
-                    <td style="padding:7px 8px;">Kerusakan di Arsip Rak / Printing ({{ $summary['archive_kode'] ?: 'Belum diarsip' }})</td>
-                    <td style="padding:7px 8px; text-align:right; font-weight:600;">{{ number_format($summary['rusak_arsip'], 0, ',', '.') }} Lbr</td>
-                    <td style="padding:7px 8px; text-align:right; font-weight:600;">{{ $fmtRp($summary['biaya_rusak_arsip']) }}</td>
+                <tr style="border-bottom:1px solid rgba(148,163,184,0.10);">
+                    <td style="padding:11px 14px;">Arsip Rak / Printing <span style="opacity:0.6;">({{ $summary['archive_kode'] ?: 'Belum diarsip' }})</span></td>
+                    <td style="padding:11px 14px; text-align:right;">{{ number_format($summary['rusak_arsip'], 0, ',', '.') }} lbr</td>
+                    <td style="padding:11px 14px; text-align:right;">{{ $fmtRp($summary['biaya_rusak_arsip']) }}</td>
                 </tr>
-                <tr>
-                    <td style="padding:8px; font-weight:700;">Total Keseluruhan Kerusakan</td>
-                    <td style="padding:8px; text-align:right; font-weight:800; color:{{ $hasDamage ? '#f87171' : '#34d399' }};">{{ number_format($summary['total_rusak'], 0, ',', '.') }} Lbr</td>
-                    <td style="padding:8px; text-align:right; font-weight:800; color:{{ $hasDamage ? '#fbbf24' : '#34d399' }};">{{ $fmtRp($summary['total_damage_cost']) }}</td>
+                <tr style="background:rgba(148,163,184,0.04);">
+                    <td style="padding:11px 14px; font-weight:600;">Total Kerusakan</td>
+                    <td style="padding:11px 14px; text-align:right; font-weight:600; color:{{ $hasDamage ? '#f87171' : '#34d399' }};">{{ number_format($summary['total_rusak'], 0, ',', '.') }} lbr</td>
+                    <td style="padding:11px 14px; text-align:right; font-weight:700; color:{{ $hasDamage ? '#fbbf24' : '#34d399' }};">{{ $fmtRp($summary['total_damage_cost']) }}</td>
                 </tr>
             </tbody>
         </table>
-
-        @if(! empty($summary['catatan_kerusakan']))
-            <div style="margin-top:10px; padding:8px 10px; border-radius:8px; border:1px solid rgba(245,158,11,0.3); background:rgba(245,158,11,0.08); font-size:12px;">
-                <strong>Catatan Kerusakan:</strong> {{ $summary['catatan_kerusakan'] }}
-            </div>
-        @endif
     </div>
 
-    {{-- Tabel baris material remake jika ada --}}
+    @if(! empty($summary['catatan_kerusakan']))
+        <div style="padding:10px 14px; border-radius:10px; border:1px solid rgba(148,163,184,0.18); background:rgba(148,163,184,0.04); font-size:12px;">
+            <span style="opacity:0.65;">Catatan:</span> {{ $summary['catatan_kerusakan'] }}
+        </div>
+    @endif
+
     @if(! empty($summary['remake_usages']))
-        <div style="padding:12px 14px; border-radius:10px; border:1px solid rgba(239,68,68,0.28); background:rgba(239,68,68,0.06);">
-            <div style="font-weight:700; margin-bottom:8px;">Log Pemakaian Material Remake / Plate Rusak</div>
+        <div style="border-radius:12px; border:1px solid rgba(148,163,184,0.16); overflow:hidden;">
+            <div style="padding:10px 14px; font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:0.04em; opacity:0.7; border-bottom:1px solid rgba(148,163,184,0.14); background:rgba(148,163,184,0.05);">
+                Log Material Remake
+            </div>
             <table style="width:100%; border-collapse:collapse; font-size:12px;">
-                <thead>
-                    <tr style="border-bottom:1px solid rgba(148,163,184,0.25); text-align:left; opacity:0.8;">
-                        <th style="padding:6px 8px;">Material Plate</th>
-                        <th style="padding:6px 8px; text-align:right;">Plate</th>
-                        <th style="padding:6px 8px; text-align:right;">Sheet</th>
-                        <th style="padding:6px 8px;">Alasan</th>
-                        <th style="padding:6px 8px; text-align:right;">Biaya</th>
-                    </tr>
-                </thead>
                 <tbody>
                     @foreach($summary['remake_usages'] as $u)
-                        <tr style="border-bottom:1px solid rgba(148,163,184,0.14);">
-                            <td style="padding:6px 8px;">{{ $u['material'] }}</td>
-                            <td style="padding:6px 8px; text-align:right;">{{ $u['jumlah_plate'] }} Lbr</td>
-                            <td style="padding:6px 8px; text-align:right;">{{ number_format($u['qty_sheet'], 2, ',', '.') }}</td>
-                            <td style="padding:6px 8px;">{{ $u['alasan'] ?: '-' }}</td>
-                            <td style="padding:6px 8px; text-align:right; font-weight:600;">{{ $fmtRp($u['total_biaya']) }}</td>
+                        <tr style="border-bottom:1px solid rgba(148,163,184,0.10);">
+                            <td style="padding:9px 14px;">{{ $u['material'] }}</td>
+                            <td style="padding:9px 14px; text-align:right; opacity:0.8;">{{ $u['jumlah_plate'] }} lbr &middot; {{ number_format($u['qty_sheet'], 2, ',', '.') }} sh</td>
+                            <td style="padding:9px 14px; opacity:0.75;">{{ $u['alasan'] ?: '-' }}</td>
+                            <td style="padding:9px 14px; text-align:right; font-weight:600;">{{ $fmtRp($u['total_biaya']) }}</td>
                         </tr>
                     @endforeach
                 </tbody>
@@ -118,8 +99,8 @@
         </div>
     @endif
 
-    {{-- Catatan metode perhitungan --}}
-    <div style="padding:8px 12px; border-radius:8px; border:1px solid rgba(148,163,184,0.2); background:rgba(148,163,184,0.06); font-size:11px; opacity:0.85;">
-        {{ $summary['formula_note'] }}
+    {{-- Subtle Footnote --}}
+    <div style="font-size:11px; opacity:0.62; line-height:1.5;">
+        Basis hitung: <strong>{{ $summary['cost_source_label'] }}</strong> &mdash; {{ $summary['formula_note'] }}
     </div>
 </div>

@@ -29,12 +29,11 @@ class ListPracetakProcesses extends ListRecords
     {
         return [
             Actions\Action::make('rekap_kerusakan_plate')
-                ->label('Rekap Kerusakan & Biaya Plate')
-                ->icon('heroicon-o-exclamation-triangle')
-                ->color('danger')
-                ->outlined()
-                ->modalHeading('Rekap Total Plate Rusak & Biaya Kerusakan')
-                ->modalWidth('5xl')
+                ->label('Rekap Kerusakan')
+                ->icon('heroicon-m-exclamation-triangle')
+                ->color('gray')
+                ->modalHeading('Rekap Kerusakan & Biaya Plate')
+                ->modalWidth('4xl')
                 ->modalSubmitAction(false)
                 ->modalCancelActionLabel('Tutup')
                 ->modalContent(function () {
@@ -56,13 +55,14 @@ class ListPracetakProcesses extends ListRecords
                     ->icon('heroicon-o-user')
                     ->url(OperatorPraCetakResource::getUrl('index')),
             ])
-                ->label('Master Mesin & Operator')
-                ->icon('heroicon-o-wrench-screwdriver')
+                ->label('Master')
+                ->icon('heroicon-m-wrench-screwdriver')
                 ->color('gray')
                 ->button(),
 
             Actions\CreateAction::make()
-                ->label('Buat Proses Pra Cetak'),
+                ->label('Buat Proses')
+                ->icon('heroicon-m-plus'),
         ];
     }
 
@@ -86,27 +86,27 @@ class ListPracetakProcesses extends ListRecords
             'all' => Tab::make('Semua')
                 ->badge(PracetakProcess::count()),
 
-            'design' => Tab::make('A. Trial Design')
+            'design' => Tab::make('Design')
                 ->badge(PracetakProcess::whereIn('status', ['design', 'trial_design'])->count())
                 ->badgeColor('warning')
                 ->modifyQueryUsing(fn (Builder $query) => $query->whereIn('status', ['design', 'trial_design'])),
 
-            'prove' => Tab::make('B. Prove Print')
+            'prove' => Tab::make('Prove')
                 ->badge(PracetakProcess::where('status', 'prove_print')->count())
                 ->badgeColor('info')
                 ->modifyQueryUsing(fn (Builder $query) => $query->where('status', 'prove_print')),
 
-            'plat' => Tab::make('C. Plate Making')
+            'plat' => Tab::make('Plate Making')
                 ->badge(PracetakProcess::where('status', 'plat_making')->count())
                 ->badgeColor('primary')
                 ->modifyQueryUsing(fn (Builder $query) => $query->where('status', 'plat_making')),
 
-            'selesai' => Tab::make('D. Tersimpan di Rak')
+            'selesai' => Tab::make('Di Rak')
                 ->badge(PracetakProcess::where('status', 'selesai')->count())
                 ->badgeColor('success')
                 ->modifyQueryUsing(fn (Builder $query) => $query->where('status', 'selesai')),
 
-            'handed_over' => Tab::make('Diserahkan Printing')
+            'handed_over' => Tab::make('Printing')
                 ->badge(PracetakProcess::where('status', 'handed_over')->count())
                 ->badgeColor('gray')
                 ->modifyQueryUsing(fn (Builder $query) => $query->where('status', 'handed_over')),

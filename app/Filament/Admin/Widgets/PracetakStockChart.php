@@ -8,11 +8,11 @@ use Illuminate\Support\Facades\Schema;
 
 class PracetakStockChart extends ChartWidget
 {
-    protected static ?string $heading = 'Posisi Saldo Stok Material Plate (Sheet)';
+    protected static ?string $heading = 'Saldo Stok Plate (Sheet)';
 
     protected static bool $isLazy = true;
 
-    protected static ?string $maxHeight = '260px';
+    protected static ?string $maxHeight = '185px';
 
     protected int | string | array $columnSpan = [
         'default' => 'full',
@@ -30,18 +30,18 @@ class PracetakStockChart extends ChartWidget
                 $stocks = PracetakMaterialStock::query()
                     ->with('plate')
                     ->orderByDesc('stok_sheet_utuh')
-                    ->limit(10)
+                    ->limit(6)
                     ->get();
 
                 foreach ($stocks as $stock) {
-                    $label = $stock->plate?->kode_material
-                        ? ($stock->plate->kode_material . ' (' . ($stock->plate->brand ?: '-') . ')')
-                        : ('Plate #' . $stock->master_material_plate_id);
+                    $brand = trim((string) ($stock->plate?->brand ?? ''));
+                    $kode = trim((string) ($stock->plate?->kode_material ?? ''));
+                    $label = $brand !== '' ? $brand : ($kode !== '' ? $kode : ('Plate #' . $stock->master_material_plate_id));
                     $qty = round((float) $stock->stok_sheet_utuh, 2);
 
-                    $labels[] = $label;
+                    $labels[] = \Illuminate\Support\Str::limit($label, 22);
                     $data[] = $qty;
-                    $colors[] = $qty <= 5 ? '#ef4444' : '#2563eb';
+                    $colors[] = $qty <= 5 ? 'rgba(239, 68, 68, 0.78)' : 'rgba(59, 130, 246, 0.72)';
                 }
             }
         } catch (\Throwable $e) {
@@ -50,17 +50,18 @@ class PracetakStockChart extends ChartWidget
         if (empty($labels)) {
             $labels = ['Belum ada stok plate'];
             $data = [0];
-            $colors = ['#64748b'];
+            $colors = ['rgba(148, 163, 184, 0.5)'];
         }
 
         return [
             'datasets' => [
                 [
-                    'label' => 'Saldo Tersedia (Sheet)',
+                    'label' => 'Sheet',
                     'data' => $data,
                     'backgroundColor' => $colors,
-                    'borderRadius' => 6,
-                    'maxBarThickness' => 42,
+                    'borderRadius' => 5,
+                    'borderSkipped' => false,
+                    'maxBarThickness' => 16,
                 ],
             ],
             'labels' => $labels,
@@ -70,15 +71,20 @@ class PracetakStockChart extends ChartWidget
     protected function getOptions(): array
     {
         return [
+            'indexAxis' => 'y',
             'plugins' => [
                 'legend' => ['display' => false],
             ],
             'scales' => [
-                'y' => [
-                    'beginAtZero' => true,
-                    'grid' => ['color' => 'rgba(148, 163, 184, 0.15)'],
-                ],
                 'x' => [
+                    'beginAtZero' => true,
+                    'border' => ['display' => false],
+                    'ticks' => ['color' => 'rgba(148, 163, 184, 0.7)', 'font' => ['size' => 11]],
+                    'grid' => ['color' => 'rgba(148, 163, 184, 0.08)'],
+                ],
+                'y' => [
+                    'border' => ['display' => false],
+                    'ticks' => ['color' => 'rgba(148, 163, 184, 0.88)', 'font' => ['size' => 11]],
                     'grid' => ['display' => false],
                 ],
             ],

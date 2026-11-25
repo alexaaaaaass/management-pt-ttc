@@ -8,11 +8,11 @@ use Illuminate\Support\Facades\Schema;
 
 class PracetakStageChart extends ChartWidget
 {
-    protected static ?string $heading = 'Distribusi Proses Pra Cetak per Tahap';
+    protected static ?string $heading = 'Proses per Tahap';
 
     protected static bool $isLazy = true;
 
-    protected static ?string $maxHeight = '260px';
+    protected static ?string $maxHeight = '185px';
 
     protected int | string | array $columnSpan = [
         'default' => 'full',
@@ -49,7 +49,7 @@ class PracetakStageChart extends ChartWidget
         return [
             'datasets' => [
                 [
-                    'label' => 'Jumlah Proses SPK',
+                    'label' => 'Proses',
                     'data' => [
                         $counts['design'],
                         $counts['prove_print'],
@@ -58,22 +58,23 @@ class PracetakStageChart extends ChartWidget
                         $counts['handed_over'],
                     ],
                     'backgroundColor' => [
-                        '#f59e0b',
-                        '#3b82f6',
-                        '#6366f1',
-                        '#10b981',
-                        '#64748b',
+                        'rgba(245, 158, 11, 0.72)',
+                        'rgba(56, 189, 248, 0.72)',
+                        'rgba(129, 140, 248, 0.75)',
+                        'rgba(16, 185, 129, 0.75)',
+                        'rgba(148, 163, 184, 0.55)',
                     ],
                     'borderRadius' => 6,
-                    'maxBarThickness' => 42,
+                    'borderSkipped' => false,
+                    'maxBarThickness' => 24,
                 ],
             ],
             'labels' => [
-                'A. Trial Design',
-                'B. Prove Print',
-                'C. Plate Making',
-                'D. Tersimpan Rak',
-                'E. Di Printing',
+                'Design',
+                'Prove',
+                'Plate Making',
+                'Di Rak',
+                'Printing',
             ],
         ];
     }
@@ -87,10 +88,13 @@ class PracetakStageChart extends ChartWidget
             'scales' => [
                 'y' => [
                     'beginAtZero' => true,
-                    'ticks' => ['precision' => 0],
-                    'grid' => ['color' => 'rgba(148, 163, 184, 0.15)'],
+                    'border' => ['display' => false],
+                    'ticks' => ['precision' => 0, 'stepSize' => 1, 'color' => 'rgba(148, 163, 184, 0.7)'],
+                    'grid' => ['color' => 'rgba(148, 163, 184, 0.08)'],
                 ],
                 'x' => [
+                    'border' => ['display' => false],
+                    'ticks' => ['color' => 'rgba(148, 163, 184, 0.85)', 'font' => ['size' => 11]],
                     'grid' => ['display' => false],
                 ],
             ],
