@@ -80,11 +80,28 @@ class SubcountOutResource extends Resource
                                 ->required(),
 
                             Forms\Components\Select::make('spk_id')
-                                ->label('No SPK')
-                                ->options(fn () => MasterSpk::pluck('no_spk', 'id'))
+                                ->label('No SPK (Subcount / Maklon)')
+                                ->placeholder('Pilih SPK bertipe Subcount / Maklon')
+                                ->options(function () {
+                                    return MasterSpk::query()
+                                        ->subcount()
+                                        ->with(['salesOrder.customer', 'salesOrder.itemable'])
+                                        ->orderByDesc('id')
+                                        ->get()
+                                        ->mapWithKeys(function (MasterSpk $spk): array {
+                                            $cust = $spk->salesOrder?->customer?->nama_customer ?? '-';
+                                            $prod = $spk->salesOrder?->itemable?->nama_barang
+                                                ?? ($spk->salesOrder?->product_name ?? '-');
+
+                                            return [$spk->id => "{$spk->no_spk} — {$cust} · {$prod}"];
+                                        })
+                                        ->all();
+                                })
+                                ->helperText('Hanya menampilkan SPK dengan tipe pengerjaan SUBCOUNT / MAKLON.')
                                 ->searchable()
                                 ->preload()
                                 ->visible(fn ($get) => $get('sumber_item') === 'spk')
+                                ->required(fn ($get) => $get('sumber_item') === 'spk')
                                 ->live()
                                 ->afterStateUpdated(function ($state, $set) {
                                     if (! $state) {
@@ -109,7 +126,7 @@ class SubcountOutResource extends Resource
                                         $spk?->salesOrder?->itemable?->satuan_id
                                     );
 
-                                    $orderQty = (float) ($spk?->salesOrder?->qty ?? 0);
+                                    $orderQty = (float) ($spk?->order_qty ?: ($spk?->salesOrder?->qty ?? 0));
                                     $set('qty', $orderQty > 0 ? (\App\Support\MoneyHelper::format($orderQty, 0) ?? '0') : '0');
                                 }),
 

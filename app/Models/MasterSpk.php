@@ -73,6 +73,15 @@ class MasterSpk extends Model
         return $this->hasMany(SubcountInItem::class, 'spk_id');
     }
 
+    public function scopeSubcount($query)
+    {
+        return $query->where(function ($q) {
+            $q->whereRaw('UPPER(COALESCE(production_plan, "")) LIKE ?', ['%SUBCOUNT%'])
+                ->orWhereRaw('UPPER(COALESCE(production_plan, "")) LIKE ?', ['%MAKLON%'])
+                ->orWhereHas('subcountOutItems');
+        });
+    }
+
     public function getIsSubcountAttribute(): bool
     {
         if ($this->relationLoaded('subcountOutItems') ? $this->subcountOutItems->isNotEmpty() : $this->subcountOutItems()->exists()) {
