@@ -366,10 +366,10 @@ class ApprovalFormResource extends Resource
                         ->label('Set BOM Finish Good')
                         ->icon('heroicon-o-queue-list')
                         ->color('primary')
-                        ->visible(fn (ApprovalForm $record): bool => ! $record->hasAllFinishGoods())
+                        ->visible(fn (ApprovalForm $record): bool => $record->bom_status !== 'complete')
                         ->tooltip('Rancang atau buka Bill of Materials di Finish Good berdasarkan Approval Form ini')
                         ->modalHeading(fn (ApprovalForm $record) => "Pilih Item untuk Mengatur BOM ({$record->form_no})")
-                        ->modalDescription('Pilih item spesifikasi yang ingin disiapkan atau diatur resep bahan baku (BOM)-nya.')
+                        ->modalDescription('Pilih item spesifikasi yang ingin disiapkan atau diatur resep bahan baku (BOM)-nya. Toggle di bawah hanya membuat Master Produk; resep BOM tetap perlu diisi pada masing-masing produk.')
                         ->modalSubmitActionLabel('Buka Form BOM Finish Good')
                         ->form(function (ApprovalForm $record) {
                             $items = $record->items;
@@ -379,6 +379,10 @@ class ApprovalFormResource extends Resource
                                         ->content('Belum ada item spesifikasi pada Approval Form ini.'),
                                 ];
                             }
+
+                            $firstMissingBom = $items->first(function ($item): bool {
+                                return ! ($item->finish_good_item_id && $item->finishGoodItem && $item->finishGoodItem->materials()->exists());
+                            });
 
                             return [
                                 Forms\Components\Select::make('approval_form_item_id')
@@ -391,13 +395,14 @@ class ApprovalFormResource extends Resource
                                             return [$item->id => "{$item->item_name} - {$status}"];
                                         });
                                     })
-                                    ->default($items->whereNull('finish_good_item_id')->first()?->id ?? $items->first()?->id)
+                                    ->default($firstMissingBom?->id ?? $items->first()?->id)
                                     ->required(),
 
                                 Forms\Components\Toggle::make('create_all_fg')
                                     ->label('Siapkan Master Finish Good untuk seluruh item sekaligus')
                                     ->default(true)
-                                    ->helperText('Otomatis mendaftarkan master Finish Good untuk item lain yang belum dibuat.'),
+                                    ->visible(fn () => ! $record->hasAllFinishGoods())
+                                    ->helperText('Otomatis mendaftarkan Master Finish Good saja untuk item lain yang belum dibuat (resep BOM tetap diisi per item).'),
                             ];
                         })
                         ->action(function (ApprovalForm $record, array $data) {
