@@ -580,12 +580,21 @@ class FlexoHppModalSchema
                                         ]),
 
                                     TextInput::make('biaya_plate')
-                                        ->label(fn (Get $get) => $get('plate_mode') === 'new' ? 'Total Estimasi HPP Plate (Otomatis) (Rp)' : 'Biaya Plate / Cliché (Rp)')
+                                        ->label(fn (Get $get) => match ($get('plate_mode') ?? 'manual') {
+                                            'new'    => 'Total Estimasi HPP Plate (Otomatis) (Rp)',
+                                            'repeat' => 'Biaya Plate — Repeat Order (Rp)',
+                                            default  => 'Biaya Plate / Cliché (Rp)',
+                                        })
                                         ->prefix('Rp')
                                         ->currencyMask(2)
                                         ->default(0)
-                                        ->readOnly(fn (Get $get) => ($get('plate_mode') ?? 'manual') !== 'manual')
-                                        ->helperText('Total HPP pembuatan plate (material + proses prepress)')
+                                        ->disabled(fn (Get $get) => ($get('plate_mode') ?? 'manual') !== 'manual')
+                                        ->dehydrated(true)
+                                        ->helperText(fn (Get $get) => match ($get('plate_mode') ?? 'manual') {
+                                            'new'    => 'Dihitung otomatis dari Master Material Plate & Layout Cylinder (terkunci).',
+                                            'repeat' => 'Repeat Order memakai arsip plate di rak — otomatis Rp 0 (terkunci).',
+                                            default  => 'Total HPP pembuatan plate (input manual).',
+                                        })
                                         ->live(onBlur: true)
                                         ->afterStateUpdated(fn (Get $get, Set $set) => self::triggerLiveRecalculate($get, $set)),
 

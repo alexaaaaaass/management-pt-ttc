@@ -693,6 +693,8 @@ class OrderConfirmationResource extends Resource
                                                     $set('kalkulasi_hpp_data', json_encode($hppData));
                                                 }
 
+                                                static::updateTotals($get, $set, isInsideRow: true);
+
                                                 Notification::make()
                                                     ->title('HPP Disesuaikan')
                                                     ->body('Nilai HPP berhasil ditetapkan sama dengan Harga (Rp ' . (\App\Support\MoneyHelper::format($harga, 2) ?? '0') . ')')
@@ -839,8 +841,8 @@ class OrderConfirmationResource extends Resource
                                             ->prefix('Rp')
                                             ->currencyMask(2)
                                             ->default(0)
-                                            ->readOnly()
-                                            ->dehydrated(),
+                                            ->disabled()
+                                            ->dehydrated(true),
                                     ]),
                                 ])
                                 ->columnSpanFull()
@@ -854,18 +856,18 @@ class OrderConfirmationResource extends Resource
                                             ->label('Subtotal Produk (Rp)')
                                             ->prefix('Rp')
                                             ->currencyMask(2)
-                                            ->readOnly()
-                                            ->dehydrated()
+                                            ->disabled()
+                                            ->dehydrated(true)
                                             ->default(0),
 
                                         Forms\Components\TextInput::make('biaya_plate_total')
                                             ->label('Biaya Plate Terpisah (Rp)')
                                             ->prefix('Rp')
                                             ->currencyMask(2)
-                                            ->readOnly()
-                                            ->dehydrated()
+                                            ->disabled()
+                                            ->dehydrated(true)
                                             ->default(0)
-                                            ->helperText('Otomatis dari item mode Tagih Terpisah'),
+                                            ->helperText('Otomatis dari kalkulator HPP (mode Tagih Terpisah)'),
 
                                         Forms\Components\TextInput::make('diskon')
                                             ->label('Diskon (Rp)')
@@ -881,8 +883,8 @@ class OrderConfirmationResource extends Resource
                                             ->label('Total Akhir (Rp)')
                                             ->prefix('Rp')
                                             ->currencyMask(2)
-                                            ->readOnly()
-                                            ->dehydrated()
+                                            ->disabled()
+                                            ->dehydrated(true)
                                             ->default(0),
                                     ]),
                                 ])
