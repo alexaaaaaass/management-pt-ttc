@@ -502,29 +502,30 @@ class PracetakProcessResource extends Resource
                             // ================================================
                             // REPEATER PEMAKAIAN BAHAN MENTAH PLATE (POTONG STOK)
                             // ================================================
-                            Forms\Components\Section::make('Pemakaian Bahan Mentah Plate (Potong Stok Prepress — Fraksi Sheet / Utuh)')
-                                ->description('Tambahkan bahan mentah plate yang digunakan untuk produksi atau remake rusak. Luas cm² & fraksi sheet dihitung otomatis namun dapat disesuaikan manual ke sheet utuh (misal 1.00). Simpan lalu klik "Posting Potong Stok" untuk memotong saldo stok prepress & mencatat Ledger OUT.')
+                            Forms\Components\Section::make('Pemakaian Material Plate')
+                                ->description('Pilih material plate & qty yang dipakai, lalu simpan dan klik "Posting Potong Stok".')
+                                ->compact()
                                 ->schema([
                                     Forms\Components\Repeater::make('materialUsages')
                                         ->relationship('materialUsages')
-                                        ->label('Daftar Pemakaian Material Plate')
-                                        ->addActionLabel('+ Tambah Pemakaian Material Plate')
+                                        ->hiddenLabel()
+                                        ->addActionLabel('Tambah Material Plate')
                                         ->defaultItems(0)
                                         ->collapsible()
                                         ->itemLabel(function (array $state): ?string {
                                             $plateName = ! empty($state['master_material_plate_id'])
                                                 ? (MasterMaterialPlate::find($state['master_material_plate_id'])?->nama_material ?? 'Material Plate')
-                                                : 'Item Pemakaian Baru';
-                                            $qty = number_format((float) ($state['qty_sheet_terpakai'] ?? 0), 4, '.', ',');
-                                            $biaya = MoneyHelper::format($state['total_biaya'] ?? 0, 2) ?? '0';
+                                                : 'Material Plate Baru';
+                                            $qty = rtrim(rtrim(number_format((float) ($state['qty_sheet_terpakai'] ?? 0), 2, ',', '.'), '0'), ',');
+                                            $biaya = number_format((float) (MoneyHelper::clean($state['total_biaya'] ?? 0) ?? 0), 0, ',', '.');
                                             $status = strtoupper((string) ($state['status'] ?? 'draft'));
 
-                                            return "[{$status}] {$plateName} — {$qty} Sheet (Rp {$biaya})";
+                                            return "[{$status}] {$plateName} · {$qty} Sheet · Rp {$biaya}";
                                         })
                                         ->deleteAction(
                                             fn (Forms\Components\Actions\Action $action) => $action
                                                 ->hidden(function (array $arguments, Forms\Components\Repeater $component): bool {
-                                                    $itemData = $component->getItemState($arguments['item']);
+                                                    $itemData = $component->getRawItemState($arguments['item']);
 
                                                     return ($itemData['status'] ?? 'draft') === 'posted';
                                                 })
@@ -534,20 +535,17 @@ class PracetakProcessResource extends Resource
 
                                             Forms\Components\Grid::make(3)->schema([
                                                 Forms\Components\Select::make('master_material_plate_id')
-                                                    ->label('Material Plate Mentah')
+                                                    ->label('Material Plate')
                                                     ->options(function () {
                                                         return MasterMaterialPlate::with('stock')
                                                             ->where('status', 'aktif')
                                                             ->orderBy('nama_material')
                                                             ->get()
                                                             ->mapWithKeys(function (MasterMaterialPlate $p) {
-                                                                $stok = number_format((float) ($p->stock?->stok_sheet_utuh ?? 0), 2, '.', ',');
-                                                                $harga = (float) ($p->stock?->harga_rata_rata ?? 0) > 0
-                                                                    ? (float) $p->stock->harga_rata_rata
-                                                                    : (float) $p->harga_beli;
+                                                                $stok = number_format((float) ($p->stock?->stok_sheet_utuh ?? 0), 2, ',', '.');
 
                                                                 return [
-                                                                    $p->id => "{$p->kode_material} · {$p->nama_material} ({$p->ukuran_sheet} | Stok: {$stok} sh | Rp " . number_format($harga, 0, ',', '.') . '/sh)',
+                                                                    $p->id => "{$p->kode_material} · {$p->nama_material} (Stok: {$stok} sh)",
                                                                 ];
                                                             });
                                                     })
@@ -560,11 +558,11 @@ class PracetakProcessResource extends Resource
                                                     ->columnSpan(2),
 
                                                 Forms\Components\Select::make('jenis_pemakaian')
-                                                    ->label('Jenis Pemakaian')
+                                                    ->label('Jenis')
                                                     ->options([
-                                                        'produksi'     => 'Produksi Plate Normal',
-                                                        'remake_rusak' => 'Remake / Ganti Plate Rusak',
-                                                        'prove'        => 'Keperluan Prove Print',
+                                                        'produksi'     => 'Produksi Normal',
+                                                        'remake_rusak' => 'Remake / Plate Rusak',
+                                                        'prove'        => 'Prove Print',
                                                     ])
                                                     ->default('produksi')
                                                     ->required()
@@ -574,80 +572,85 @@ class PracetakProcessResource extends Resource
 
                                             Forms\Components\Grid::make(4)->schema([
                                                 Forms\Components\TextInput::make('jumlah_plate')
-                                                    ->label('Jml Plate (Warna)')
+                                                    ->label('Jml Plate')
                                                     ->numeric()
                                                     ->default(4)
                                                     ->minValue(1)
+                                                    ->suffix('lbr')
                                                     ->required()
                                                     ->live(onBlur: true)
                                                     ->disabled(fn (Get $get) => ($get('status') ?? 'draft') !== 'draft')
                                                     ->afterStateUpdated(fn (Get $get, Set $set) => self::recalculateUsageRow($get, $set, true)),
 
-                                                Forms\Components\TextInput::make('panjang_potong_mm')
-                                                    ->label('Panjang Potong (mm)')
-                                                    ->numeric()
-                                                    ->default(432.8)
-                                                    ->helperText('Repeat + margin')
-                                                    ->live(onBlur: true)
-                                                    ->disabled(fn (Get $get) => ($get('status') ?? 'draft') !== 'draft')
-                                                    ->afterStateUpdated(fn (Get $get, Set $set) => self::recalculateUsageRow($get, $set, true)),
-
-                                                Forms\Components\TextInput::make('lebar_potong_mm')
-                                                    ->label('Lebar Potong (mm)')
-                                                    ->numeric()
-                                                    ->default(280)
-                                                    ->helperText('Lebar web + margin')
-                                                    ->live(onBlur: true)
-                                                    ->disabled(fn (Get $get) => ($get('status') ?? 'draft') !== 'draft')
-                                                    ->afterStateUpdated(fn (Get $get, Set $set) => self::recalculateUsageRow($get, $set, true)),
-
-                                                Forms\Components\TextInput::make('luas_terpakai_cm2')
-                                                    ->label('Total Luas (cm²)')
-                                                    ->numeric()
-                                                    ->readOnly()
-                                                    ->dehydrated(),
-                                            ]),
-
-                                            Forms\Components\Grid::make(3)->schema([
                                                 Forms\Components\TextInput::make('qty_sheet_terpakai')
-                                                    ->label('Qty Sheet Dipotong (Desimal / Utuh)')
+                                                    ->label('Qty Sheet')
                                                     ->numeric()
-                                                    ->step('0.0001')
+                                                    ->step('0.01')
+                                                    ->default(0)
+                                                    ->suffix('sh')
                                                     ->required()
-                                                    ->helperText('Otomatis dari luas cm²; ubah manual misal ke 1.00 jika potong 1 sheet penuh')
+                                                    ->helperText('Otomatis / ubah manual')
                                                     ->live(onBlur: true)
                                                     ->disabled(fn (Get $get) => ($get('status') ?? 'draft') !== 'draft')
                                                     ->afterStateUpdated(fn (Get $get, Set $set) => self::recalculateUsageRow($get, $set, false)),
 
                                                 Forms\Components\TextInput::make('harga_satuan_snapshot')
-                                                    ->label('Harga Rata-rata / Sheet (Rp)')
+                                                    ->label('Harga / Sheet')
                                                     ->prefix('Rp')
-                                                    ->readOnly()
+                                                    ->disabled()
+                                                    ->dehydrated(true)
                                                     ->formatStateUsing(fn ($state) => MoneyHelper::format($state, 2) ?? '0')
-                                                    ->dehydrateStateUsing(fn ($state) => MoneyHelper::clean($state) ?? 0)
-                                                    ->dehydrated(),
+                                                    ->dehydrateStateUsing(fn ($state) => MoneyHelper::clean($state) ?? 0),
 
                                                 Forms\Components\TextInput::make('total_biaya')
-                                                    ->label('Total Biaya Material (Rp)')
+                                                    ->label('Total Biaya')
                                                     ->prefix('Rp')
-                                                    ->readOnly()
+                                                    ->disabled()
+                                                    ->dehydrated(true)
                                                     ->formatStateUsing(fn ($state) => MoneyHelper::format($state, 2) ?? '0')
-                                                    ->dehydrateStateUsing(fn ($state) => MoneyHelper::clean($state) ?? 0)
-                                                    ->dehydrated(),
+                                                    ->dehydrateStateUsing(fn ($state) => MoneyHelper::clean($state) ?? 0),
                                             ]),
 
+                                            Forms\Components\Section::make('Detail Ukuran Potong (Opsional)')
+                                                ->collapsed()
+                                                ->compact()
+                                                ->columns(3)
+                                                ->schema([
+                                                    Forms\Components\TextInput::make('panjang_potong_mm')
+                                                        ->label('Panjang (mm)')
+                                                        ->numeric()
+                                                        ->default(432.8)
+                                                        ->live(onBlur: true)
+                                                        ->disabled(fn (Get $get) => ($get('status') ?? 'draft') !== 'draft')
+                                                        ->afterStateUpdated(fn (Get $get, Set $set) => self::recalculateUsageRow($get, $set, true)),
+
+                                                    Forms\Components\TextInput::make('lebar_potong_mm')
+                                                        ->label('Lebar (mm)')
+                                                        ->numeric()
+                                                        ->default(280)
+                                                        ->live(onBlur: true)
+                                                        ->disabled(fn (Get $get) => ($get('status') ?? 'draft') !== 'draft')
+                                                        ->afterStateUpdated(fn (Get $get, Set $set) => self::recalculateUsageRow($get, $set, true)),
+
+                                                    Forms\Components\TextInput::make('luas_terpakai_cm2')
+                                                        ->label('Total Luas (cm²)')
+                                                        ->numeric()
+                                                        ->disabled()
+                                                        ->dehydrated(true),
+                                                ]),
+
                                             Forms\Components\TextInput::make('alasan_kerusakan')
-                                                ->label('Alasan Remake / Kerusakan Plate')
-                                                ->placeholder('Contoh: Plate warna Cyan baret saat cuci / revisi teks customer')
+                                                ->label('Alasan Remake / Kerusakan')
+                                                ->placeholder('Contoh: Plate baret / revisi teks')
                                                 ->visible(fn (Get $get) => $get('jenis_pemakaian') === 'remake_rusak')
                                                 ->disabled(fn (Get $get) => ($get('status') ?? 'draft') !== 'draft'),
                                         ])
                                         ->columnSpanFull(),
                                 ]),
 
-                            // Kartu Ringkasan Actual Cost & Variance
+                            // Kartu Ringkasan Actual Cost & Variance (Minimalis)
                             Forms\Components\Placeholder::make('cost_variance_summary')
-                                ->label('Ringkasan Actual Costing & Variance vs Estimasi Order Confirmation')
+                                ->hiddenLabel()
                                 ->content(function (?PracetakProcess $record, Get $get) {
                                     $est = (float) (MoneyHelper::clean($get('estimasi_biaya_plate')) ?? $record?->estimasi_biaya_plate ?? 0);
                                     $mat = (float) ($record?->actual_material_cost ?? 0);
@@ -656,26 +659,27 @@ class PracetakProcessResource extends Resource
                                     $prv = (float) (MoneyHelper::clean($get('actual_prove_cost')) ?? $record?->actual_prove_cost ?? 0);
                                     $actualTotal = $mat + $proc + $des + $prv;
                                     $variance = $est > 0 ? ($est - $actualTotal) : 0;
-                                    $varColor = $variance >= 0 ? '#10b981' : '#ef4444';
-                                    $varLabel = $est <= 0 ? 'Belum ada acuan OC' : ($variance >= 0 ? 'Hemat / Dalam Budget' : 'Overbudget (Cek Remake/Waste)');
+                                    $varColor = $variance >= 0 ? '#34d399' : '#f87171';
+                                    $varLabel = $est <= 0 ? 'Tanpa acuan OC' : ($variance >= 0 ? 'Dalam budget' : 'Overbudget');
+                                    $fmt = fn (float $v) => 'Rp ' . number_format($v, 0, ',', '.');
 
                                     return new HtmlString('
-                                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 10px; padding: 12px; border-radius: 10px; border: 1px solid rgba(156,163,175,0.25); background: rgba(156,163,175,0.06);">
+                                        <div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; padding: 14px 16px; border-radius: 12px; border: 1px solid rgba(148,163,184,0.16); background: rgba(148,163,184,0.04); font-variant-numeric: tabular-nums;">
                                             <div>
-                                                <div style="font-size: 11px; color: #6b7280;">Estimasi Budget OC</div>
-                                                <div style="font-size: 15px; font-weight: 700; color: #3b82f6;">Rp ' . (MoneyHelper::format($est, 2) ?? '0') . '</div>
+                                                <div style="font-size: 11px; opacity: 0.65;">Estimasi OC</div>
+                                                <div style="font-size: 15px; font-weight: 600; margin-top: 4px;">' . $fmt($est) . '</div>
                                             </div>
                                             <div>
-                                                <div style="font-size: 11px; color: #6b7280;">Material Plate Posted (OUT)</div>
-                                                <div style="font-size: 15px; font-weight: 700;">Rp ' . (MoneyHelper::format($mat, 2) ?? '0') . '</div>
+                                                <div style="font-size: 11px; opacity: 0.65;">Material Posted</div>
+                                                <div style="font-size: 15px; font-weight: 600; margin-top: 4px;">' . $fmt($mat) . '</div>
                                             </div>
                                             <div>
-                                                <div style="font-size: 11px; color: #6b7280;">Total Biaya Aktual Plate</div>
-                                                <div style="font-size: 15px; font-weight: 700; color: #f59e0b;">Rp ' . (MoneyHelper::format($actualTotal, 2) ?? '0') . '</div>
+                                                <div style="font-size: 11px; opacity: 0.65;">Total Aktual</div>
+                                                <div style="font-size: 15px; font-weight: 600; color: #fbbf24; margin-top: 4px;">' . $fmt($actualTotal) . '</div>
                                             </div>
                                             <div>
-                                                <div style="font-size: 11px; color: #6b7280;">Variance (' . e($varLabel) . ')</div>
-                                                <div style="font-size: 15px; font-weight: 800; color: ' . $varColor . ';">' . ($variance >= 0 ? '+' : '-') . 'Rp ' . (MoneyHelper::format(abs($variance), 2) ?? '0') . '</div>
+                                                <div style="font-size: 11px; opacity: 0.65;">Selisih (' . e($varLabel) . ')</div>
+                                                <div style="font-size: 15px; font-weight: 700; color: ' . $varColor . '; margin-top: 4px;">' . ($variance >= 0 ? '+' : '-') . $fmt(abs($variance)) . '</div>
                                             </div>
                                         </div>
                                     ');
