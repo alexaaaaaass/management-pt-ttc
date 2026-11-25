@@ -137,8 +137,13 @@ class SalesOrderResource extends Resource
                                     }
 
                                     $formData = app(\App\Services\Sales\SalesOrderService::class)->prepareFormDataFromOrderConfirmation($oc);
+                                    $maskedFields = ['qty', 'qty_from_stock', 'qty_to_produce', 'harga_pcs', 'harga_kirim', 'diskon'];
                                     foreach ($formData as $field => $val) {
-                                        $set($field, $val);
+                                        if (in_array($field, $maskedFields, true) && $val !== null && $val !== '') {
+                                            $set($field, \App\Support\MoneyHelper::format($val, 0) ?? '0');
+                                        } else {
+                                            $set($field, $val);
+                                        }
                                     }
                                 }),
 
@@ -180,8 +185,13 @@ class SalesOrderResource extends Resource
                                     if (! $oc) return;
 
                                     $formData = app(\App\Services\Sales\SalesOrderService::class)->prepareFormDataFromOrderConfirmation($oc, (int) $state);
+                                    $maskedFields = ['qty', 'qty_from_stock', 'qty_to_produce', 'harga_pcs', 'harga_kirim', 'diskon'];
                                     foreach ($formData as $field => $val) {
-                                        $set($field, $val);
+                                        if (in_array($field, $maskedFields, true) && $val !== null && $val !== '') {
+                                            $set($field, \App\Support\MoneyHelper::format($val, 0) ?? '0');
+                                        } else {
+                                            $set($field, $val);
+                                        }
                                     }
                                 }),     
 
@@ -305,7 +315,7 @@ class SalesOrderResource extends Resource
                                 ->required(fn(Get $get) => $get('order_type') == 'SPK')
                                 ->label('Jumlah Pesanan')
                                 ->quantityMask(0)
-                                ->live(debounce: 500)
+                                ->live(onBlur: true)
                                 ->afterStateUpdated(function ($state, callable $set, callable $get, $record) {
                                     if ($get('order_type') === 'SPK') {
                                         static::syncFulfillmentAndBom($set, $get, $record);
@@ -323,8 +333,8 @@ class SalesOrderResource extends Resource
                                         if ($itemableType !== \App\Models\FinishGoodItem::class || !$itemableId) return;
 
                                         $fulfillment = $get('fulfillment_type') ?? 'PRODUCTION';
-                                        $qtyVal = (float) $value;
-                                        $qtyFromStock = (float) ($get('qty_from_stock') ?? 0);
+                                        $qtyVal = (float) (\App\Support\MoneyHelper::clean($value) ?? 0);
+                                        $qtyFromStock = (float) (\App\Support\MoneyHelper::clean($get('qty_from_stock')) ?? 0);
 
                                         $qtyToProduce = match ($fulfillment) {
                                             'FROM_STOCK'    => 0.0,
@@ -413,14 +423,14 @@ class SalesOrderResource extends Resource
                                         }
 
                                         $fgId = (int) ($get('itemable_id') ?: $get('item_source') ?: 0);
-                                        $qty = (float) ($get('qty') ?? 0);
+                                        $qty = (float) (\App\Support\MoneyHelper::clean($get('qty')) ?? 0);
                                         if (! $fgId || $qty <= 0) {
                                             return;
                                         }
 
                                         $free = static::getEffectiveFreeBufferForForm($fgId, $record);
                                         if ($free < $qty) {
-                                            $fail("Buffer stock bebas hanya tersedia " . number_format($free, 0, ',', '.') . " pcs (kurang dari {$qty} pcs). Pilih Kombinasi atau Produksi Baru.");
+                                            $fail("Buffer stock bebas hanya tersedia " . number_format($free, 0, ',', '.') . " pcs (kurang dari " . number_format($qty, 0, ',', '.') . " pcs). Pilih Kombinasi atau Produksi Baru.");
                                         }
                                     };
                                 }),
@@ -428,11 +438,20 @@ class SalesOrderResource extends Resource
                             Forms\Components\TextInput::make('qty_from_stock')
                                 ->label('Qty Diambil dari Buffer Stock (pcs)')
                                 ->visible(fn (Get $get) => $get('order_type') === 'SPK' && $get('fulfillment_type') !== 'PRODUCTION')
-                                ->numeric()
+                                ->quantityMask(0)
                                 ->default(0)
-                                ->dehydrated()
-                                ->readOnly(fn (Get $get) => $get('fulfillment_type') === 'FROM_STOCK')
-                                ->live(debounce: 400)
+                                ->disabled(fn (Get $get) => $get('fulfillment_type') === 'FROM_STOCK')
+                                ->dehydrated(true)
+                                ->live(onBlur: true)
+                                ->helperText(function (Get $get, $record): ?string {
+                                    if ($get('fulfillment_type') === 'FROM_STOCK') {
+                                        return 'Otomatis penuh sesuai Jumlah Pesanan.';
+                                    }
+                                    $fgId = (int) ($get('itemable_id') ?: $get('item_source') ?: 0);
+                                    $free = $fgId ? static::getEffectiveFreeBufferForForm($fgId, $record) : 0.0;
+
+                                    return 'Maksimal ambil dari Buffer Stock bebas: ' . number_format($free, 0, ',', '.') . ' pcs.';
+                                })
                                 ->afterStateUpdated(function ($state, callable $set, callable $get, $record) {
                                     static::syncFulfillmentAndBom($set, $get, $record, true);
                                 })
@@ -443,11 +462,11 @@ class SalesOrderResource extends Resource
                                         }
 
                                         $fgId = (int) ($get('itemable_id') ?: $get('item_source') ?: 0);
-                                        $qty = (float) ($get('qty') ?? 0);
-                                        $val = (float) $value;
+                                        $qty = (float) (\App\Support\MoneyHelper::clean($get('qty')) ?? 0);
+                                        $val = (float) (\App\Support\MoneyHelper::clean($value) ?? 0);
 
                                         if ($val > $qty) {
-                                            $fail("Qty dari stock tidak boleh melebihi Jumlah Pesanan ({$qty}).");
+                                            $fail("Qty dari stock tidak boleh melebihi Jumlah Pesanan (" . number_format($qty, 0, ',', '.') . " pcs).");
                                             return;
                                         }
 
@@ -463,10 +482,11 @@ class SalesOrderResource extends Resource
                             Forms\Components\TextInput::make('qty_to_produce')
                                 ->label('Qty Sisa Wajib Diproduksi via SPK (pcs)')
                                 ->visible(fn (Get $get) => $get('order_type') === 'SPK' && $get('fulfillment_type') !== 'PRODUCTION')
-                                ->numeric()
+                                ->quantityMask(0)
                                 ->default(0)
-                                ->readOnly()
-                                ->dehydrated(),
+                                ->disabled()
+                                ->dehydrated(true)
+                                ->helperText('Otomatis: Jumlah Pesanan − Qty Diambil dari Buffer Stock'),
 
                             Forms\Components\TextInput::make('harga_pcs')
                                 ->label('Harga pcs')
@@ -910,7 +930,7 @@ class SalesOrderResource extends Resource
         bool $preferExistingQtyFromStock = false
     ): void {
         $fgId = (int) ($get('itemable_id') ?: $get('item_source') ?: 0);
-        $qty = max(0.0, (float) ($get('qty') ?? 0));
+        $qty = max(0.0, (float) (\App\Support\MoneyHelper::clean($get('qty')) ?? 0));
         $mode = $get('fulfillment_type') ?: 'PRODUCTION';
 
         $effectiveFree = $fgId ? static::getEffectiveFreeBufferForForm($fgId, $record) : 0.0;
@@ -918,19 +938,24 @@ class SalesOrderResource extends Resource
         if ($mode === 'FROM_STOCK') {
             $qtyFromStock = $qty;
             $qtyToProduce = 0.0;
+            $set('qty_from_stock', \App\Support\MoneyHelper::format($qtyFromStock, 0) ?? '0');
         } elseif ($mode === 'PARTIAL_STOCK') {
-            $rawFromStock = $preferExistingQtyFromStock
-                ? (float) ($get('qty_from_stock') ?? 0)
-                : min($qty, $effectiveFree);
-            $qtyFromStock = min($qty, max(0.0, $rawFromStock));
-            $qtyToProduce = max(0.0, $qty - $qtyFromStock);
+            if ($preferExistingQtyFromStock) {
+                $qtyFromStock = max(0.0, (float) (\App\Support\MoneyHelper::clean($get('qty_from_stock')) ?? 0));
+                // Jangan menimpa/mengoreksi paksa angka yang sedang diisi user; cukup hitung sisa produksi
+                $qtyToProduce = max(0.0, $qty - min($qty, $qtyFromStock));
+            } else {
+                $qtyFromStock = min($qty, max(0.0, $effectiveFree));
+                $qtyToProduce = max(0.0, $qty - $qtyFromStock);
+                $set('qty_from_stock', \App\Support\MoneyHelper::format($qtyFromStock, 0) ?? '0');
+            }
         } else {
             $qtyFromStock = 0.0;
             $qtyToProduce = $qty;
+            $set('qty_from_stock', '0');
         }
 
-        $set('qty_from_stock', $qtyFromStock);
-        $set('qty_to_produce', $qtyToProduce);
+        $set('qty_to_produce', \App\Support\MoneyHelper::format($qtyToProduce, 0) ?? '0');
 
         if ($fgId && $qtyToProduce > 0) {
             $bom = app(\App\Services\Sales\SalesOrderService::class)->getBomPreview($fgId, $qtyToProduce);
