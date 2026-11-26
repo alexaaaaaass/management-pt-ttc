@@ -136,4 +136,22 @@
     .fi-wi-chart canvas {
         filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.02));
     }
+
+    /* 9. Full-Width Responsive Layout & Tables (otomatis melebar penuh saat sidebar collapse) */
+    .fi-layout .fi-main-ctn {
+        min-width: 0 !important;
+        width: 100% !important;
+    }
+
+    .fi-layout .fi-main {
+        max-width: 100% !important;
+        width: 100% !important;
+    }
+
+    .fi-ta,
+    .fi-ta-ctn,
+    .fi-ta-content,
+    .fi-ta-table {
+        width: 100% !important;
+    }
 </style>

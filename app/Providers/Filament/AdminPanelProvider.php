@@ -14,6 +14,7 @@ use Filament\Pages;
 use Filament\Panel;
 use Filament\PanelProvider;
 use Filament\Support\Colors\Color;
+use Filament\Support\Enums\MaxWidth;
 use Filament\View\PanelsRenderHook;
 use Filament\Widgets;
 use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
@@ -41,7 +42,8 @@ class AdminPanelProvider extends PanelProvider
 
             // ukuran logo
             ->brandLogoHeight('40px')
-            ->sidebarCollapsibleOnDesktop()    
+            ->sidebarCollapsibleOnDesktop()
+            ->maxContentWidth(MaxWidth::Full)
             ->font('Inter')
             ->colors([
                 'primary' => Color::Blue,
@@ -60,10 +62,10 @@ class AdminPanelProvider extends PanelProvider
                     ->label('Purchase')
                     ->collapsed(),
                 NavigationGroup::make()
-                    ->label('Subcount')
+                    ->label('Ppic')
                     ->collapsed(),
                 NavigationGroup::make()
-                    ->label('Ppic')
+                    ->label('Subcount')
                     ->collapsed(),
                 NavigationGroup::make()
                     ->label('Pra Cetak')
