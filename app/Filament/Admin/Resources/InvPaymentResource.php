@@ -34,7 +34,7 @@ class InvPaymentResource extends Resource
     return $form
         ->schema([ 
 
-            Grid::make(3)
+            Grid::make(['default' => 1, 'lg' => 3])
                 ->schema([
 
                     /*
@@ -44,7 +44,16 @@ class InvPaymentResource extends Resource
                     */
 
                     Section::make('Input Pembayaran')
-                        ->columnSpan(2)
+                        ->description('Catat penerimaan pembayaran atau cicilan invoice customer.')
+                        ->icon('heroicon-o-credit-card')
+                        ->iconColor('primary')
+                        ->extraAttributes([
+                            'style' => 'border-left: 5px solid #3b82f6 !important;',
+                        ])
+                        ->columnSpan([
+                            'default' => 1,
+                            'lg' => fn (Get $get) => filled($get('invoice_id')) ? 2 : 3,
+                        ])
                         ->schema([
 
                             Grid::make(2)
@@ -253,72 +262,66 @@ class InvPaymentResource extends Resource
                     */
 
                     Section::make('Ringkasan Invoice')
-    ->visible(fn (Get $get) => filled($get('invoice_id')))
-    ->schema([
+                        ->description('Detail tagihan dan sisa pembayaran aktif.')
+                        ->icon('heroicon-o-document-text')
+                        ->iconColor('success')
+                        ->extraAttributes([
+                            'style' => 'border-left: 5px solid #10b981 !important;',
+                        ])
+                        ->columnSpan(['default' => 1, 'lg' => 1])
+                        ->visible(fn (Get $get) => filled($get('invoice_id')))
+                        ->schema([
 
-        Placeholder::make('customer')
-            ->label('Customer')
-            ->content(function (Get $get) {
+                            Placeholder::make('customer')
+                                ->label('Customer')
+                                ->extraAttributes(['class' => 'text-base font-semibold'])
+                                ->content(function (Get $get) {
+                                    $invoice = Invoice::with(['customer', 'suratJalan.salesOrder.customer'])->find($get('invoice_id'));
 
-                return Invoice::find(
-                    $get('invoice_id')
-                )?->customer?->nama_customer;
+                                    return $invoice?->customer?->nama_customer
+                                        ?? $invoice?->suratJalan?->salesOrder?->customer?->nama_customer
+                                        ?? '-';
+                                }),
 
-            }),
+                            Placeholder::make('grand_total')
+                                ->label('Grand Total')
+                                ->extraAttributes(['class' => 'text-base font-bold tabular-nums'])
+                                ->content(function (Get $get) {
+                                    $invoice = Invoice::find($get('invoice_id'));
 
-        Placeholder::make('grand_total')
-            ->label('Grand Total')
-            ->content(function (Get $get) {
+                                    return 'Rp ' . number_format((float) ($invoice?->grand_total ?? 0), 0, ',', '.');
+                                }),
 
-                $invoice = Invoice::find(
-                    $get('invoice_id')
-                );
+                            Placeholder::make('paid')
+                                ->label('Sudah Dibayar')
+                                ->extraAttributes([
+                                    'class' => 'text-base font-bold tabular-nums',
+                                    'style' => 'color: #10b981;',
+                                ])
+                                ->content(function (Get $get) {
+                                    $invoice = Invoice::find($get('invoice_id'));
 
-                return 'Rp '.number_format(
-                    $invoice?->grand_total ?? 0,
-                    0,
-                    ',',
-                    '.'
-                );
+                                    return 'Rp ' . number_format((float) ($invoice?->total_payment ?? 0), 0, ',', '.');
+                                }),
 
-            }),
+                            Placeholder::make('outstanding')
+                                ->label('Outstanding')
+                                ->extraAttributes(function (Get $get) {
+                                    $sisa = (float) (Invoice::find($get('invoice_id'))?->sisa_tagihan ?? 0);
 
-        Placeholder::make('paid')
-            ->label('Sudah Dibayar')
-            ->content(function (Get $get) {
+                                    return [
+                                        'class' => 'text-lg font-extrabold tabular-nums',
+                                        'style' => $sisa > 0 ? 'color: #f59e0b;' : 'color: #10b981;',
+                                    ];
+                                })
+                                ->content(function (Get $get) {
+                                    $invoice = Invoice::find($get('invoice_id'));
 
-                $invoice = Invoice::find(
-                    $get('invoice_id')
-                );
+                                    return 'Rp ' . number_format((float) ($invoice?->sisa_tagihan ?? 0), 0, ',', '.');
+                                }),
 
-                return 'Rp '.number_format(
-                    $invoice?->total_payment ?? 0,
-                    0,
-                    ',',
-                    '.'
-                );
-
-            }),
-
-        Placeholder::make('outstanding')
-            ->label('Outstanding')
-            ->content(function (Get $get) {
-
-                $invoice = Invoice::find(
-                    $get('invoice_id')
-                );
-
-                return 'Rp '.number_format(
-                    $invoice?->sisa_tagihan ?? 0,
-                    0,
-                    ',',
-                    '.'
-                );
-
-            }),
-
-    ])
-    ->columns(2),
+                        ])
+                        ->columns(['default' => 2, 'lg' => 1]),
 
                 ])
 
