@@ -154,4 +154,9 @@
     .fi-ta-table {
         width: 100% !important;
     }
+
+    /* 10. Pembayaran Bon/Cicilan: sembunyikan baris subtotal "This page" agar hanya tampil total keseluruhan */
+    .fi-resource-inv-payments tr.fi-ta-summary-header-row + tr.fi-ta-summary-row {
+        display: none !important;
+    }
 </style>

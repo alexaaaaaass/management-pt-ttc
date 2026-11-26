@@ -3,8 +3,10 @@
 namespace App\Filament\Admin\Resources;
 
 use App\Filament\Admin\Resources\InvPaymentResource\Pages;
+use App\Models\Customer;
 use App\Models\Invoice;
 use App\Models\InvPayment;
+use Carbon\Carbon;
 use Filament\Forms\Components\Checkbox;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Grid;
@@ -397,8 +399,8 @@ class InvPaymentResource extends Resource
                     ->sortable()
                     ->summarize(
                         Tables\Columns\Summarizers\Sum::make()
-                            ->label('Total Pembayaran Diterima')
-                            ->money('IDR')
+                            ->label('')
+                            ->formatStateUsing(fn ($state) => 'Rp ' . number_format((float) $state, 0, ',', '.'))
                     ),
 
                 Tables\Columns\TextColumn::make('keterangan')
@@ -418,44 +420,150 @@ class InvPaymentResource extends Resource
                         default => 'gray',
                     }),
             ])
-        ->bulkActions([
-            Tables\Actions\BulkAction::make('infoDataTerpilih')
-                ->label('Info Data Terpilih')
-                ->icon('heroicon-o-check-circle')
-                ->action(function (\Illuminate\Database\Eloquent\Collection $records): void {
-                    \Filament\Notifications\Notification::make()
-                        ->title($records->count() . ' data dipilih')
-                        ->success()
-                        ->send();
-                })
-                ->deselectRecordsAfterCompletion(),
-        ])
-        ->bulkActions([
-            Tables\Actions\BulkAction::make('infoDataTerpilih')
-                ->label('Info Data Terpilih')
-                ->icon('heroicon-o-check-circle')
-                ->action(function (\Illuminate\Database\Eloquent\Collection $records): void {
-                    \Filament\Notifications\Notification::make()
-                        ->title($records->count() . ' data dipilih')
-                        ->success()
-                        ->send();
-                })
-                ->deselectRecordsAfterCompletion(),
-        ])
-        ->actions([
-            Tables\Actions\ActionGroup::make([
-                Tables\Actions\EditAction::make(),
-                Tables\Actions\DeleteAction::make()
-                    ->using(fn ($record) => app(\App\Services\Finance\InvoicePaymentService::class)->deletePayment($record)),
+            ->filters([
+                Tables\Filters\SelectFilter::make('customer_id')
+                    ->label('Customer')
+                    ->options(fn () => Customer::query()->latest('id')->pluck('nama_customer', 'id')->toArray())
+                    ->searchable()
+                    ->preload()
+                    ->query(function (Builder $query, array $data): Builder {
+                        if (blank($data['value'] ?? null)) {
+                            return $query;
+                        }
+
+                        $customerId = (int) $data['value'];
+
+                        return $query->whereHas('invoice', function (Builder $iq) use ($customerId) {
+                            $iq->where('customer_id', $customerId)
+                                ->orWhereHas('suratJalan.salesOrder', fn (Builder $sq) => $sq->where('customer_id', $customerId));
+                        });
+                    }),
+
+                Tables\Filters\SelectFilter::make('status_invoice')
+                    ->label('Status Invoice')
+                    ->options([
+                        'Paid'    => 'PAID (Lunas)',
+                        'Partial' => 'PARTIAL (Cicilan)',
+                        'Unpaid'  => 'UNPAID (Belum Lunas)',
+                    ])
+                    ->query(function (Builder $query, array $data): Builder {
+                        if (blank($data['value'] ?? null)) {
+                            return $query;
+                        }
+
+                        return $query->whereHas('invoice', fn (Builder $iq) => $iq->whereRaw('LOWER(status) = ?', [strtolower((string) $data['value'])]));
+                    }),
+
+                Tables\Filters\SelectFilter::make('coa_id')
+                    ->label('Rekening Kas / Bank')
+                    ->relationship(
+                        name: 'coa',
+                        titleAttribute: 'nama_akun',
+                        modifyQueryUsing: fn (Builder $query) => $query
+                            ->where(function (Builder $q) {
+                                $q->whereIn('account_class', ['Current - Cash', 'Current - Bank'])
+                                    ->orWhereIn('id', InvPayment::query()->whereNotNull('coa_id')->select('coa_id')->distinct());
+                            })
+                            ->orderBy('kode_akun'),
+                    )
+                    ->getOptionLabelFromRecordUsing(fn ($record) => trim($record->kode_akun) . ' - ' . $record->nama_akun)
+                    ->searchable(['kode_akun', 'nama_akun'])
+                    ->preload(),
+
+                Tables\Filters\SelectFilter::make('metode_bayar_id')
+                    ->label('Metode Pembayaran')
+                    ->relationship('metodeBayar', 'metode_pembayaran')
+                    ->searchable()
+                    ->preload(),
+
+                Tables\Filters\SelectFilter::make('jenis_pembayaran')
+                    ->label('Jenis Pembayaran')
+                    ->options([
+                        'dp'        => 'DP / Uang Muka',
+                        'termin'    => 'Termin / Cicilan',
+                        'pelunasan' => 'Pelunasan',
+                    ])
+                    ->query(function (Builder $query, array $data): Builder {
+                        return match ($data['value'] ?? null) {
+                            'dp' => $query->where(fn (Builder $q) => $q->where('keterangan', 'like', '%DP%')->orWhere('keterangan', 'like', '%Uang Muka%')),
+                            'termin' => $query->where(fn (Builder $q) => $q->where('keterangan', 'like', '%Termin%')->orWhere('keterangan', 'like', '%Cicilan%')),
+                            'pelunasan' => $query->where('keterangan', 'like', '%Pelunasan%'),
+                            default => $query,
+                        };
+                    }),
+
+                Tables\Filters\Filter::make('tanggal_bayar')
+                    ->label('Periode Tanggal Bayar')
+                    ->columnSpanFull()
+                    ->form([
+                        Grid::make(2)->schema([
+                            DatePicker::make('dari_tanggal')
+                                ->label('Dari Tanggal'),
+                            DatePicker::make('sampai_tanggal')
+                                ->label('Sampai Tanggal'),
+                        ]),
+                    ])
+                    ->query(function (Builder $query, array $data): Builder {
+                        return $query
+                            ->when(
+                                $data['dari_tanggal'] ?? null,
+                                fn (Builder $q, $date): Builder => $q->whereDate('inv_payments.tanggal_bayar', '>=', $date),
+                            )
+                            ->when(
+                                $data['sampai_tanggal'] ?? null,
+                                fn (Builder $q, $date): Builder => $q->whereDate('inv_payments.tanggal_bayar', '<=', $date),
+                            );
+                    })
+                    ->indicateUsing(function (array $data): array {
+                        $indicators = [];
+                        if ($data['dari_tanggal'] ?? null) {
+                            $indicators[] = 'Dari: ' . Carbon::parse($data['dari_tanggal'])->format('d/m/Y');
+                        }
+                        if ($data['sampai_tanggal'] ?? null) {
+                            $indicators[] = 'Sampai: ' . Carbon::parse($data['sampai_tanggal'])->format('d/m/Y');
+                        }
+
+                        return $indicators;
+                    }),
             ])
-                ->label('Aksi')
-                ->icon('heroicon-m-ellipsis-vertical')
-                ->size('sm')
-                ->color('primary')
-                ->button()
-                ->dropdownPlacement('bottom-end'),
-        ]);
-}
+            ->filtersFormColumns(2)
+            ->bulkActions([
+                Tables\Actions\BulkAction::make('infoDataTerpilih')
+                    ->label('Info Data Terpilih')
+                    ->icon('heroicon-o-check-circle')
+                    ->action(function (\Illuminate\Database\Eloquent\Collection $records): void {
+                        \Filament\Notifications\Notification::make()
+                            ->title($records->count() . ' data dipilih')
+                            ->success()
+                            ->send();
+                    })
+                    ->deselectRecordsAfterCompletion(),
+            ])
+            ->actions([
+                Tables\Actions\ActionGroup::make([
+                    Tables\Actions\EditAction::make(),
+                    Tables\Actions\DeleteAction::make()
+                        ->using(fn ($record) => app(\App\Services\Finance\InvoicePaymentService::class)->deletePayment($record)),
+                ])
+                    ->label('Aksi')
+                    ->icon('heroicon-m-ellipsis-vertical')
+                    ->size('sm')
+                    ->color('primary')
+                    ->button()
+                    ->dropdownPlacement('bottom-end'),
+            ]);
+    }
+
+    public static function getEloquentQuery(): Builder
+    {
+        return parent::getEloquentQuery()
+            ->with([
+                'invoice.customer',
+                'invoice.suratJalan.salesOrder.customer',
+                'coa',
+                'metodeBayar',
+            ]);
+    }
 
     public static function getRelations(): array
     {
