@@ -52,8 +52,11 @@ class InvPaymentResource extends Resource
 
                                     Select::make('invoice_id')
                                         ->relationship(
-                                            'invoice',
-                                            'kode_invoice'
+                                            name: 'invoice',
+                                            titleAttribute: 'kode_invoice',
+                                            modifyQueryUsing: fn (Builder $query) => $query
+                                                ->with(['customer', 'suratJalan.salesOrder.customer'])
+                                                ->orderByDesc('invoices.id'),
                                         )
                                         ->default(request('invoice'))
                                         ->disabled(fn () => request()->has('invoice'))
@@ -62,7 +65,7 @@ class InvPaymentResource extends Resource
                                             fn ($record) =>
                                                 $record->kode_invoice .
                                                 ' • ' .
-                                                ($record->suratJalan?->salesOrder?->customer?->nama_customer ?? '-')
+                                                ($record->customer?->nama_customer ?? $record->suratJalan?->salesOrder?->customer?->nama_customer ?? '-')
                                         )
                                         ->searchable()
                                         ->preload()

@@ -132,7 +132,7 @@ class SubcountOutResource extends Resource
 
                             Forms\Components\Select::make('item_id')
                                 ->label('Material')
-                                ->options(fn () => MasterItem::pluck('nama_master_item', 'id'))
+                                ->options(fn () => MasterItem::latest('id')->pluck('nama_master_item', 'id'))
                                 ->searchable()
                                 ->preload()
                                 ->visible(fn ($get) => $get('sumber_item') === 'material')
@@ -164,7 +164,7 @@ class SubcountOutResource extends Resource
 
                             Forms\Components\Select::make('satuan_id')
                                 ->label('Satuan')
-                                ->options(fn () => MasterSatuan::pluck('nama_satuan', 'id'))
+                                ->options(fn () => MasterSatuan::latest('id')->pluck('nama_satuan', 'id'))
                                 ->searchable()
                                 ->preload()
                                 ->dehydrated(),

@@ -31,7 +31,8 @@ class PembPinjamanResource extends Resource
                 Forms\Components\Select::make('peng_pinjaman_id')
                     ->label('Pinjaman (Karyawan)')
                     ->options(
-                        PengPinjaman::with('karyawan')
+                        fn () => PengPinjaman::with('karyawan')
+                            ->latest('id')
                             ->get()
                             ->mapWithKeys(fn ($item) => [
                                 $item->id =>

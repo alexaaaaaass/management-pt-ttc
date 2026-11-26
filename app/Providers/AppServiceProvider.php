@@ -13,7 +13,12 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        // Urutkan seluruh dropdown relasi Filament (Select::relationship & SelectFilter::relationship)
+        // dari data terbaru (id DESC) secara default, sambil tetap menghormati orderBy eksplisit.
+        $this->app->singleton(
+            \Filament\Support\Services\RelationshipJoiner::class,
+            \App\Support\Filament\LatestRelationshipJoiner::class,
+        );
     }
 
     /**

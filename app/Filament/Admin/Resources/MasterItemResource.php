@@ -61,6 +61,7 @@ Forms\Components\Select::make('type_item_id')
         }
 
         return \App\Models\TypeItem::where('category_item_id', $categoryId)
+            ->latest('id')
             ->pluck('nama_type_item', 'id');
     })
     ->searchable()

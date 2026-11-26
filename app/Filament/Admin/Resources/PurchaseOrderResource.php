@@ -521,7 +521,7 @@ class PurchaseOrderResource extends Resource
 
                                         Forms\Components\Select::make('item_id')
                                             ->label('Item')
-                                            ->options(fn () => MasterItem::pluck('nama_master_item', 'id'))
+                                            ->options(fn () => MasterItem::latest('id')->pluck('nama_master_item', 'id'))
                                             ->disabled()
                                             ->dehydrated()
                                             ->columnSpan(fn (string $operation) => $operation === 'create' ? 2 : 3),

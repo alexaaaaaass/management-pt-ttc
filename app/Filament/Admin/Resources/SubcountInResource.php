@@ -69,7 +69,7 @@ class SubcountInResource extends Resource
                     Select::make('subcount_out_id')
                         ->label('Surat Jalan Subcount Out')
                         ->options(function () {
-                            return SubcountOut::with('items')->get()->mapWithKeys(function ($out) {
+                            return SubcountOut::with('items')->latest('id')->get()->mapWithKeys(function ($out) {
                                 $sisa = app(\App\Services\Subcontract\SubcontractService::class)->calculateOutstandingQty($out->id);
                                 $label = $out->surat_jalan_subcount . ' (Sisa Belum Diterima: ' . number_format($sisa, 0, ',', '.') . ')';
                                 return [$out->id => $label];
@@ -162,7 +162,7 @@ class SubcountInResource extends Resource
                             Select::make('item_hasil_id')
                                 ->label('Material Hasil (Master Item)')
                                 ->options(
-                                    fn () => MasterItem::pluck('nama_master_item', 'id')
+                                    fn () => MasterItem::latest('id')->pluck('nama_master_item', 'id')
                                 )
                                 ->searchable()
                                 ->preload()
@@ -172,7 +172,7 @@ class SubcountInResource extends Resource
                             Select::make('finish_good_item_id')
                                 ->label('Barang Jadi (Finish Good)')
                                 ->options(
-                                    fn () => FinishGoodItem::pluck('nama_barang', 'id')
+                                    fn () => FinishGoodItem::latest('id')->pluck('nama_barang', 'id')
                                 )
                                 ->searchable()
                                 ->preload()

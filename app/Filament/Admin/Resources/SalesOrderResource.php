@@ -209,9 +209,9 @@ class SalesOrderResource extends Resource
                                 })
                                 ->options(function (callable $get) {
                                     if ($get('order_type') === 'SPK') {
-                                        return \App\Models\FinishGoodItem::pluck('nama_barang', 'id');
+                                        return \App\Models\FinishGoodItem::latest('id')->pluck('nama_barang', 'id');
                                     }
-                                    return \App\Models\MasterItem::pluck('nama_master_item', 'id');
+                                    return \App\Models\MasterItem::latest('id')->pluck('nama_master_item', 'id');
                                 })
                                 ->live()
                                 ->afterStateUpdated(function ($state, callable $set, callable $get) {

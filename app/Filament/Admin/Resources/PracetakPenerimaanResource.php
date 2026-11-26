@@ -98,8 +98,9 @@ class PracetakPenerimaanResource extends Resource
                         ->schema([
                             Forms\Components\Select::make('master_material_plate_id')
                                 ->label('Material Plate')
-                                ->options(MasterMaterialPlate::query()
+                                ->options(fn () => MasterMaterialPlate::query()
                                     ->where('status', 'aktif')
+                                    ->latest('id')
                                     ->get()
                                     ->mapWithKeys(fn ($p) => [$p->id => "{$p->kode_material} - {$p->nama_material} ({$p->brand})"]))
                                 ->searchable()

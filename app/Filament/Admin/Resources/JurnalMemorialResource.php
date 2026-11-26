@@ -94,7 +94,7 @@ class JurnalMemorialResource extends Resource
 
                                 Select::make('karyawan_id')
                                     ->label('Dibuat Oleh / PIC')
-                                    ->options(fn () => Karyawan::pluck('nama', 'id')->toArray())
+                                    ->options(fn () => Karyawan::latest('id')->pluck('nama', 'id')->toArray())
                                     ->searchable()
                                     ->preload(),
 

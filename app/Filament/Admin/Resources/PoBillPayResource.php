@@ -161,7 +161,7 @@ protected static ?int $navigationSort = 12;
                                     )
 
                                     ->options(
-                                        MetodeBayar::pluck(
+                                        fn () => MetodeBayar::latest('id')->pluck(
                                             'metode_pembayaran',
                                             'id'
                                         )
