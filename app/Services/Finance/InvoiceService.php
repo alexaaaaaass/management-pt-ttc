@@ -565,15 +565,23 @@ class InvoiceService
     {
         // Hubungkan data dari Surat Jalan & Sales Order jika belum ada
         if ($invoice->surat_jalan_id) {
-            $suratJalan = SuratJalan::with('salesOrder')->find($invoice->surat_jalan_id);
+            $suratJalan = SuratJalan::with('salesOrder.orderConfirmation')->find($invoice->surat_jalan_id);
             if ($suratJalan && $suratJalan->salesOrder) {
-                $invoice->customer_id = $invoice->customer_id ?: $suratJalan->salesOrder->customer_id;
-                $invoice->sales_order_id = $invoice->sales_order_id ?: $suratJalan->salesOrder->id;
-                $invoice->no_po_customer = $invoice->no_po_customer ?: $suratJalan->salesOrder->no_po_customer;
+                $so = $suratJalan->salesOrder;
+                $invoice->customer_id = $invoice->customer_id ?: $so->customer_id;
+                $invoice->sales_order_id = $invoice->sales_order_id ?: $so->id;
+                $invoice->no_po_customer = $invoice->no_po_customer ?: $so->no_po_customer;
+                $invoice->order_id = $invoice->order_id
+                    ?: ($so->no_sales_order ?: ($so->orderConfirmation?->order_id ?: null));
 
                 if (!isset($invoice->subtotal) || $invoice->subtotal <= 0) {
                     $invoice->subtotal = $this->calculateSubtotal($suratJalan);
                 }
+            }
+        } elseif ($invoice->sales_order_id && empty($invoice->order_id)) {
+            $so = \App\Models\SalesOrder::withTrashed()->with('orderConfirmation')->find($invoice->sales_order_id);
+            if ($so) {
+                $invoice->order_id = $so->no_sales_order ?: ($so->orderConfirmation?->order_id ?: null);
             }
         }
 
@@ -621,16 +629,20 @@ class InvoiceService
                 ]);
             }
 
-            $suratJalan = SuratJalan::with('salesOrder')->findOrFail($suratJalanId);
+            $suratJalan = SuratJalan::with('salesOrder.orderConfirmation')->findOrFail($suratJalanId);
 
             if (empty($data['kode_invoice']) || $data['kode_invoice'] === 'AUTO') {
                 $data['kode_invoice'] = $this->generateKodeInvoice();
             }
 
             // Auto-fill dari Surat Jalan jika kosong
-            $data['customer_id'] = $data['customer_id'] ?? $suratJalan->salesOrder?->customer_id;
-            $data['sales_order_id'] = $data['sales_order_id'] ?? $suratJalan->salesOrder?->id;
-            $data['no_po_customer'] = $data['no_po_customer'] ?? $suratJalan->salesOrder?->no_po_customer;
+            $so = $suratJalan->salesOrder;
+            $data['customer_id'] = $data['customer_id'] ?? $so?->customer_id;
+            $data['sales_order_id'] = $data['sales_order_id'] ?? $so?->id;
+            $data['no_po_customer'] = $data['no_po_customer'] ?? $so?->no_po_customer;
+            $data['order_id'] = ! empty($data['order_id'])
+                ? $data['order_id']
+                : ($so?->no_sales_order ?: ($so?->orderConfirmation?->order_id ?: null));
 
             $data['subtotal'] = (float) (MoneyHelper::clean($data['subtotal'] ?? 0) ?? 0);
             $data['potongan'] = (float) (MoneyHelper::clean($data['potongan'] ?? 0) ?? 0);

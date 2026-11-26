@@ -163,6 +163,7 @@ class InvoiceResource extends Resource
                                             $set('customer_id', $so?->customer_id);
                                             $set('sales_order_id', $so?->id);
                                             $set('no_po_customer', $so?->no_po_customer ?? '-');
+                                            $set('order_id', $so?->no_sales_order ?: ($so?->orderConfirmation?->order_id ?: null));
                                         }),
 
                                     TextInput::make('kode_invoice')
@@ -304,6 +305,7 @@ class InvoiceResource extends Resource
                             Forms\Components\Hidden::make('customer_id'),
                             Forms\Components\Hidden::make('sales_order_id'),
                             Forms\Components\Hidden::make('no_po_customer'),
+                            Forms\Components\Hidden::make('order_id'),
                             Forms\Components\Hidden::make('potongan_hint')->dehydrated(false),
                             Forms\Components\Hidden::make('ongkir_hint')->dehydrated(false),
                             Forms\Components\Hidden::make('uang_muka_hint')->dehydrated(false),
@@ -543,10 +545,17 @@ class InvoiceResource extends Resource
 
                 Tables\Columns\TextColumn::make('order_id')
                     ->label('Order ID')
-                    ->getStateUsing(fn ($record) => $record->order_id ?: ($record->salesOrder?->no_po ?? '-'))
+                    ->getStateUsing(fn ($record) => $record->order_id
+                        ?: ($record->salesOrder?->no_sales_order
+                        ?: ($record->suratJalan?->salesOrder?->no_sales_order
+                        ?: ($record->salesOrder?->orderConfirmation?->order_id ?: '-'))))
                     ->badge()
                     ->color('info')
-                    ->searchable(),
+                    ->searchable(query: function (Builder $query, string $search): Builder {
+                        return $query->where('invoices.order_id', 'like', "%{$search}%")
+                            ->orWhereHas('salesOrder', fn (Builder $q) => $q->where('no_sales_order', 'like', "%{$search}%"))
+                            ->orWhereHas('suratJalan.salesOrder', fn (Builder $q) => $q->where('no_sales_order', 'like', "%{$search}%"));
+                    }),
 
                 Tables\Columns\TextColumn::make('customer_display')
                     ->label('Customer & Order')
@@ -728,7 +737,9 @@ class InvoiceResource extends Resource
     {
         return parent::getEloquentQuery()
             ->with([
+                'salesOrder.orderConfirmation',
                 'suratJalan.salesOrder.customer',
+                'suratJalan.salesOrder.orderConfirmation',
                 'payments.metodeBayar',
                 'payments.coa',
                 'payments.karyawan',
