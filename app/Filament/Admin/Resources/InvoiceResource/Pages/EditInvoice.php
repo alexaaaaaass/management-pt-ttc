@@ -4,6 +4,7 @@ namespace App\Filament\Admin\Resources\InvoiceResource\Pages;
 
 use App\Filament\Admin\Resources\InvoiceResource;
 use App\Services\Finance\InvoiceService;
+use App\Support\MoneyHelper;
 use Filament\Actions;
 use Filament\Resources\Pages\EditRecord;
 use Illuminate\Database\Eloquent\Model;
@@ -40,23 +41,33 @@ class EditInvoice extends EditRecord
 
     protected function mutateFormDataBeforeSave(array $data): array
     {
-        $subtotal = (float) ($data['subtotal'] ?? 0);
+        $subtotal = (float) (MoneyHelper::clean($data['subtotal'] ?? 0) ?? 0);
         $diskon = (float) ($data['diskon'] ?? 0);
-        $potongan = (float) ($data['potongan'] ?? 0);
+        $potongan = (float) (MoneyHelper::clean($data['potongan'] ?? 0) ?? 0);
         $ppn = (float) ($data['ppn'] ?? 0);
-        $ongkir = (float) ($data['ongkir'] ?? 0);
-        $uangMuka = (float) ($data['uang_muka'] ?? 0);
-
-        $diskonNominal = ($subtotal * $diskon) / 100;
-        $ppnNominal = ($subtotal * $ppn) / 100;
-        $grandTotal = $subtotal - $diskonNominal - $potongan + $ppnNominal + $ongkir;
+        $ongkir = (float) (MoneyHelper::clean($data['ongkir'] ?? 0) ?? 0);
+        $uangMuka = (float) (MoneyHelper::clean($data['uang_muka'] ?? 0) ?? 0);
 
         $paymentsSum = (float) $this->record->payments()->where('status', 'SUCCESS')->sum('nominal_bayar');
-        $totalPayment = $uangMuka + $paymentsSum;
 
-        $data['grand_total'] = $grandTotal;
-        $data['total_payment'] = $totalPayment;
-        $data['sisa_tagihan'] = max(0, $grandTotal - $totalPayment);
+        $totals = app(InvoiceService::class)->calculateTotals(
+            subtotal: $subtotal,
+            diskonPersen: $diskon,
+            ppnPersen: $ppn,
+            ongkir: $ongkir,
+            uangMuka: $uangMuka,
+            paymentsSum: $paymentsSum,
+            potongan: $potongan
+        );
+
+        $data['subtotal'] = $subtotal;
+        $data['potongan'] = $potongan;
+        $data['ongkir'] = $ongkir;
+        $data['uang_muka'] = $uangMuka;
+        $data['grand_total'] = $totals['grand_total'];
+        $data['total_payment'] = $totals['total_payment'];
+        $data['sisa_tagihan'] = $totals['sisa_tagihan'];
+        $data['status'] = $totals['status'];
 
         return $data;
     }

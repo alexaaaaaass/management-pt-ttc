@@ -197,8 +197,10 @@
 
     $subtotal = (float) ($invoice->subtotal ?? 0);
     $ongkir = (float) ($invoice->ongkir ?? 0);
-    $potongan = (float) ($invoice->potongan ?? (($subtotal * (float) ($invoice->diskon ?? 0)) / 100));
-    $grandTotal = (float) ($invoice->grand_total ?? ($subtotal - $potongan + $ongkir));
+    $diskonNominal = round(($subtotal * (float) ($invoice->diskon ?? 0)) / 100, 2);
+    $potongan = round((float) ($invoice->potongan ?? 0) + $diskonNominal, 2);
+    $ppnNominal = round(($subtotal * (float) ($invoice->ppn ?? 0)) / 100, 2);
+    $grandTotal = (float) ($invoice->grand_total ?? max(0, $subtotal - $potongan + $ppnNominal + $ongkir));
 
     // Uang Muka (DP) resmi saat Order Confirmation
     $uangMuka = (float) ($invoice->uang_muka ?? 0);

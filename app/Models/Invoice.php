@@ -39,6 +39,7 @@ class Invoice extends Model
     protected $casts = [
         'subtotal' => 'float',
         'diskon' => 'float',
+        'potongan' => 'float',
         'ppn' => 'float',
         'ongkir' => 'float',
         'uang_muka' => 'float',

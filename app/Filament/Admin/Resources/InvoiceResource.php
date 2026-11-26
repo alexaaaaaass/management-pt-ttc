@@ -5,7 +5,10 @@ namespace App\Filament\Admin\Resources;
 use App\Filament\Admin\Resources\InvoiceResource\Pages;
 use App\Models\Invoice;
 use App\Models\SuratJalan;
+use App\Services\Finance\InvoiceService;
+use App\Support\MoneyHelper;
 use Filament\Forms;
+use Filament\Forms\Components\Actions\Action as FormAction;
 use Filament\Forms\Form;
 use Filament\Forms\Components\Grid;
 use Filament\Forms\Components\Section;
@@ -18,7 +21,6 @@ use Filament\Forms\Components\Wizard;
 use Filament\Forms\Get;
 use Filament\Forms\Set;
 use Filament\Resources\Resource;
-use Filament\Support\RawJs;
 use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
@@ -114,6 +116,15 @@ class InvoiceResource extends Resource
 
                                             if (! $sj) {
                                                 $set('preview_items', []);
+                                                $set('subtotal', '0');
+                                                $set('potongan', '0');
+                                                $set('ongkir', '0');
+                                                $set('uang_muka', '0');
+                                                $set('potongan_hint', null);
+                                                $set('ongkir_hint', null);
+                                                $set('uang_muka_hint', null);
+                                                $set('last_customer_dp', 0);
+                                                $set('last_customer_dp_label', null);
                                                 return;
                                             }
 
@@ -134,14 +145,19 @@ class InvoiceResource extends Resource
                                                 $set('preview_items', []);
                                             }
 
-                                            // Perhitungan Subtotal via InvoiceService
-                                            $subtotal = app(\App\Services\Finance\InvoiceService::class)->calculateSubtotal($sj);
-                                            $set('subtotal', $subtotal);
+                                            // Auto-fill Subtotal, Potongan/Diskon SO/OC, Ongkir, dan Riwayat DP via InvoiceService
+                                            $autofill = app(InvoiceService::class)->resolveAutofillFromSuratJalan($sj);
 
-                                            $set('ongkir', $so?->harga_kirim ?? 0);
+                                            $set('subtotal', MoneyHelper::format($autofill['subtotal'], 0) ?? '0');
+                                            $set('potongan', MoneyHelper::format($autofill['potongan'], 0) ?? '0');
+                                            $set('ongkir', MoneyHelper::format($autofill['ongkir'], 0) ?? '0');
+                                            $set('uang_muka', MoneyHelper::format($autofill['uang_muka'], 0) ?? '0');
 
-                                            $uangMuka = $so?->orderConfirmation?->dp_nominal ?? ($so?->uang_muka ?? 0);
-                                            $set('uang_muka', $uangMuka);
+                                            $set('potongan_hint', $autofill['potongan_note']);
+                                            $set('ongkir_hint', $autofill['ongkir_note']);
+                                            $set('uang_muka_hint', $autofill['uang_muka_note']);
+                                            $set('last_customer_dp', $autofill['last_customer_dp']);
+                                            $set('last_customer_dp_label', $autofill['last_customer_dp_label']);
 
                                             // Autofill hidden fields
                                             $set('customer_id', $so?->customer_id);
@@ -288,6 +304,11 @@ class InvoiceResource extends Resource
                             Forms\Components\Hidden::make('customer_id'),
                             Forms\Components\Hidden::make('sales_order_id'),
                             Forms\Components\Hidden::make('no_po_customer'),
+                            Forms\Components\Hidden::make('potongan_hint')->dehydrated(false),
+                            Forms\Components\Hidden::make('ongkir_hint')->dehydrated(false),
+                            Forms\Components\Hidden::make('uang_muka_hint')->dehydrated(false),
+                            Forms\Components\Hidden::make('last_customer_dp')->dehydrated(false),
+                            Forms\Components\Hidden::make('last_customer_dp_label')->dehydrated(false),
                         ]),
 
                     // ==========================================
@@ -310,14 +331,13 @@ class InvoiceResource extends Resource
                                         ->required(),
                                 ]),
 
-                            Grid::make(4)
+                            Grid::make(3)
                                 ->schema([
                                     TextInput::make('subtotal')
                                         ->label('Subtotal (DPP)')
                                         ->prefix('Rp')
-                                        ->mask(RawJs::make('$money($input, ",", ".", 0)'))
-                                        ->stripCharacters('.')
-                                        ->readOnly()
+                                        ->currencyMask(0)
+                                        ->disabled()
                                         ->default(0)
                                         ->dehydrated(true),
 
@@ -343,18 +363,30 @@ class InvoiceResource extends Resource
                                         ->inputMode('decimal')
                                         ->suffix('%')
                                         ->default(0)
-                                        ->live()
+                                        ->live(onBlur: true)
                                         ->afterStateUpdated(function ($state, Set $set) {
                                             $set('tipe_pajak_helper', ((float) $state) > 0 ? 'PPN_11' : 'NON_PPN');
                                         }),
+                                ]),
+
+                            Grid::make(2)
+                                ->schema([
+                                    TextInput::make('potongan')
+                                        ->label('Diskon / Potongan (Rp)')
+                                        ->prefix('Rp')
+                                        ->currencyMask(0)
+                                        ->default(0)
+                                        ->live(onBlur: true)
+                                        ->helperText(fn (Get $get) => $get('potongan_hint') ?: 'Diambil otomatis dari Diskon Sales Order / Order Confirmation jika tersedia.'),
 
                                     TextInput::make('diskon')
-                                        ->label('Diskon (%)')
+                                        ->label('Diskon Tambahan (%)')
                                         ->numeric()
                                         ->inputMode('decimal')
                                         ->suffix('%')
                                         ->default(0)
-                                        ->live(),
+                                        ->live(onBlur: true)
+                                        ->helperText('Opsional — potongan persentase tambahan dari Subtotal.'),
                                 ]),
 
                             Grid::make(2)
@@ -362,18 +394,30 @@ class InvoiceResource extends Resource
                                     TextInput::make('ongkir')
                                         ->label('Ongkos Kirim')
                                         ->prefix('Rp')
-                                        ->mask(RawJs::make('$money($input, ",", ".", 0)'))
-                                        ->stripCharacters('.')
+                                        ->currencyMask(0)
                                         ->default(0)
-                                        ->live(),
+                                        ->live(onBlur: true)
+                                        ->helperText(fn (Get $get) => $get('ongkir_hint')),
 
                                     TextInput::make('uang_muka')
                                         ->label('Uang Muka (DP)')
                                         ->prefix('Rp')
-                                        ->mask(RawJs::make('$money($input, ",", ".", 0)'))
-                                        ->stripCharacters('.')
+                                        ->currencyMask(0)
                                         ->default(0)
-                                        ->live(),
+                                        ->live(onBlur: true)
+                                        ->helperText(fn (Get $get) => $get('uang_muka_hint'))
+                                        ->suffixAction(
+                                            FormAction::make('apply_last_customer_dp')
+                                                ->icon('heroicon-o-arrow-down-tray')
+                                                ->tooltip(fn (Get $get) => $get('last_customer_dp_label') ?: 'Gunakan nominal DP terakhir customer')
+                                                ->visible(fn (Get $get) => ((float) ($get('last_customer_dp') ?? 0)) > 0 && ((float) (MoneyHelper::clean($get('uang_muka')) ?? 0)) <= 0)
+                                                ->action(function (Get $get, Set $set) {
+                                                    $lastDp = (float) ($get('last_customer_dp') ?? 0);
+                                                    if ($lastDp > 0) {
+                                                        $set('uang_muka', MoneyHelper::format($lastDp, 0) ?? '0');
+                                                    }
+                                                })
+                                        ),
                                 ]),
 
                             Section::make('Ringkasan Biaya Tagihan')
@@ -381,67 +425,91 @@ class InvoiceResource extends Resource
                                     Placeholder::make('subtotal_view')
                                         ->label('Subtotal')
                                         ->content(function (Get $get) {
-                                            return 'Rp ' . number_format((float) ($get('subtotal') ?? 0), 0, ',', '.');
+                                            $subtotal = (float) (MoneyHelper::clean($get('subtotal')) ?? 0);
+                                            return 'Rp ' . number_format($subtotal, 0, ',', '.');
                                         }),
 
                                     Placeholder::make('diskon_view')
-                                        ->label('Diskon')
+                                        ->label('Diskon & Potongan')
                                         ->content(function (Get $get) {
-                                            $subtotal = (float) ($get('subtotal') ?? 0);
-                                            $diskonPersen = (float) ($get('diskon') ?? 0);
-                                            $diskonNominal = ($subtotal * $diskonPersen) / 100;
+                                            $subtotal = (float) (MoneyHelper::clean($get('subtotal')) ?? 0);
+                                            $potongan = max(0.0, (float) (MoneyHelper::clean($get('potongan')) ?? 0));
+                                            $diskonPersen = max(0.0, (float) ($get('diskon') ?? 0));
+                                            $diskonNominal = round(($subtotal * $diskonPersen) / 100, 2);
+                                            $totalDiskon = round($potongan + $diskonNominal, 2);
+
+                                            if ($potongan > 0 && $diskonPersen > 0) {
+                                                return sprintf(
+                                                    'Rp %s (Potongan Rp %s + %s%%)',
+                                                    number_format($totalDiskon, 0, ',', '.'),
+                                                    number_format($potongan, 0, ',', '.'),
+                                                    $diskonPersen
+                                                );
+                                            }
+                                            if ($potongan > 0) {
+                                                return 'Rp ' . number_format($potongan, 0, ',', '.');
+                                            }
+
                                             return $diskonPersen . '% = Rp ' . number_format($diskonNominal, 0, ',', '.');
                                         }),
 
                                     Placeholder::make('ppn_view')
                                         ->label('PPN')
                                         ->content(function (Get $get) {
-                                            $subtotal = (float) ($get('subtotal') ?? 0);
-                                            $ppnPersen = (float) ($get('ppn') ?? 0);
-                                            $ppnNominal = ($subtotal * $ppnPersen) / 100;
+                                            $subtotal = (float) (MoneyHelper::clean($get('subtotal')) ?? 0);
+                                            $ppnPersen = max(0.0, (float) ($get('ppn') ?? 0));
+                                            $ppnNominal = round(($subtotal * $ppnPersen) / 100, 2);
                                             return $ppnPersen . '% = Rp ' . number_format($ppnNominal, 0, ',', '.');
+                                        }),
+
+                                    Placeholder::make('ongkir_view')
+                                        ->label('Ongkos Kirim')
+                                        ->content(function (Get $get) {
+                                            $ongkir = max(0.0, (float) (MoneyHelper::clean($get('ongkir')) ?? 0));
+                                            return 'Rp ' . number_format($ongkir, 0, ',', '.');
                                         }),
 
                                     Placeholder::make('grand_total_view')
                                         ->label('Grand Total Tagihan')
                                         ->extraAttributes(['class' => 'text-lg font-bold', 'style' => 'color: #007bff; font-size: 1.5rem;'])
                                         ->content(function (Get $get) {
-                                            $subtotal = (float) ($get('subtotal') ?? 0);
-                                            $diskon = (float) ($get('diskon') ?? 0);
-                                            $ppn = (float) ($get('ppn') ?? 0);
-                                            $ongkir = (float) ($get('ongkir') ?? 0);
+                                            $totals = app(InvoiceService::class)->calculateTotals(
+                                                subtotal: (float) (MoneyHelper::clean($get('subtotal')) ?? 0),
+                                                diskonPersen: (float) ($get('diskon') ?? 0),
+                                                ppnPersen: (float) ($get('ppn') ?? 0),
+                                                ongkir: (float) (MoneyHelper::clean($get('ongkir')) ?? 0),
+                                                uangMuka: (float) (MoneyHelper::clean($get('uang_muka')) ?? 0),
+                                                paymentsSum: 0.0,
+                                                potongan: (float) (MoneyHelper::clean($get('potongan')) ?? 0)
+                                            );
 
-                                            $diskonNominal = ($subtotal * $diskon) / 100;
-                                            $ppnNominal = ($subtotal * $ppn) / 100;
-                                            $grandTotal = $subtotal - $diskonNominal + $ppnNominal + $ongkir;
-
-                                            return 'Rp ' . number_format($grandTotal, 0, ',', '.');
+                                            return 'Rp ' . number_format($totals['grand_total'], 0, ',', '.');
                                         }),
 
                                     Placeholder::make('uang_muka_view')
                                         ->label('Uang Muka (DP)')
                                         ->extraAttributes(['class' => 'text-lg font-bold', 'style' => 'color: #16a34a; font-size: 1.5rem;'])
                                         ->content(function (Get $get) {
-                                            $uangMuka = (float) str_replace(['.', ','], '', (string) ($get('uang_muka') ?? 0));
+                                            $uangMuka = max(0.0, (float) (MoneyHelper::clean($get('uang_muka')) ?? 0));
                                             return 'Rp ' . number_format($uangMuka, 0, ',', '.');
                                         }),
 
                                     Placeholder::make('sisa_tagihan_view')
                                         ->label('Sisa Tagihan (Setelah DP)')
+                                        ->columnSpanFull()
                                         ->extraAttributes(['class' => 'text-lg font-bold', 'style' => 'color: #dc2626; font-size: 1.5rem;'])
                                         ->content(function (Get $get) {
-                                            $subtotal = (float) ($get('subtotal') ?? 0);
-                                            $diskon = (float) ($get('diskon') ?? 0);
-                                            $ppn = (float) ($get('ppn') ?? 0);
-                                            $ongkir = (float) ($get('ongkir') ?? 0);
-                                            $uangMuka = (float) str_replace(['.', ','], '', (string) ($get('uang_muka') ?? 0));
+                                            $totals = app(InvoiceService::class)->calculateTotals(
+                                                subtotal: (float) (MoneyHelper::clean($get('subtotal')) ?? 0),
+                                                diskonPersen: (float) ($get('diskon') ?? 0),
+                                                ppnPersen: (float) ($get('ppn') ?? 0),
+                                                ongkir: (float) (MoneyHelper::clean($get('ongkir')) ?? 0),
+                                                uangMuka: (float) (MoneyHelper::clean($get('uang_muka')) ?? 0),
+                                                paymentsSum: 0.0,
+                                                potongan: (float) (MoneyHelper::clean($get('potongan')) ?? 0)
+                                            );
 
-                                            $diskonNominal = ($subtotal * $diskon) / 100;
-                                            $ppnNominal = ($subtotal * $ppn) / 100;
-                                            $grandTotal = $subtotal - $diskonNominal + $ppnNominal + $ongkir;
-                                            $sisa = max(0, $grandTotal - $uangMuka);
-
-                                            return 'Rp ' . number_format($sisa, 0, ',', '.');
+                                            return 'Rp ' . number_format($totals['sisa_tagihan'], 0, ',', '.');
                                         }),
                                 ])
                                 ->columns(2),
@@ -506,8 +574,7 @@ class InvoiceResource extends Resource
                             return 'Tanpa Faktur';
                         }
                         $subtotal = (float) ($record->subtotal ?? 0);
-                        $diskonNominal = ($subtotal * (float) ($record->diskon ?? 0)) / 100;
-                        $ppnNominal = (($subtotal - $diskonNominal) * $ppnVal) / 100;
+                        $ppnNominal = round(($subtotal * $ppnVal) / 100, 2);
                         return 'Rp ' . number_format($ppnNominal, 0, ',', '.');
                     })
                     ->color(fn ($state) => str_starts_with($state, 'PPN') ? 'success' : 'gray'),

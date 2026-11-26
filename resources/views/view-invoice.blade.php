@@ -328,6 +328,16 @@
                     </span>
                 </div>
 
+                {{-- POTONGAN NOMINAL --}}
+                @if(($invoice->potongan ?? 0) > 0)
+                    <div class="flex justify-between items-center text-sm">
+                        <span class="text-danger-600">Diskon / Potongan (Rp)</span>
+                        <span class="font-semibold text-danger-600">
+                            - Rp {{ number_format($invoice->potongan,0,',','.') }}
+                        </span>
+                    </div>
+                @endif
+
                 {{-- DISKON --}}
                 @if(($invoice->diskon ?? 0) > 0)
                     <div class="flex justify-between items-center text-sm">
