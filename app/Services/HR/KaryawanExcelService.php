@@ -42,6 +42,7 @@ class KaryawanExcelService
         'W' => 'No Telp / WA',
         'X' => 'Tgl Masuk (YYYY-MM-DD)',
         'Y' => 'Akhir Kontrak (YYYY-MM-DD)',
+        'Z' => 'Masa Kontrak (1_BULAN/3_BULAN/6_BULAN/1_TAHUN/2_TAHUN/MANUAL/TETAP)',
     ];
 
     /**
@@ -55,8 +56,8 @@ class KaryawanExcelService
 
         $sheet->setCellValue('A1', 'DATA MASTER KARYAWAN PT. TEKNOGRAFI TRI CAWANASKA');
         $sheet->setCellValue('A2', 'Petunjuk: Kolom NIP menjadi kunci pencocokan saat Impor (NIP yang sudah ada akan di-update, NIP baru akan didaftarkan).');
-        $sheet->mergeCells('A1:Y1');
-        $sheet->mergeCells('A2:Y2');
+        $sheet->mergeCells('A1:Z1');
+        $sheet->mergeCells('A2:Z2');
         $sheet->getStyle('A1')->getFont()->setBold(true)->setSize(13);
         $sheet->getStyle('A2')->getFont()->setItalic(true)->setSize(9);
 
@@ -64,7 +65,7 @@ class KaryawanExcelService
             $sheet->setCellValue($col . '4', $title);
         }
 
-        $sheet->getStyle('A4:Y4')->applyFromArray([
+        $sheet->getStyle('A4:Z4')->applyFromArray([
             'font'      => ['bold' => true, 'color' => ['rgb' => 'FFFFFF']],
             'fill'      => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => '1E3A8A']],
             'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER, 'vertical' => Alignment::VERTICAL_CENTER],
@@ -103,6 +104,7 @@ class KaryawanExcelService
             $sheet->setCellValueExplicit('W' . $r, (string) ($k->no_telp ?? ''), \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING);
             $sheet->setCellValue('X' . $r, $k->tanggal_masuk_kerja ? Carbon::parse($k->tanggal_masuk_kerja)->format('Y-m-d') : '');
             $sheet->setCellValue('Y' . $r, $k->tangal_akhir_kontrak ? Carbon::parse($k->tangal_akhir_kontrak)->format('Y-m-d') : '');
+            $sheet->setCellValue('Z' . $r, $k->masa_kontrak ?? '');
 
             foreach (['I', 'J', 'K', 'L', 'M', 'N', 'S', 'U'] as $numCol) {
                 $sheet->getStyle($numCol . $r)->getNumberFormat()->setFormatCode('#,##0');
@@ -224,6 +226,7 @@ class KaryawanExcelService
                     'no_telp'                      => trim((string) $sheet->getCell('W' . $r)->getValue()) ?: null,
                     'tanggal_masuk_kerja'          => $parseDate($sheet->getCell('X' . $r)->getValue()),
                     'tangal_akhir_kontrak'         => $parseDate($sheet->getCell('Y' . $r)->getValue()),
+                    'masa_kontrak'                 => ($mk = strtoupper(trim((string) $sheet->getCell('Z' . $r)->getValue()))) !== '' && array_key_exists($mk, Karyawan::MASA_KONTRAK_OPTIONS) ? $mk : null,
                 ];
 
                 $existing = $nip !== ''

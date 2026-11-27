@@ -4,6 +4,7 @@ namespace App\Filament\Admin\Resources;
 
 use App\Filament\Admin\Resources\KaryawanResource\Pages;
 use App\Filament\Admin\Resources\KaryawanResource\RelationManagers;
+use App\Models\HrPayrollSetting;
 use App\Models\HrShift;
 use App\Models\Karyawan;
 use Carbon\Carbon;
@@ -14,6 +15,9 @@ use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
 use Filament\Forms\Components\Wizard;
 use Filament\Forms\Form;
+use Filament\Forms\Get;
+use Filament\Forms\Set;
+use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Columns\TextColumn;
@@ -123,10 +127,54 @@ class KaryawanResource extends Resource
                             ->required(),
 
                         DatePicker::make('tanggal_masuk_kerja')
-                            ->label('Tanggal Masuk Kerja'),
+                            ->label('Tanggal Masuk Kerja')
+                            ->live()
+                            ->afterStateUpdated(function ($state, Get $get, Set $set) {
+                                if ($state && blank($get('tanggal_mulai_kontrak'))) {
+                                    $set('tanggal_mulai_kontrak', $state);
+                                }
+                                $masa = $get('masa_kontrak');
+                                $start = $get('tanggal_mulai_kontrak') ?: $state;
+                                if ($masa && ! in_array($masa, ['MANUAL', 'TETAP'], true) && $start) {
+                                    $set('tangal_akhir_kontrak', Karyawan::calculateContractEndDate($start, $masa));
+                                }
+                            }),
+
+                        Select::make('masa_kontrak')
+                            ->label('Masa / Periode Kontrak')
+                            ->options(Karyawan::MASA_KONTRAK_OPTIONS)
+                            ->placeholder('Pilih: 1 Bulan / 3 Bulan / 1 Tahun / Manual / Tetap')
+                            ->helperText('Otomatis menghitung Tanggal Akhir Kontrak (tetap bisa diedit manual kapan saja).')
+                            ->live()
+                            ->afterStateUpdated(function ($state, Get $get, Set $set) {
+                                if ($state === 'TETAP') {
+                                    $set('tangal_akhir_kontrak', null);
+                                    return;
+                                }
+                                if ($state === 'MANUAL' || ! $state) {
+                                    return;
+                                }
+                                $start = $get('tanggal_mulai_kontrak') ?: $get('tanggal_masuk_kerja') ?: now()->toDateString();
+                                if (blank($get('tanggal_mulai_kontrak'))) {
+                                    $set('tanggal_mulai_kontrak', $start);
+                                }
+                                $set('tangal_akhir_kontrak', Karyawan::calculateContractEndDate($start, $state));
+                            }),
+
+                        DatePicker::make('tanggal_mulai_kontrak')
+                            ->label('Tanggal Mulai Kontrak Berjalan')
+                            ->helperText('Dipakai sebagai tanggal awal periode kontrak (1 bln / 3 bln / 1 thn).')
+                            ->live()
+                            ->afterStateUpdated(function ($state, Get $get, Set $set) {
+                                $masa = $get('masa_kontrak');
+                                if ($state && $masa && ! in_array($masa, ['MANUAL', 'TETAP'], true)) {
+                                    $set('tangal_akhir_kontrak', Karyawan::calculateContractEndDate($state, $masa));
+                                }
+                            }),
 
                         DatePicker::make('tangal_akhir_kontrak')
-                            ->label('Tanggal Akhir Kontrak'),
+                            ->label('Tanggal Akhir Kontrak (Bisa Input Manual)')
+                            ->helperText('Terisi otomatis dari Masa Kontrak atau isi bebas secara manual (kosongkan jika Karyawan Tetap).'),
                     ])
                     ->columns(2),
 
@@ -292,32 +340,35 @@ class KaryawanResource extends Resource
                     ->sortable(),
 
                 TextColumn::make('tangal_akhir_kontrak')
-                    ->label('Akhir Kontrak')
+                    ->label('Kontrak')
                     ->badge()
-                    ->formatStateUsing(function ($state) {
-                        if (! $state) {
-                            return 'Tetap / -';
+                    ->formatStateUsing(function ($state, Karyawan $r) {
+                        if ($r->masa_kontrak === 'TETAP' || ! $state) {
+                            return $r->masa_kontrak === 'TETAP' ? 'Tetap (PKWTT)' : (Karyawan::MASA_KONTRAK_SHORT[$r->masa_kontrak] ?? 'Tetap / -');
                         }
                         $d = Carbon::parse($state);
                         $diff = now()->startOfDay()->diffInDays($d->copy()->startOfDay(), false);
+                        $alertDays = (int) (HrPayrollSetting::current()->alert_kontrak_hari ?: 30);
                         if ($diff < 0) {
                             return $d->format('d/m/Y') . ' (Expired)';
                         }
-                        if ($diff <= 30) {
+                        if ($diff <= $alertDays) {
                             return $d->format('d/m/Y') . " ({$diff}h lagi)";
                         }
 
                         return $d->format('d/m/Y');
                     })
-                    ->color(function ($state) {
-                        if (! $state) {
+                    ->description(fn (Karyawan $r) => $r->masa_kontrak ? (Karyawan::MASA_KONTRAK_SHORT[$r->masa_kontrak] ?? $r->masa_kontrak) : null)
+                    ->color(function ($state, Karyawan $r) {
+                        if ($r->masa_kontrak === 'TETAP' || ! $state) {
                             return 'gray';
                         }
                         $diff = now()->startOfDay()->diffInDays(Carbon::parse($state)->startOfDay(), false);
+                        $alertDays = (int) (HrPayrollSetting::current()->alert_kontrak_hari ?: 30);
                         if ($diff < 0) {
                             return 'danger';
                         }
-                        if ($diff <= 30) {
+                        if ($diff <= $alertDays) {
                             return 'warning';
                         }
 
@@ -336,6 +387,9 @@ class KaryawanResource extends Resource
                 Tables\Filters\SelectFilter::make('shift_id')
                     ->label('Shift Kerja')
                     ->relationship('shift', 'nama'),
+                Tables\Filters\SelectFilter::make('masa_kontrak')
+                    ->label('Masa Kontrak')
+                    ->options(Karyawan::MASA_KONTRAK_OPTIONS),
                 Tables\Filters\SelectFilter::make('tipe_gaji')
                     ->label('Skema Gaji')
                     ->options(Karyawan::TIPE_GAJI_OPTIONS),
@@ -344,6 +398,56 @@ class KaryawanResource extends Resource
                     ->options(['Aktif' => 'Aktif', 'Nonaktif' => 'Nonaktif']),
             ])
             ->actions([
+                Tables\Actions\Action::make('aturKontrak')
+                    ->label('Kontrak')
+                    ->icon('heroicon-o-document-check')
+                    ->color('info')
+                    ->modalHeading(fn (Karyawan $r) => "Atur / Perpanjang Kontrak — {$r->nama}")
+                    ->modalDescription('Pilih masa kontrak (1 Bulan / 3 Bulan / 6 Bulan / 1 Tahun / 2 Tahun / Manual / Tetap). Tanggal akhir dihitung otomatis dan tetap bisa diubah manual.')
+                    ->form([
+                        Select::make('masa_kontrak')
+                            ->label('Masa / Periode Kontrak')
+                            ->options(Karyawan::MASA_KONTRAK_OPTIONS)
+                            ->default(fn (Karyawan $r) => $r->masa_kontrak ?: '1_TAHUN')
+                            ->required()
+                            ->live()
+                            ->afterStateUpdated(function ($state, Get $get, Set $set) {
+                                if ($state === 'TETAP') {
+                                    $set('tangal_akhir_kontrak', null);
+                                    return;
+                                }
+                                if ($state === 'MANUAL' || ! $state) {
+                                    return;
+                                }
+                                $start = $get('tanggal_mulai_kontrak') ?: now()->toDateString();
+                                $set('tangal_akhir_kontrak', Karyawan::calculateContractEndDate($start, $state));
+                            }),
+                        DatePicker::make('tanggal_mulai_kontrak')
+                            ->label('Tanggal Mulai Kontrak')
+                            ->default(fn (Karyawan $r) => $r->tangal_akhir_kontrak ?: $r->tanggal_mulai_kontrak ?: $r->tanggal_masuk_kerja ?: now())
+                            ->live()
+                            ->afterStateUpdated(function ($state, Get $get, Set $set) {
+                                $masa = $get('masa_kontrak');
+                                if ($state && $masa && ! in_array($masa, ['MANUAL', 'TETAP'], true)) {
+                                    $set('tangal_akhir_kontrak', Karyawan::calculateContractEndDate($state, $masa));
+                                }
+                            }),
+                        DatePicker::make('tangal_akhir_kontrak')
+                            ->label('Tanggal Akhir Kontrak (Bisa Diubah Manual)')
+                            ->default(fn (Karyawan $r) => $r->tangal_akhir_kontrak ?: Karyawan::calculateContractEndDate(now()->toDateString(), $r->masa_kontrak ?: '1_TAHUN')),
+                    ])
+                    ->action(function (Karyawan $record, array $data) {
+                        $record->update([
+                            'masa_kontrak'          => $data['masa_kontrak'],
+                            'tanggal_mulai_kontrak' => $data['tanggal_mulai_kontrak'] ?? null,
+                            'tangal_akhir_kontrak'  => $data['masa_kontrak'] === 'TETAP' ? null : ($data['tangal_akhir_kontrak'] ?? null),
+                        ]);
+                        Notification::make()
+                            ->title("Kontrak {$record->nama} diperbarui")
+                            ->body('Periode: ' . (Karyawan::MASA_KONTRAK_SHORT[$data['masa_kontrak']] ?? $data['masa_kontrak']) . ($record->tangal_akhir_kontrak ? ' · Berakhir ' . $record->tangal_akhir_kontrak->format('d/m/Y') : ''))
+                            ->success()
+                            ->send();
+                    }),
                 Tables\Actions\EditAction::make(),
                 Tables\Actions\DeleteAction::make(),
             ]);

@@ -13,6 +13,7 @@ class HrPayrollSetting extends Model
         'jam_pulang_standar',
         'toleransi_telat_menit',
         'kuota_cuti_tahunan',
+        'alert_kontrak_hari',
         'pakai_cutoff_bulanan',
         'cutoff_tanggal_mulai',
         'cutoff_tanggal_selesai',
@@ -52,6 +53,7 @@ class HrPayrollSetting extends Model
     protected $casts = [
         'toleransi_telat_menit'       => 'integer',
         'kuota_cuti_tahunan'          => 'integer',
+        'alert_kontrak_hari'          => 'integer',
         'pakai_cutoff_bulanan'        => 'boolean',
         'cutoff_tanggal_mulai'        => 'integer',
         'cutoff_tanggal_selesai'      => 'integer',
@@ -82,6 +84,7 @@ class HrPayrollSetting extends Model
             'jam_pulang_standar'          => '17:00',
             'toleransi_telat_menit'       => 10,
             'kuota_cuti_tahunan'          => 12,
+            'alert_kontrak_hari'          => 30,
             'pakai_cutoff_bulanan'        => true,
             'cutoff_tanggal_mulai'        => 26,
             'cutoff_tanggal_selesai'      => 25,

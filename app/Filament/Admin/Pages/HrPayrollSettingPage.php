@@ -68,11 +68,19 @@ class HrPayrollSettingPage extends Page implements HasForms
                 Section::make('Jam Kerja Standar, Cut-Off Payroll & Kuota Cuti')
                     ->description('Standar PT TTC menggunakan cut-off tanggal 26 bulan lalu s/d tanggal 25 bulan berjalan. Jam kerja detail per karyawan mengikuti Master Shift Kerja.')
                     ->schema([
-                        Grid::make(4)->schema([
+                        Grid::make(5)->schema([
                             TextInput::make('jam_masuk_standar')->label('Jam Masuk Default (HH:MM)')->default('08:00')->required(),
                             TextInput::make('jam_pulang_standar')->label('Jam Pulang Default (HH:MM)')->default('17:00')->required(),
                             TextInput::make('toleransi_telat_menit')->label('Toleransi Telat (Menit)')->numeric()->default(10)->required(),
                             TextInput::make('kuota_cuti_tahunan')->label('Kuota Cuti Tahunan (Hari)')->numeric()->default(12)->required(),
+                            TextInput::make('alert_kontrak_hari')
+                                ->label('Pengingat Kontrak Habis (Hari)')
+                                ->helperText('Mis. 7, 14, 30, atau 60 hari sebelum akhir kontrak')
+                                ->numeric()
+                                ->minValue(1)
+                                ->maxValue(365)
+                                ->default(30)
+                                ->required(),
                         ]),
                         Grid::make(3)->schema([
                             Toggle::make('pakai_cutoff_bulanan')

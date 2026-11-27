@@ -137,14 +137,14 @@
         </div>
 
         <div class="hrd-kpi hrd-kpi-red">
-            <div class="hrd-kpi-label">Alert Kontrak Habis (≤ 30 Hr)</div>
-            <div class="hrd-kpi-val" style="color:{{ count($d['contract_alerts']) > 0 ? '#dc2626' : '#059669' }};">
+            <div class="hrd-kpi-label">Monitoring Kontrak ({{ $this->kontrakFilterHari > 0 ? '≤ ' . $this->kontrakFilterHari . ' Hr' : 'Semua' }})</div>
+            <div class="hrd-kpi-val" style="color:{{ collect($d['contract_alerts'])->where('is_expired', true)->count() > 0 ? '#dc2626' : '#059669' }};">
                 {{ count($d['contract_alerts']) }} <span style="font-size:13px; font-weight:600; color:#64748b;">Karyawan</span>
             </div>
             <div class="hrd-kpi-meta">
-                <div>Expired: <strong>{{ collect($d['contract_alerts'])->where('is_expired', true)->count() }}</strong></div>
-                <div>Habis ≤ 30 hari: <strong>{{ collect($d['contract_alerts'])->where('is_expired', false)->count() }}</strong></div>
+                <div>Expired: <strong>{{ collect($d['contract_alerts'])->where('is_expired', true)->count() }}</strong> · Mendekati: <strong>{{ collect($d['contract_alerts'])->where('is_soon', true)->count() }}</strong></div>
                 <div>SP / Scorsing Aktif: <strong>{{ count($d['active_disiplins']) }}</strong></div>
+                <a href="{{ url('/admin/karyawans') }}" style="color:#2563eb; font-weight:700; text-decoration:none;">Atur Masa Kontrak →</a>
             </div>
         </div>
 
@@ -230,33 +230,41 @@
 
     {{-- Row 3: Alert Kontrak & Alert Kelengkapan Data --}}
     <div class="hrd-grid-2">
-        {{-- Alert Kontrak Habis --}}
+        {{-- Monitoring Masa Kontrak --}}
         <div class="hrd-card">
             <div class="hrd-sec-head">
                 <div>
-                    <div class="hrd-sec-title">Alert Masa Kontrak (Expired / ≤ 30 Hari)</div>
-                    <div class="hrd-sec-sub">Segera proses perpanjangan PKWT atau pengangkatan PKWTT</div>
+                    <div class="hrd-sec-title">Monitoring Masa Kontrak Karyawan</div>
+                    <div class="hrd-sec-sub">Mendukung kontrak 1 bulan, 3 bulan, 6 bulan, 1 tahun, atau input manual</div>
                 </div>
+                <select wire:model.live="kontrakFilterHari" class="hrd-select" style="min-width:145px; font-size:11.5px; padding:5px 30px 5px 10px !important;">
+                    <option value="0">Semua Kontrak</option>
+                    <option value="7">Habis ≤ 7 Hari</option>
+                    <option value="14">Habis ≤ 14 Hari</option>
+                    <option value="30">Habis ≤ 30 Hari</option>
+                    <option value="90">Habis ≤ 3 Bulan</option>
+                    <option value="365">Habis ≤ 1 Tahun</option>
+                </select>
             </div>
             <div style="overflow-x:auto;">
                 <table class="hrd-table">
                     <thead>
-                        <tr><th>Karyawan</th><th>Dept</th><th>Akhir Kontrak</th><th>Status</th></tr>
+                        <tr><th>Karyawan</th><th>Masa Kontrak</th><th>Akhir Kontrak</th><th>Status</th></tr>
                     </thead>
                     <tbody>
                         @forelse($d['contract_alerts'] as $ca)
                             <tr>
                                 <td><a href="{{ url('/admin/karyawans/' . $ca['id'] . '/edit') }}" style="font-weight:700; color:#2563eb; text-decoration:none;">{{ $ca['nama'] }}</a> <span style="color:#64748b;">({{ $ca['nip'] }})</span></td>
-                                <td>{{ $ca['departemen'] }}</td>
+                                <td><span class="hrd-pill hrd-p-blue">{{ $ca['masa_kontrak'] }}</span></td>
                                 <td><strong>{{ $ca['tanggal'] }}</strong></td>
                                 <td>
-                                    <span class="hrd-pill {{ $ca['is_expired'] ? 'hrd-p-red' : 'hrd-p-amber' }}">
+                                    <span class="hrd-pill {{ $ca['is_expired'] ? 'hrd-p-red' : ($ca['is_soon'] ? 'hrd-p-amber' : 'hrd-p-green') }}">
                                         {{ $ca['is_expired'] ? 'EXPIRED' : $ca['sisa_hari'] . ' hari lagi' }}
                                     </span>
                                 </td>
                             </tr>
                         @empty
-                            <tr><td colspan="4" style="text-align:center; padding:18px; color:#059669; font-weight:600;">✓ Semua kontrak karyawan aman (tidak ada yang berakhir dalam 30 hari).</td></tr>
+                            <tr><td colspan="4" style="text-align:center; padding:18px; color:#059669; font-weight:600;">✓ Tidak ada kontrak yang mendekati batas akhir pada filter ini.</td></tr>
                         @endforelse
                     </tbody>
                 </table>

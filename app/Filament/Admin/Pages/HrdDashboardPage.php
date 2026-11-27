@@ -3,6 +3,7 @@
 namespace App\Filament\Admin\Pages;
 
 use App\Models\Cuti;
+use App\Models\HrPayrollSetting;
 use App\Models\HrShift;
 use App\Models\Izin;
 use App\Models\Karyawan;
@@ -25,6 +26,7 @@ class HrdDashboardPage extends Page
 
     public int $bulan;
     public int $tahun;
+    public int $kontrakFilterHari;
 
     public function getMaxContentWidth(): MaxWidth
     {
@@ -35,6 +37,7 @@ class HrdDashboardPage extends Page
     {
         $this->bulan = (int) request()->query('bulan', now()->month);
         $this->tahun = (int) request()->query('tahun', now()->year);
+        $this->kontrakFilterHari = (int) (HrPayrollSetting::current()->alert_kontrak_hari ?: 0);
     }
 
     public function getDashboardDataProperty(): array
@@ -75,25 +78,35 @@ class HrdDashboardPage extends Page
             ])
             ->all();
 
-        // 4. Alert Kontrak Habis (Expired atau ≤ 30 hari)
+        // 4. Monitoring Masa Kontrak (fleksibel: 0 = semua kontrak aktif, atau H-7 / H-14 / H-30 / H-90 / H-365)
         $today = now()->startOfDay();
-        $contractAlerts = $aktif->filter(function (Karyawan $k) use ($today) {
-            if (! $k->tangal_akhir_kontrak) {
+        $filterHari = (int) $this->kontrakFilterHari;
+        $alertSettingHari = (int) (HrPayrollSetting::current()->alert_kontrak_hari ?: 30);
+
+        $contractAlerts = $aktif->filter(function (Karyawan $k) use ($today, $filterHari) {
+            if ($k->masa_kontrak === 'TETAP' || ! $k->tangal_akhir_kontrak) {
                 return false;
             }
+            if ($filterHari <= 0) {
+                return true;
+            }
             $diff = $today->diffInDays(Carbon::parse($k->tangal_akhir_kontrak)->startOfDay(), false);
-            return $diff <= 30;
-        })->map(function (Karyawan $k) use ($today) {
+
+            return $diff <= $filterHari;
+        })->map(function (Karyawan $k) use ($today, $alertSettingHari) {
             $exp = Carbon::parse($k->tangal_akhir_kontrak)->startOfDay();
             $diff = $today->diffInDays($exp, false);
+
             return [
                 'id'           => $k->id,
                 'nip'          => $k->nip,
                 'nama'         => $k->nama,
                 'departemen'   => $k->departemen?->nama_departemen ?? '-',
+                'masa_kontrak' => Karyawan::MASA_KONTRAK_SHORT[$k->masa_kontrak] ?? ($k->masa_kontrak ?: 'Manual'),
                 'tanggal'      => $exp->format('d/m/Y'),
                 'sisa_hari'    => $diff,
                 'is_expired'   => $diff < 0,
+                'is_soon'      => $diff >= 0 && $diff <= $alertSettingHari,
             ];
         })->sortBy('sisa_hari')->values()->all();
 
