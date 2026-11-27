@@ -7,53 +7,42 @@ use Barryvdh\DomPDF\Facade\Pdf;
 
 class SubcountInPdfController extends Controller
 {
- public function preview(SubcountIn $subcountIn)
-{
-    $subcountIn->load(
-        'items.subcountOut',
-        'items.itemHasil'
-    );
+    protected function loadRelations(SubcountIn $subcountIn): SubcountIn
+    {
+        return $subcountIn->load([
+            'subcountOut.supplier',
+            'supplier',
+            'items.subcountOut.supplier',
+            'items.spk.salesOrder.itemable',
+            'items.itemAsal',
+            'items.itemHasil',
+            'items.finishGoodItem',
+        ]);
+    }
 
-    $pdf = Pdf::loadView(
-        'pdf.subcount-in',
-        [
-            'subcountIn' => $subcountIn
-        ]
-    );
+    public function preview(SubcountIn $subcountIn)
+    {
+        $this->loadRelations($subcountIn);
 
-    $filename = str_replace(
-        '/',
-        '-',
-        $subcountIn->no_subcount
-    );
+        $pdf = Pdf::loadView('pdf.subcount-in', [
+            'subcountIn' => $subcountIn,
+        ]);
 
-    return $pdf->stream(
-        $filename.'.pdf'
-    );
-}
+        $filename = str_replace('/', '-', (string) $subcountIn->no_subcount);
+
+        return $pdf->stream($filename . '.pdf');
+    }
 
     public function download(SubcountIn $subcountIn)
-{
-    $subcountIn->load(
-        'items.subcountOut',
-        'items.itemHasil'
-    );
+    {
+        $this->loadRelations($subcountIn);
 
-    $pdf = Pdf::loadView(
-        'pdf.subcount-in',
-        [
-            'subcountIn' => $subcountIn
-        ]
-    );
+        $pdf = Pdf::loadView('pdf.subcount-in', [
+            'subcountIn' => $subcountIn,
+        ]);
 
-    $filename = str_replace(
-        '/',
-        '-',
-        $subcountIn->no_subcount
-    );
+        $filename = str_replace('/', '-', (string) $subcountIn->no_subcount);
 
-    return $pdf->download(
-        $filename.'.pdf'
-    );
-}
+        return $pdf->download($filename . '.pdf');
+    }
 }

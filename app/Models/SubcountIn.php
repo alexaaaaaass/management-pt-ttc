@@ -2,9 +2,9 @@
 
 namespace App\Models;
 
+use App\Services\Subcontract\SubcontractService;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use App\Services\Subcontract\SubcontractService;
 
 class SubcountIn extends Model
 {
@@ -12,6 +12,8 @@ class SubcountIn extends Model
 
     protected $fillable = [
         'no_subcount',
+        'subcount_out_id',
+        'supplier_id',
         'tanggal_subcount',
         'surat_jalan_pengiriman',
         'admin_produksi',
@@ -24,9 +26,29 @@ class SubcountIn extends Model
         'tanggal_subcount' => 'date',
     ];
 
+    public function subcountOut()
+    {
+        return $this->belongsTo(SubcountOut::class, 'subcount_out_id');
+    }
+
+    public function supplier()
+    {
+        return $this->belongsTo(MasterSupplier::class, 'supplier_id');
+    }
+
     public function items()
     {
         return $this->hasMany(SubcountInItem::class);
+    }
+
+    public function getResolvedSubcountOutAttribute(): ?SubcountOut
+    {
+        return $this->subcountOut ?? $this->items->first()?->subcountOut;
+    }
+
+    public function getResolvedSupplierAttribute(): ?MasterSupplier
+    {
+        return $this->supplier ?? $this->resolved_subcount_out?->supplier;
     }
 
     protected static function booted()

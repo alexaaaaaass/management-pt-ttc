@@ -240,12 +240,27 @@ class SubcontractService
                 $data['no_subcount'] = $this->generateSubcountInNumber();
             }
 
+            $headerOutId = ! empty($data['subcount_out_id'])
+                ? (int) $data['subcount_out_id']
+                : (! empty($itemsData[0]['subcount_out_id']) ? (int) $itemsData[0]['subcount_out_id'] : null);
+
+            if ($headerOutId) {
+                $data['subcount_out_id'] = $headerOutId;
+                if (empty($data['supplier_id'])) {
+                    $data['supplier_id'] = SubcountOut::where('id', $headerOutId)->value('supplier_id');
+                }
+            }
+
             unset($data['items']);
             /** @var SubcountIn $subcountIn */
             $subcountIn = SubcountIn::create($data);
 
             // Simpan items dan mutasi stok
             foreach ($itemsData as $item) {
+                if (empty($item['subcount_out_id']) && $headerOutId) {
+                    $item['subcount_out_id'] = $headerOutId;
+                }
+
                 $qtyDiterima = (float) ($item['qty_diterima'] ?? 0);
                 $tipeHasil = $item['tipe_hasil'] ?? 'material';
                 $itemHasilId = !empty($item['item_hasil_id']) ? (int) $item['item_hasil_id'] : null;

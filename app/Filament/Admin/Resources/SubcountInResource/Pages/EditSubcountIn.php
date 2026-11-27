@@ -18,7 +18,28 @@ class EditSubcountIn extends EditRecord
 
     protected function mutateFormDataBeforeFill(array $data): array
     {
-        $data['items'] = $this->record->items->toArray();
+        $this->record->loadMissing([
+            'subcountOut.supplier',
+            'supplier',
+            'items.itemAsal',
+            'items.spk.salesOrder.itemable',
+            'items.subcountOut',
+        ]);
+
+        $resolvedOut = $this->record->resolved_subcount_out;
+        $data['subcount_out_id'] = $data['subcount_out_id'] ?? $resolvedOut?->id;
+        $data['supplier_id'] = $data['supplier_id'] ?? $this->record->resolved_supplier?->id;
+
+        $data['items'] = $this->record->items->map(function ($item): array {
+            $arr = $item->toArray();
+            $arr['nama_item_asal'] = $item->itemAsal?->nama_master_item
+                ?? ($item->spk?->salesOrder?->itemable?->nama_barang
+                    ?? $item->spk?->salesOrder?->product_name
+                    ?? $item->spk?->no_spk
+                    ?? '-');
+
+            return $arr;
+        })->all();
 
         return $data;
     }
