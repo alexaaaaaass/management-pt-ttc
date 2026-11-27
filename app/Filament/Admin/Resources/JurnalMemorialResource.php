@@ -224,6 +224,14 @@ class JurnalMemorialResource extends Resource
 
     public static function table(Table $table): Table
     {
+        $formatRupiah = function ($state): string {
+            $val = (float) $state;
+
+            return 'Rp ' . (fmod(round($val, 2), 1.0) != 0.0
+                ? number_format($val, 2, ',', '.')
+                : number_format($val, 0, ',', '.'));
+        };
+
         return $table
             ->defaultSort('tanggal', 'desc')
             ->columns([
@@ -258,29 +266,26 @@ class JurnalMemorialResource extends Resource
 
                 Tables\Columns\TextColumn::make('total_debit')
                     ->label('Total Debit')
-                    ->formatStateUsing(function ($state) {
-                        $val = (float) $state;
-                        return 'Rp ' . (fmod(round($val, 2), 1.0) != 0.0 ? number_format($val, 2, ',', '.') : number_format($val, 0, ',', '.'));
-                    })
+                    ->formatStateUsing($formatRupiah)
                     ->alignRight()
                     ->weight('bold')
                     ->sortable()
                     ->summarize(
                         Tables\Columns\Summarizers\Sum::make()
-                            ->label('Total Debit')
-                            ->money('IDR')
+                            ->label('')
+                            ->formatStateUsing($formatRupiah)
                     ),
 
                 Tables\Columns\TextColumn::make('total_kredit')
                     ->label('Total Kredit')
-                    ->money('IDR')
+                    ->formatStateUsing($formatRupiah)
                     ->alignRight()
                     ->weight('bold')
                     ->sortable()
                     ->summarize(
                         Tables\Columns\Summarizers\Sum::make()
-                            ->label('Total Kredit')
-                            ->money('IDR')
+                            ->label('')
+                            ->formatStateUsing($formatRupiah)
                     ),
 
                 Tables\Columns\TextColumn::make('status')

@@ -155,8 +155,14 @@
         width: 100% !important;
     }
 
-    /* 10. Pembayaran Bon/Cicilan: sembunyikan baris subtotal "This page" agar hanya tampil total keseluruhan */
-    .fi-resource-inv-payments tr.fi-ta-summary-header-row + tr.fi-ta-summary-row {
+    /* 10. Sembunyikan baris subtotal "This page" (dan header summary redundan di Jurnal Memorial) */
+    .fi-resource-inv-payments tr.fi-ta-summary-header-row + tr.fi-ta-summary-row,
+    .fi-resource-jurnal-memorials tr.fi-ta-summary-header-row,
+    .fi-resource-jurnal-memorials tr.fi-ta-summary-header-row + tr.fi-ta-summary-row {
         display: none !important;
+    }
+
+    .fi-resource-jurnal-memorials tr.fi-ta-summary-header-row + tr.fi-ta-summary-row + tr.fi-ta-summary-row {
+        background-color: rgba(148, 163, 184, 0.07);
     }
 </style>

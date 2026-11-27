@@ -4,6 +4,7 @@ namespace App\Filament\Admin\Pages;
 
 use App\Models\Invoice;
 use App\Models\OperasionalPay;
+use Filament\Actions\Action;
 use Filament\Pages\Page;
 use Filament\Support\Enums\MaxWidth;
 
@@ -13,8 +14,30 @@ class SalesCommissionPage extends Page
     protected static ?string $navigationGroup = 'Finance';
     protected static ?int $navigationSort = 3;
     protected static ?string $navigationLabel = 'Sales Commission';
-    protected static ?string $title = 'Rekap & Pembayaran Sales Commission (Marketing)';
+    protected static ?string $title = 'Sales Commission';
     protected static string $view = 'filament.admin.pages.sales-commission-page';
+
+    public function getSubheading(): ?string
+    {
+        return 'Rekap adjustment harga, komisi marketing (2%), dan voucher pembayaran · Akun 601.002 Komisi Penjualan';
+    }
+
+    protected function getHeaderActions(): array
+    {
+        return [
+            Action::make('operasional_keluar')
+                ->label('Operasional Keluar')
+                ->icon('heroicon-o-arrow-top-right-on-square')
+                ->color('gray')
+                ->outlined()
+                ->url(url('/admin/operasional-pays')),
+            Action::make('input_komisi')
+                ->label('Input Pembayaran Komisi')
+                ->icon('heroicon-o-plus')
+                ->color('primary')
+                ->url(url('/admin/operasional-pays/create')),
+        ];
+    }
 
     public function getMaxContentWidth(): MaxWidth
     {
