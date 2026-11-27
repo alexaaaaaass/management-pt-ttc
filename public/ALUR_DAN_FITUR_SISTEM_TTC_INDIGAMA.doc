@@ -2,581 +2,1163 @@ MIME-Version: 1.0
 Content-Type: text/html; charset=utf-8
 
 <!DOCTYPE html>
-<html>
+<html lang="id">
 <head>
     <meta charset="utf-8">
-    <title>PRESENTASI ALUR & FITUR SISTEM TTC - INDIGAMA</title>
+    <title>BLUEPRINT ALUR KERJA &amp; FITUR SISTEM — TTC ENTERPRISE ERP v3.0</title>
     <style>
         @page {
-            margin: 28px 36px 36px 36px;
+            size: A4 portrait;
+            margin: 34px 36px 42px 36px;
         }
         body {
-            font-family: 'Helvetica', 'Arial', sans-serif;
+            font-family: 'DejaVu Sans', Arial, Helvetica, sans-serif;
             color: #1e293b;
-            font-size: 11px;
-            line-height: 1.5;
+            font-size: 9.2px;
+            line-height: 1.48;
+            margin: 0;
+            padding: 0;
         }
         .page-break {
             page-break-after: always;
         }
-        /* COVER STYLING */
-        .cover {
+        .avoid-break {
+            page-break-inside: avoid;
+        }
+
+        /* COVER PAGE */
+        .cover-wrap {
             text-align: center;
-            padding-top: 140px;
+            padding-top: 68px;
         }
         .cover-tag {
-            background-color: #2563eb;
+            background-color: #1d4ed8;
             color: #ffffff;
-            font-size: 11px;
+            font-size: 9px;
             font-weight: bold;
-            padding: 6px 16px;
-            border-radius: 20px;
+            padding: 5px 16px;
+            border-radius: 16px;
             text-transform: uppercase;
-            letter-spacing: 1px;
+            letter-spacing: 0.8px;
             display: inline-block;
         }
         .cover-title {
-            font-size: 26px;
-            font-weight: 800;
+            font-size: 22px;
+            font-weight: bold;
             color: #0f172a;
-            margin-top: 25px;
+            margin-top: 18px;
             line-height: 1.25;
             text-transform: uppercase;
         }
         .cover-subtitle {
-            font-size: 14px;
-            color: #475569;
-            margin-top: 12px;
-            font-weight: 500;
+            font-size: 11px;
+            color: #334155;
+            margin: 12px auto 0 auto;
+            max-width: 480px;
+            line-height: 1.5;
         }
         .cover-divider {
-            width: 120px;
+            width: 110px;
             height: 4px;
-            background-color: #3b82f6;
-            margin: 30px auto;
+            background-color: #2563eb;
+            margin: 22px auto;
             border-radius: 2px;
         }
-        .cover-info {
-            margin-top: 120px;
-            font-size: 11px;
-            color: #64748b;
-            line-height: 1.8;
+        .cover-desc {
+            text-align: center;
+            max-width: 470px;
+            margin: 0 auto 24px auto;
+            color: #475569;
+            font-size: 9.5px;
+            line-height: 1.55;
         }
-        .cover-info strong {
-            color: #0f172a;
+        .cover-metrics {
+            width: 88%;
+            margin: 18px auto 26px auto;
+            border-collapse: separate;
+            border-spacing: 8px 0;
         }
-
-        /* HEADER & FOOTER */
-        .header-bar {
-            border-bottom: 2px solid #2563eb;
-            padding-bottom: 6px;
-            margin-bottom: 18px;
+        .cover-metrics td {
+            background-color: #f8fafc;
+            border: 1px solid #cbd5e1;
+            border-top: 3px solid #2563eb;
+            border-radius: 5px;
+            padding: 9px 6px;
+            text-align: center;
+            width: 25%;
         }
-        .header-title {
+        .metric-val {
             font-size: 14px;
             font-weight: bold;
             color: #1e3a8a;
+            display: block;
+        }
+        .metric-lbl {
+            font-size: 7.8px;
+            color: #475569;
+            margin-top: 2px;
+            display: block;
+        }
+        .cover-meta-box {
+            width: 84%;
+            margin: 34px auto 0 auto;
+            border: 1px solid #cbd5e1;
+            background-color: #f8fafc;
+            border-radius: 6px;
+            padding: 12px 16px;
+            text-align: left;
+            font-size: 8.8px;
+            color: #334155;
+            line-height: 1.65;
+        }
+        .cover-meta-box strong {
+            color: #0f172a;
+        }
+
+        /* PAGE HEADER */
+        .header-bar {
+            width: 100%;
+            border-bottom: 2px solid #1d4ed8;
+            padding-bottom: 5px;
+            margin-bottom: 12px;
+        }
+        .header-bar table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 0;
+        }
+        .header-bar td {
+            border: none;
+            padding: 0;
+            vertical-align: middle;
+        }
+        .header-title {
+            font-size: 11.5px;
+            font-weight: bold;
+            color: #1e3a8a;
             text-transform: uppercase;
+            letter-spacing: 0.2px;
         }
         .header-sub {
-            font-size: 9px;
+            font-size: 7.8px;
             color: #64748b;
-            float: right;
-            margin-top: -16px;
+            text-align: right;
         }
 
         /* HEADINGS */
-        h1 {
-            font-size: 16px;
-            color: #1e3a8a;
-            margin-top: 18px;
-            margin-bottom: 10px;
-            border-bottom: 1px solid #cbd5e1;
-            padding-bottom: 4px;
-            text-transform: uppercase;
-        }
         h2 {
-            font-size: 12.5px;
+            font-size: 10.2px;
             color: #0f172a;
-            margin-top: 14px;
-            margin-bottom: 6px;
-            background-color: #f1f5f9;
-            padding: 5px 8px;
+            margin-top: 11px;
+            margin-bottom: 5px;
+            background-color: #eff6ff;
+            padding: 4px 8px;
             border-left: 4px solid #2563eb;
-        }
-        h3 {
-            font-size: 11px;
-            color: #334155;
-            margin-top: 8px;
-            margin-bottom: 4px;
             font-weight: bold;
         }
-
+        h3 {
+            font-size: 9.2px;
+            color: #1e3a8a;
+            margin-top: 7px;
+            margin-bottom: 3px;
+            font-weight: bold;
+        }
         p {
             margin-top: 0;
-            margin-bottom: 8px;
+            margin-bottom: 6px;
             text-align: justify;
+        }
+        ul {
+            margin-top: 2px;
+            margin-bottom: 6px;
+            padding-left: 16px;
+        }
+        li {
+            margin-bottom: 3px;
+            text-align: justify;
+        }
+        code {
+            font-family: 'DejaVu Sans Mono', monospace;
+            font-size: 8px;
+            background-color: #f1f5f9;
+            color: #0f172a;
+            padding: 1px 3px;
+            border-radius: 2px;
         }
 
         /* TABLES */
-        table {
+        table.data-table {
             width: 100%;
             border-collapse: collapse;
-            margin-top: 8px;
-            margin-bottom: 14px;
-            font-size: 10px;
+            margin-top: 5px;
+            margin-bottom: 9px;
+            font-size: 8.3px;
         }
-        th {
+        table.data-table th {
             background-color: #1e3a8a;
             color: #ffffff;
             font-weight: bold;
             text-align: left;
-            padding: 6px 8px;
+            padding: 5px 6px;
             border: 1px solid #1e3a8a;
         }
-        td {
-            padding: 5px 8px;
-            border: 1px solid #e2e8f0;
+        table.data-table td {
+            padding: 4.5px 6px;
+            border: 1px solid #cbd5e1;
             vertical-align: top;
         }
-        tr:nth-child(even) td {
+        table.data-table tr:nth-child(even) td {
             background-color: #f8fafc;
         }
+        .text-center { text-align: center; }
+        .text-right { text-align: right; }
 
-        /* BOXES & BADGES */
+        /* BOXES & CALLOUTS */
         .box-highlight {
             background-color: #eff6ff;
-            border-left: 4px solid #3b82f6;
-            padding: 10px 12px;
-            margin: 10px 0;
-            border-radius: 4px;
+            border-left: 4px solid #2563eb;
+            padding: 7px 10px;
+            margin: 7px 0;
+            border-radius: 3px;
+            font-size: 8.8px;
         }
+        .box-amber {
+            background-color: #fffbeb;
+            border-left: 4px solid #d97706;
+            padding: 7px 10px;
+            margin: 7px 0;
+            border-radius: 3px;
+            font-size: 8.6px;
+        }
+        .box-green {
+            background-color: #f0fdf4;
+            border-left: 4px solid #16a34a;
+            padding: 7px 10px;
+            margin: 7px 0;
+            border-radius: 3px;
+            font-size: 8.6px;
+        }
+
+        /* BADGES */
         .badge {
             display: inline-block;
-            padding: 2px 7px;
-            border-radius: 4px;
-            font-size: 9px;
+            padding: 1.5px 5.5px;
+            border-radius: 3px;
+            font-size: 7.4px;
             font-weight: bold;
             text-transform: uppercase;
         }
-        .badge-green { background-color: #dcfce7; color: #166534; }
-        .badge-blue { background-color: #dbeafe; color: #1e40af; }
-        .badge-amber { background-color: #fef3c7; color: #92400e; }
-        .badge-gray { background-color: #f1f5f9; color: #475569; }
+        .badge-green  { background-color: #dcfce7; color: #166534; }
+        .badge-blue   { background-color: #dbeafe; color: #1e40af; }
+        .badge-amber  { background-color: #fef3c7; color: #92400e; }
+        .badge-purple { background-color: #f3e8ff; color: #6b21a8; }
+        .badge-red    { background-color: #fee2e2; color: #991b1b; }
+        .badge-gray   { background-color: #e2e8f0; color: #334155; }
 
-        /* FLOW DIAGRAMS */
+        /* FLOW CARDS */
         .flow-step {
             background-color: #ffffff;
             border: 1px solid #cbd5e1;
-            border-radius: 6px;
-            padding: 8px 12px;
-            margin-bottom: 8px;
+            border-left: 4px solid #2563eb;
+            border-radius: 4px;
+            padding: 5.5px 9px;
+            margin-bottom: 5.5px;
+            font-size: 8.5px;
         }
+        .flow-step.teal   { border-left-color: #0d9488; }
+        .flow-step.amber  { border-left-color: #d97706; }
+        .flow-step.purple { border-left-color: #7c3aed; }
+        .flow-step.green  { border-left-color: #16a34a; }
         .step-num {
-            background-color: #2563eb;
+            background-color: #1d4ed8;
             color: #ffffff;
             font-weight: bold;
-            padding: 2px 7px;
-            border-radius: 10px;
-            font-size: 9px;
-            margin-right: 6px;
+            padding: 1.5px 6px;
+            border-radius: 9px;
+            font-size: 7.8px;
+            margin-right: 5px;
+            display: inline-block;
+        }
+        .step-num.teal   { background-color: #0d9488; }
+        .step-num.amber  { background-color: #d97706; }
+        .step-num.purple { background-color: #7c3aed; }
+        .step-num.green  { background-color: #16a34a; }
+
+        /* VISUAL FLOWCHART GRID */
+        table.flow-grid {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0 2px;
+            margin: 6px 0 8px 0;
+        }
+        table.flow-grid td {
+            border: none;
+            padding: 2px;
+            vertical-align: middle;
+        }
+        .fnode, table.flow-grid td.fnode {
+            border: 1px solid #93c5fd;
+            background-color: #eff6ff;
+            border-radius: 4px;
+            padding: 5px 5px;
+            text-align: center;
+            font-size: 7.5px;
+            line-height: 1.35;
+            color: #0f172a;
+        }
+        .fnode strong, table.flow-grid td.fnode strong {
+            display: block;
+            color: #1e3a8a;
+            font-size: 7.8px;
+            margin-bottom: 2px;
+        }
+        .fnode.green, table.flow-grid td.fnode.green {
+            border-color: #86efac;
+            background-color: #f0fdf4;
+        }
+        .fnode.green strong, table.flow-grid td.fnode.green strong { color: #166534; }
+        .fnode.amber, table.flow-grid td.fnode.amber {
+            border-color: #fcd34d;
+            background-color: #fffbeb;
+        }
+        .fnode.amber strong, table.flow-grid td.fnode.amber strong { color: #92400e; }
+        .fnode.purple, table.flow-grid td.fnode.purple {
+            border-color: #d8b4fe;
+            background-color: #faf5ff;
+        }
+        .fnode.purple strong, table.flow-grid td.fnode.purple strong { color: #6b21a8; }
+        .farrow {
+            text-align: center;
+            font-size: 10px;
+            font-weight: bold;
+            color: #2563eb;
+            width: 13px;
+        }
+        .farrow-down {
+            text-align: center;
+            font-size: 11px;
+            font-weight: bold;
+            color: #2563eb;
+            padding: 1px 0;
+        }
+
+        /* TWO-COLUMN LAYOUT */
+        table.two-col {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 4px 0 6px 0;
+        }
+        table.two-col > tbody > tr > td {
+            width: 50%;
+            vertical-align: top;
+            border: none;
+            padding: 0 5px 0 0;
+        }
+        table.two-col > tbody > tr > td:last-child {
+            padding: 0 0 0 5px;
+        }
+        .card-panel {
+            border: 1px solid #cbd5e1;
+            border-radius: 5px;
+            padding: 7px 9px;
+            background-color: #ffffff;
+            margin-bottom: 6px;
+        }
+        .card-panel-title {
+            font-size: 8.8px;
+            font-weight: bold;
+            color: #1e3a8a;
+            border-bottom: 1px solid #e2e8f0;
+            padding-bottom: 3px;
+            margin-bottom: 5px;
         }
     </style>
 </head>
 <body>
 
-    <!-- ============================================================== -->
-    <!-- COVER PAGE                                                     -->
-    <!-- ============================================================== -->
-    <div class="cover">
-        <div class="cover-tag">Dokumen Presentasi &amp; Panduan Eksekutif</div>
-        <div class="cover-title">
-            Blueprint Alur Kerja &amp; Fitur Sistem<br>
-            TTC Enterprise ERP
-        </div>
-        <div class="cover-subtitle">
-            Integrasi Proses Percetakan Offset Packaging: Marketing, Produksi, Logistik, Penjualan, &amp; Akuntansi Finansial
-        </div>
-        <div class="cover-divider"></div>
-        <p style="text-align: center; max-width: 480px; margin: 0 auto; color: #475569; font-size: 11px;">
-            Dokumen resmi perbandingan alur operasional, adopsi modul Bismillah MACRO.xlsm, standardisasi format Indigama 02, dan otomatisasi akuntansi keuangan Multi-Step.
-        </p>
-
-        <div class="cover-info">
-            <strong>PT. TEKNOGRAFI TRI CAWANASKA (TTC)</strong><br>
-            Versi Rilis: 2.5 (Audited &amp; Synchronized)<br>
-            Tanggal Dokumen: 09 November 2026<br>
-            Disusun untuk: Stakeholder, Manajemen, Tim Marketing, &amp; Tim Finance
-        </div>
+<!-- ====================================================================== -->
+<!-- HALAMAN 1: COVER PAGE                                                  -->
+<!-- ====================================================================== -->
+<div class="cover-wrap">
+    <img src="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEAYABgAAD//gA7Q1JFQVRPUjogZ2QtanBlZyB2MS4wICh1c2luZyBJSkcgSlBFRyB2ODApLCBxdWFsaXR5ID0gOTIK/9sAQwADAgICAgIDAgICAwMDAwQGBAQEBAQIBgYFBgkICgoJCAkJCgwPDAoLDgsJCQ0RDQ4PEBAREAoMEhMSEBMPEBAQ/9sAQwEDAwMEAwQIBAQIEAsJCxAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQ/8AAEQgChANjAwEiAAIRAQMRAf/EAB8AAAEFAQEBAQEBAAAAAAAAAAABAgMEBQYHCAkKC//EALUQAAIBAwMCBAMFBQQEAAABfQECAwAEEQUSITFBBhNRYQcicRQygZGhCCNCscEVUtHwJDNicoIJChYXGBkaJSYnKCkqNDU2Nzg5OkNERUZHSElKU1RVVldYWVpjZGVmZ2hpanN0dXZ3eHl6g4SFhoeIiYqSk5SVlpeYmZqio6Slpqeoqaqys7S1tre4ubrCw8TFxsfIycrS09TV1tfY2drh4uPk5ebn6Onq8fLz9PX29/j5+v/EAB8BAAMBAQEBAQEBAQEAAAAAAAABAgMEBQYHCAkKC//EALURAAIBAgQEAwQHBQQEAAECdwABAgMRBAUhMQYSQVEHYXETIjKBCBRCkaGxwQkjM1LwFWJy0QoWJDThJfEXGBkaJicoKSo1Njc4OTpDREVGR0hJSlNUVVZXWFlaY2RlZmdoaWpzdHV2d3h5eoKDhIWGh4iJipKTlJWWl5iZmqKjpKWmp6ipqrKztLW2t7i5usLDxMXGx8jJytLT1NXW19jZ2uLj5OXm5+jp6vLz9PX29/j5+v/aAAwDAQACEQMRAD8A/VOiiigAooooAKKKKACiiigAooooAKKKKAPmwfHebwb+1R4t+H2vXhbQrqLTplDvxZyPaxjzVzwEJGHH0bsQfpIEMAykEHkEV+aX7XniFvBP7aianK2y21DTNPWYk4BUqUz+BSvsX4FfElbm2t/BesTcrGP7MmZshkA/1J9wOV7Y+XjaN3i4fFuji54eq9G24v1e337Hr4nDqtRjVh8SSv5qy/Ffl6a+00UUV7R5AUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFAH5e/8FP7I23x80K9RSoufCtsS3q63V0D+m2u4+BPi5/GPw20nVRcOL6yAt5nRyHWWM8MCOQeAQRzUP/BVbRFi134eeI1X5rq01Gyc46CJ4XX/ANHN+RrxH9lTxs2hyalo08n+jySpNtPYkYP8hXy2bxUW5vo/wf8ASPewbbilHt+R+oPwp+I0fjTTTp+oyqutWKDz1wF89OgmUDjrgMB0JHADLXe18d6PrN5pV7a+IdCuvLngYSROOR6EEdwQSCO4Jr6h8C+NtO8c6Imp2g8m4jxHd2xbLQyY6Z7qeqt3HoQQPSyvH/WI+yqP3l+K/wA/+HOLG4Xk/e01p1Xb/gflt2Ojooor1zzgooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooA+N/+CoHhwah8FfD/iSOItNo/iGOJmA+5DPBKGP/AH3HEPxr8/vhBfG28SvAGx58BA+oINfrF+2R4Sbxn+zP480yNAZbTTf7VjJGSPsjrcNj3KxMPxr8fPB19/Z3iWwuScDzQjfQ8f1rwc3pc8Jx7r+vyPYwE7KL7O39fefaXw88beURpmoSfIeFJ7V7F4V8Vap4M1mHXdHcSIRtmgZsR3EXdCex7hucH1GQflSGZ4mWaJsEcgivWvAHjWO9hXTNQk+cDCk18bgsXKEkr2a2Z7Fal9pL1PvPw34j0vxXo8GtaRMXgmHKtw8bj7yOOzA/h3BIINalfLHgTx3qHgDV/tUIe5064IF5ag/fX++meA47diODjgr9OaTq2na5p1vq2k3SXNpdJvikXoR0IIPIIOQQeQQQcEV+gYDHRxkLPSS3X6r+tD5vF4X2D5o/C/w8n+nf7y3RRRXoHGFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAVtS06z1jTrrSdRgWa0vYHt54m6PG6lWU+xBIr8IPGPhu/8C+M9a8Jagf8ATNA1K40+UjoZIZWQkexK5r96K/J3/gor8PG8G/tDXXiK3g2WPi+xg1SMqmEE6jyZlz3bdGJD/wBdRXBjoXipHdg5bx+Zm+HtQXVNFtL1TnzIlJ+uK17W6ltJlnhYqynPFec/CLV/tOky6ZI3z2z5Uf7J5r0CvzTF0nQryh2Z9TSl7SCZ7R4I8ZwazbLY3kgEyjAJPWvXfht8RLvwDqZgut82jXbg3EK8mNunmoPXGMjuB6gV8hWN9Pp9wtxA5VlOeK9m8HeMLbXbVbW6cLOoxz3rvwGNlCSadpLY5a9FWel090fd1le2mpWcN/YXEc9tcIJIpYzlXU9CDU9fM3wz+Jt34DvRpupGSfQrh8yIAWa2Y9ZEHcf3lHXqOchvpO0u7W/tYr6xuI57edBJFLGwZXUjIII6givvsFjYYyF1pJbr+uh85isK8O7rWL2f6PzJqKKK7TlCiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAK+Sf8AgpN8MD4x+Cdt46sYN994KvRc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ajTJ6cV8m2ekLGmecVetWkgkEkTFSpzxUUcdW4ovaobKseieEfGKyKtlqDewY16FpGp6jod9FrOhXhhnj6MOVdT1R1/iU9x9CCCAR4LArKwZTjFdx4V8WSWpW1vG3IeATXpYTHuDUZu1tmctWjb3on1v4K8f6Z4vhNuQLTUok3S2rNnK9C8Z/iXJ57jIyBkE9TXzFZzbmh1HTrho5YmEkckbbWRvUEdOpH4mvXPA/wATY9TMWj+JXjgvywjhucBY7kngA9kkPTHRjjbgnYPvMuzeNe1Ou7S6Po/8n/XkeBisDa86K9V/l3/P1PQaKKK908sKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKAPgn/AIKoeBzLpXgf4k29uB9muLjRLuXufMUTQD6Dy7j/AL6r5q/Zb+Ij+HNWvPDV3Kfsl5iZFJ4Djg/piv0m/bA+HZ+Jn7O/jDQreASX1lZ/2vY/LubzrU+btUf3nRXjH/XSvx18L6o+ja9Z36ttEcgDH/ZPBrwc1oOako7vVep7GCqXjG/ofpLpWrXVhd2uv6FeNDcQMJIpUPKn0PqCCQQeCCQeDX018OfiNp3jzTjwlvqlso+1Wufw3pnkoT+IPB7E/A3gDx61qsVtdyboJACCT0r17SdYvNMvLfX/AA/fNBcQnfHLGensR0II4IPBFeJlmZvDyutuq/VHbicMqseSfyfb/gH2XRXE/Db4m6d48sjbzBLTWLZM3Frnhx082PPJTJGR1UkA9VZu2r7WjWhXgqlN3TPnqtKdGXJNann/AMcvg14Z+O3w71DwF4kURGYefYXqoGksrtQfLmUd8ZIYZG5WZcjOa/G7x74D8V/CbxvqPgvxVZtZavo8/lvtztcdUljJA3IykMp7gj6V+6NfPf7X37L1h+0D4RGp6FDBb+NdEiY6ZcthBdxcsbSVv7pOShP3GJ6BnzzYvD+1XNHf8zowtfkfJLb8j4L+GXjiLX7JdPvZAt3E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as6cDSdubvoez/B/QI9E0FtVuwEluvny3GF7VreIviDpWlKypKJHHYGvPdc8bXlxHHpmmKwTiOOOMEluwAA6mvVvhX+wt8aPioYtX8XY8F6NLhvM1GIveSKe6W2Qw/7aFOuRmvj6OVVMfWdWp16HtzxEaELLZHiniX4q6lel47aQxqey1Z8C/A348fGmRLjwX4E1e/s5TxfzKLe098TylUYj0Uk+1fpZ8Kv2K/gL8LBDeR+Fl8R6vHgnUdc23LBvVIiBEmDyCE3D+8a92VVRQqqAoGAAOAK+qwmTQoLseRWzFPbX8F/X3H53+Af+CXXiS88u7+J3xIstOUkM1no1u1zIV7gzS7FRvojivojwT+wL+zR4NEclx4PufEd1Eci41u9ebP1iTZCR9UNfRNFepDC0odL+pxSxdWWzt6f57mL4a8FeDfBlubTwf4S0bQ4D1j02witlP1EagVtUUVuklojncnJ3bCiiimIKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACis3X/Enh/wrp76r4k1qy0yzTgzXUyxrn0BJ5PoBya+eviF+2v4Y0zzNP+G+iy67dDIF7dq0Fqp7EJxJJ9Ds9ia5sRjKGFV6sreXX7joo4WrX+Bad+h9JXNzbWVvJd3lxHBBCpeSWVwqIo6kk8AD1rwD4n/tk+AvCXnaX4IhPinVFyvmQvsso295esnY4QEH+8K+YfFvjn4q/GC7/wCKo1y6ubYvujsYf3VrHzxiNeCRn7zZb3rS8OfCIALPqRCDrt718vj+J1BctHTz6/1957GHyqMdZ6v8P+D+HoYXjf4h/Ff42X2fE+rzSWe/dDp1sDFaRemIwfmIyfmYs3vWt4U+DoUJcaqAo67e9em6V4e0vSIwlpbKCP4sc1okgDk4FfG4rNa2Ibd/n1PXhQjFWKOmaJp2kxCKzt0THfHNXmZUGWIAHrWLrfi7R9DiZ7m5TcOig815J4t+L9xel7fT38uPpwea5KOFq4l3X3lynGG56X4l8faXokbJFKskw7A9K8+03/hOPi14iTQPCunT391J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6mVcdBnk15f4v+I9xdt9i00O7SMI444wWZ2JwAAOSSe1Q+GNB+Ifxq8Rjw94L0qe/nJBmkztgtkP8csh4RevucYAJwK+kp/CXwi/Yg8FJ8QfGckHij4g3cbR6XE3GZ8crboc+XGuRvmI3YOBguEPvZbkbqfvKmy3fT/gs5K+LUPdW76f108z5w8T/Dm1+Dfhu28f/GqGO58VavGZPDfg2X5tg7XmojtGp5EHV2AVuBIo4D4WWmreIfEU+r3csk8k8plllbq7k5JNZWua744+O3j+88UeJr173UdRl3zSYIjhjH3Y0H8KKOAPT1OTXq9hJpXgbSV03T9rXG3DyD19q7czxEKUPq9Fav8ALuzOgpTfNLZHbanr1rotqIlYNKFx16VofB74SeJvjn4haQvLZeH7OQC/1Db+PlRZ4aQj8FByewZfgZ8AvFHxu1Fde1l59M8KwyfvrwjEl0QeY4AeCexc5C89SMV97eHPDmh+EtFtPDvhzTYbDTrKPy4IIhwo7kk8kk5JY5JJJJJNGS5A6rVav8P5/wDA8/uMsdmCoLkh8X5ev+X3+bfDPhnQ/B2h2nhzw5p8dnYWSbIok/VierMTkknkkkmtSiivvIxUEoxVkj5qUnJ80twooopiCiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAoqlqetaPosP2nWdWs7CIc+ZczpEv5sQK4rVf2h/gPoiu2o/GLwcjR/ejj1m3lkH/AEYt+la06FWt/Di36JszqVadJXqSS9XY9CorwDWf27f2YdIVxH8QZdRlT/AJZWelXblvozRqh/76rzvXv+CmvwjtI3Xw74G8WalMv3ftKW9rE30YSO35pXo0sizKt8NCXzVvzsefVzvLqHx14/en+Vz7Dor88PEf8AwU/8bXSbfCHwp0XTm/valfy3oP4RrDj868t8S/t5/tN+ImcWni+y0OGQEGHTNMhUAezyrJIPqGzXqUODc0q/FFR9X/lc8mvxllVH4ZOXon+tj9Ya4Xxf8dPg34C81PF3xO8N6dPAMvbPqEbXI+kKkyH8Fr8f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RQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAhBIIBIz3HavKfifrni3QRING8YX9pgEgrbWj4/wC+4TRRXFj5yhTvF2PdyGjTrV2qkU15q58veOPiv8aXZ4l+MfiOFORi3gsYCPxjt1P6141r2q/EDxMTDr/xd8cX8ZONk+q71x/ulcfpRRXz3PKp8bv6n0M6cKU7QSSXbQz9J+DGi6zL/pnibxFljyUuYgf/AEXXrPgj9iD4X+LHjXVPFnjQb8Z8u+tx/wChQGiiumjCKa0ODExXI3Y9csv+CZH7PVuyyXGueN7wdSs2pW4B/wC+LdT+tdbpX/BP39lfTlAuPAF1qLj+O61m8z+Ucir+lFFepQhFzs0ePWbjh+Zbnb6J+yx+zl4eULp/wX8JvjobzTku2/Ofea9A0Pwv4Z8MQfZvDfh3TNJhxjy7G0jgXH0QAUUV3RpwjsjzJVZy+KTfzNSiiirMwooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooA//2Q==" alt="Logo PT TTC" style="width: 118px; height: auto; margin-bottom: 14px;"><br>
+    <div class="cover-tag">Dokumen Presentasi &amp; Panduan Eksekutif Sistem</div>
+    <div class="cover-title">
+        Blueprint Alur Kerja &amp; Fitur Sistem<br>
+        TTC Enterprise ERP
     </div>
-
-    <div class="page-break"></div>
-
-    <!-- ============================================================== -->
-    <!-- HALAMAN 1: RINGKASAN EKSEKUTIF & ARSITEKTUR                   -->
-    <!-- ============================================================== -->
-    <div class="header-bar">
-        <span class="header-title">1. Ringkasan Eksekutif &amp; Arsitektur Sistem</span>
-        <span class="header-sub">TTC Enterprise ERP &bull; Dokumen Presentasi</span>
+    <div class="cover-subtitle">
+        Integrasi Menyeluruh Manufaktur Percetakan Offset &amp; Flexo Packaging:<br>
+        Marketing, Purchase, PPIC, Produksi 4 Tahap, Subcount, Warehouse, Dispatch, Finance-Akuntansi PSAK, &amp; HRD v2
     </div>
-
-    <div class="box-highlight">
-        <strong>Visi Sistem:</strong> Mengintegrasikan seluruh siklus hidup manufaktur percetakan offset dari penawaran harga pelanggan hingga terbitnya Laporan Laba Rugi dan Neraca secara otomatis, presisi, dan auditable tanpa jeda manual.
-    </div>
-
-    <h2>1.1 Tiga Pilar Penyelarasan Sistem</h2>
-    <p>
-        Sistem TTC Enterprise ERP dibangun melalui harmonisasi 3 basis data utama perusahaan:
+    <div class="cover-divider"></div>
+    <p class="cover-desc">
+        Dokumen resmi arsitektur operasional dan fitur aktual sistem ERP PT. Teknografi Tri Cawanaska hasil penyelarasan
+        <em>Bismillah MACRO.xlsm</em>, arsitektur manufaktur <em>Indigama 02</em>, modernisasi Finance 10 menu (termasuk NPB/LPJ),
+        serta transformasi HRD v2 8 menu dengan kontrak fleksibel dan sinkronisasi jurnal PSAK otomatis.
     </p>
-    <table>
-        <thead>
-            <tr>
-                <th style="width: 28%;">Komponen Asal</th>
-                <th style="width: 32%;">Kelebihan / Karakteristik</th>
-                <th style="width: 40%;">Penerapan di Sistem Baru</th>
-            </tr>
-        </thead>
-        <tbody>
-            <tr>
-                <td><strong>Bismillah MACRO.xlsm</strong></td>
-                <td>Data riil sales order percetakan, perhitungan titipan harga (adjustment unit), komisi marketing 2%, serta voucher pembayaran.</td>
-                <td>Diintegrasikan 100% pada modul <em>Sales Commission Page</em>, Invoice, dan jurnal otomatis akun <code>6101</code> (Beban Komisi Penjualan).</td>
-            </tr>
-            <tr>
-                <td><strong>Sistem Indigama 02</strong></td>
-                <td>Arsitektur ERP manufaktur yang teruji: Approval Form, Order Confirmation, SPK Mesin, Analisa Laba Rugi per Mesin Cetak.</td>
-                <td>Format laporan, struktur menu, kalkulasi HPP bahan baku vs operasional mesin, dan alur bertingkat diadopsi secara presisi.</td>
-            </tr>
-            <tr>
-                <td><strong>TTC Modern Laravel Engine</strong></td>
-                <td>Teknologi Laravel 10 + Filament 3, sistem multi-tier security, database relasional MariaDB/MySQL, dan Multi-Step Accounting.</td>
-                <td>Menjamin performa tinggi, laporan interaktif, audit trail lengkap, dan pembagian hak akses (role-based permissions).</td>
-            </tr>
-        </tbody>
-    </table>
 
-    <h2>1.2 Diagram Alur Bisnis End-to-End</h2>
-    <div class="flow-step">
-        <span class="step-num">1</span> <strong>MARKETING &amp; PRE-ORDER:</strong> 
-        Customer Request &rarr; Form Approval Teknis (Cek Desain, Plat, Warna, Kertas) &rarr; Order Confirmation (OC) &rarr; Sales Order (SO).
-    </div>
-    <div class="flow-step">
-        <span class="step-num">2</span> <strong>KOMISI &amp; ADJUSTMENT:</strong> 
-        Perhitungan Titipan Harga Unit (Adjustment) &amp; Komisi Sales (2%) otomatis terbit di menu <em>Sales Commission</em>.
-    </div>
-    <div class="flow-step">
-        <span class="step-num">3</span> <strong>PERENCANAAN &amp; PRODUKSI (PPIC):</strong> 
-        Penerbitan Surat Perintah Kerja (SPK) &rarr; Alokasi Mesin Cetak (Komori, Ryobi, Sakurai) &rarr; Input Pelaporan Hasil Baik vs Rusak (Waste Sheet).
-    </div>
-    <div class="flow-step">
-        <span class="step-num">4</span> <strong>LOGISTIK &amp; DELIVERY:</strong> 
-        Penerbitan Surat Jalan (SJ) riil &rarr; Toleransi Pengiriman &rarr; Driver &amp; Kendaraan &rarr; Pengiriman ke Gudang Customer.
-    </div>
-    <div class="flow-step">
-        <span class="step-num">5</span> <strong>FINANCE &amp; INVOICING:</strong> 
-        Penarikan Surat Jalan Siap Tagih &rarr; Penentuan Pajak (PPN 11% / Non-PPN) &rarr; Terbit Invoice &rarr; Pelunasan Pembayaran (Kas/Bank).
-    </div>
-    <div class="flow-step">
-        <span class="step-num">6</span> <strong>AKUNTANSI &amp; LAPORAN KEUANGAN:</strong> 
-        Posting Jurnal Otomatis &rarr; Buku Besar (General Ledger) &rarr; Neraca Saldo &rarr; Laba Rugi Global &amp; Laba Rugi Mesin &rarr; Neraca Balance.
-    </div>
-
-    <div class="page-break"></div>
-
-    <!-- ============================================================== -->
-    <!-- HALAMAN 2: DETAIL ALUR MODUL OPERASIONAL                       -->
-    <!-- ============================================================== -->
-    <div class="header-bar">
-        <span class="header-title">2. Detail Modul Operasional: Marketing, Produksi &amp; Logistik</span>
-        <span class="header-sub">TTC Enterprise ERP &bull; Dokumen Presentasi</span>
-    </div>
-
-    <h2>2.1 Modul Marketing (Pre-Sales &amp; Order)</h2>
-    <p>
-        Modul Marketing menangani transaksi komersial awal agar spesifikasi pesanan terkunci rapi sebelum masuk ke lantai produksi:
-    </p>
-    <ul>
-        <li><strong>Master Customer:</strong> Pengelolaan data pelanggan lengkap dengan legalitas, alamat pengiriman multi-cabang, PIC, NPWP, serta preferensi pajak (PKP/PPN atau Non-PPN).</li>
-        <li><strong>Approval Form (AF):</strong> Validasi teknis cetak sebelum order disepakati. Memuat checklist teknis kesiapan Desain/Layout, Film/Plate CTP, Jenis Kertas (Metalize, Ivory, Duplex, HVS), Jumlah Warna (4 warna, 5 warna, spot color), dan Finishing (Spot UV, Emboss, Pond/Die Cut, Lem).</li>
-        <li><strong>Order Confirmation (OC):</strong> Dokumen kesepakatan resmi dengan customer yang mengunci Harga Satuan / PCS, Total Nominal Order, Ketentuan Pembayaran (Term of Payment / TOP), Uang Muka (DP), dan Perkiraan Waktu Pengerjaan (Lead Time).</li>
-        <li><strong>Sales Order (SO):</strong> Konfirmasi pesanan resmi yang mengaktifkan antrean produksi ke bagian PPIC.</li>
-    </ul>
-
-    <h2>2.2 Modul Sales Commission &amp; Adjustment (Macro Adoption)</h2>
-    <p>
-        Mengadopsi formula khusus dari <code>Bismillah MACRO.xlsm</code> (sheet <em>DOC_Comm</em>) untuk menghitung komisi sales &amp; titipan harga secara transparan:
-    </p>
-    <table>
-        <thead>
-            <tr>
-                <th style="width: 25%;">Komponen</th>
-                <th style="width: 40%;">Rumus &amp; Logika</th>
-                <th style="width: 35%;">Dampak Akuntansi</th>
-            </tr>
-        </thead>
-        <tbody>
-            <tr>
-                <td><strong>Revenue Gross</strong></td>
-                <td><code>Qty Kirim &times; Harga Jual Satuan</code></td>
-                <td>Mencatat potensi bruto penjualan.</td>
-            </tr>
-            <tr>
-                <td><strong>Adjustment (Titipan)</strong></td>
-                <td><code>Qty &times; Nominal Titipan per Unit</code></td>
-                <td>Dialokasikan sebagai penyesuaian harga non-operasional.</td>
-            </tr>
-            <tr>
-                <td><strong>Revenue After Adj.</strong></td>
-                <td><code>Revenue Gross - Total Adjustment</code></td>
-                <td>Basis pengenaan persentase komisi marketing.</td>
-            </tr>
-            <tr>
-                <td><strong>Marketing Comm (2%)</strong></td>
-                <td><code>2% &times; Revenue After Adjustment</code></td>
-                <td>Otomatis dicatat sebagai Beban Komisi Penjualan (Akun <code>6101</code>).</td>
-            </tr>
-            <tr>
-                <td><strong>Net Revenue TTC</strong></td>
-                <td><code>Revenue After Adj. - Marketing Comm</code></td>
-                <td>Pendapatan bersih riil yang diterima perusahaan.</td>
-            </tr>
-        </tbody>
-    </table>
-
-    <h2>2.3 Modul Produksi &amp; Logistik (Delivery)</h2>
-    <ul>
-        <li><strong>SPK (Surat Perintah Kerja):</strong> Diterbitkan per mesin cetak dengan alokasi target lembar plano cetak, pisau pond, dan waktu giliran mesin.</li>
-        <li><strong>Laporan Hasil Cetak (Printing):</strong> Operator mencatat jumlah lembar cetak baik (<em>good run</em>), lembar rusak/rusak setel (<em>waste sheet</em>), serta semi-waste. Data ini otomatis menjadi dasar analisis biaya HPP riil pada Laporan Laba Rugi per Mesin Cetak.</li>
-        <li><strong>Surat Jalan (SJ):</strong> Diterbitkan ketika barang jadi telah lolos Quality Control (QC). Surat Jalan memvalidasi qty riil yang dikirim ke pelanggan, nama driver ekspedisi, dan nomor polisi kendaraan. <em>Surat Jalan inilah yang menjadi syarat mutlak penerbitan Invoice</em>.</li>
-    </ul>
-
-    <div class="page-break"></div>
-
-    <!-- ============================================================== -->
-    <!-- HALAMAN 3: MODUL FINANCE, INVOICE & PAJAK                      -->
-    <!-- ============================================================== -->
-    <div class="header-bar">
-        <span class="header-title">3. Modul Finance: Invoicing, Kas/Bank &amp; Pajak (PPN / Non-PPN)</span>
-        <span class="header-sub">TTC Enterprise ERP &bull; Dokumen Presentasi</span>
-    </div>
-
-    <h2>3.1 Alur Invoicing &amp; Integrasi Tagihan</h2>
-    <p>
-        Proses penagihan di Finance tidak lagi diinput manual, melainkan ditarik langsung dari Surat Jalan yang valid:
-    </p>
-    <div class="box-highlight">
-        <strong>Prinsip Anti-Double Invoice:</strong> Surat Jalan yang sudah dibuatkan invoice akan otomatis terkunci dan tidak bisa ditagihkan dua kali. Finance hanya dapat memilih Surat Jalan yang barangnya benar-benar sudah dikirim.
-    </div>
-
-    <h2>3.2 Penanganan PPN (11%) vs Non-PPN (0%)</h2>
-    <p>
-        Sistem menyediakan fleksibilitas penuh dalam menangani pesanan resmi (Faktur Pajak) dan pesanan non-faktur:
-    </p>
-    <table>
-        <thead>
-            <tr>
-                <th style="width: 25%;">Kategori</th>
-                <th style="width: 35%;">Alur di Form Invoice</th>
-                <th style="width: 40%;">Jurnal Akuntansi Otomatis</th>
-            </tr>
-        </thead>
-        <tbody>
-            <tr>
-                <td><strong>PPN 11% (PKP)</strong><br><span class="badge badge-green">Pakai Faktur</span></td>
-                <td>Pilih opsi <em>PPN 11%</em>. Sistem otomatis menghitung DPP, PPN 11%, dan Grand Total tagihan secara instan.</td>
-                <td>
-                    (D) 1121 - Piutang Usaha (Gross)<br>
-                    (K) 4101 - Penjualan Usaha (DPP)<br>
-                    (K) 2121 - Utang PPN Keluaran (11%)
-                </td>
-            </tr>
-            <tr>
-                <td><strong>Non-PPN (0%)</strong><br><span class="badge badge-gray">Tanpa Faktur</span></td>
-                <td>Pilih opsi <em>Non-PPN (0%)</em>. Nilai PPN menjadi Rp 0, Grand Total sama dengan nilai subtotal order.</td>
-                <td>
-                    (D) 1121 - Piutang Usaha<br>
-                    (K) 4101 - Penjualan Usaha
-                </td>
-            </tr>
-        </tbody>
-    </table>
-
-    <h2>3.3 Fitur Unggulan Invoice &amp; Penagihan</h2>
-    <ul>
-        <li><strong>Badge Status Pajak &amp; Filter Dropdown:</strong> Tabel Invoice menampilkan badge hijau <em>PPN 11%</em> beserta nominal rupiah pajaknya, atau badge abu-abu <em>NON-PPN</em>. Dilengkapi filter 1-klik untuk menyaring khusus PPN atau Non-PPN.</li>
-        <li><strong>1-Click Action Toggle Pajak:</strong> Finance dapat mengubah invoice yang sudah terbit dari Non-PPN ke PPN 11% (atau sebaliknya) hanya dengan 1 klik pada menu aksi. Sistem otomatis merevisi Grand Total, Sisa Tagihan, dan menjurnal ulang pembukuan akuntansi.</li>
-        <li><strong>Pemotongan DP Otomatis:</strong> Down payment (uang muka) yang dibayarkan saat Order Confirmation otomatis memotong total tagihan invoice sehingga menampilkan <em>Sisa Tagihan (AR)</em> yang akurat.</li>
-        <li><strong>Cetak &amp; Preview Dokumen:</strong> Tombol <em>Preview PDF</em> dan <em>Download PDF</em> siap cetak dengan template profesional berlogo perusahaan, rincian item, terbilang rupiah, dan tanda tangan legal.</li>
-        <li><strong>Struktur Total Faktur &amp; Sinkronisasi Terbilang:</strong> Baris <em>Total IDR</em> pada faktur cetak selalu menampilkan nilai riil transaksi (Grand Total) yang sinkron 100% dengan kalimat <em>Terbilang</em>. Invoice yang telah lunas otomatis menampilkan badge resmi <strong>LUNAS (PAID)</strong> serta status pembayaran transparan tanpa menampilkan angka total Rp 0 yang membingungkan.</li>
-    </ul>
-
-    <h2>3.4 Pelunasan Pembayaran (Invoice Payment) &amp; Matching Multi-Pesanan</h2>
-    <ul>
-        <li><strong>Mendukung Pembayaran Penuh &amp; Bertahap:</strong> Fleksibel untuk pelunasan lunas (<em>Paid</em>) maupun cicilan bertahap (<em>Partial</em>) dengan pemantauan sisa piutang secara <em>real-time</em>.</li>
-        <li><strong>Alur Pesanan Jamak (Multi-Order / Multi-Item):</strong>
-            <ul>
-                <li><em>Multi-Item dalam 1 Order:</em> Satu nomor PO customer dapat memuat banyak item produk sekaligus menggunakan mode Multi-Material. Seluruh item tercakup dalam satu Surat Jalan dan satu Invoice dengan total tagihan terkonsolidasi.</li>
-                <li><em>Pelunasan Pembayaran Gelondongan (1 Transfer untuk Banyak Invoice):</em> Jika pelanggan mentransfer 1 nominal sekaligus untuk melunasi beberapa nomor invoice, kasir dapat memanfaatkan tombol aksi <strong>"Create &amp; Create Another"</strong>. Setiap invoice dialokasikan nominalnya masing-masing dengan mencantumkan nomor referensi transfer yang sama pada memo, sehingga seluruh invoice langsung berstatus Lunas (Piutang = Rp 0) dan mutasi rekening koran bank tercatat akurat.</li>
-            </ul>
-        </li>
-        <li><strong>Auto-Fill Keterangan Otomatis:</strong> Saat invoice dipilih pada form pembayaran, kolom <em>Keterangan</em> langsung terisi otomatis format standar <code>Pembayaran Invoice [No. Invoice] - [Nama Customer]</code>, mengurangi beban ketik kasir dan mencegah salah input.</li>
-        <li><strong>Ayat Jurnal Akuntansi Otomatis 100%:</strong> Begitu pembayaran disimpan, mesin akuntansi (Treasury Service) langsung memposting ayat jurnal berpasangan (Double-Entry) ke Buku Besar:
-            <br>&bull; (Debit) Akun Kas/Bank Tujuan
-            <br>&bull; (Kredit) Akun Piutang Usaha Pelanggan
-        </li>
-    </ul>
-
-    <div class="page-break"></div>
-
-    <!-- ============================================================== -->
-    <!-- HALAMAN 4: STRUKTUR REPORT & KEUANGAN EKSEKUTIF                -->
-    <!-- ============================================================== -->
-    <div class="header-bar">
-        <span class="header-title">4. Struktur Menu Report &amp; Laporan Keuangan Eksekutif</span>
-        <span class="header-sub">TTC Enterprise ERP &bull; Dokumen Presentasi</span>
-    </div>
-
-    <h2>4.1 Restrukturisasi Sidebar Menu Report</h2>
-    <p>
-        Untuk menjaga kerapian antarmuka dan kemudahan navigasi manajemen, menu <strong>Report</strong> dikelompokkan secara ringkas menjadi <strong>3 Menu Utama</strong>:
-    </p>
-    <table>
-        <thead>
-            <tr>
-                <th style="width: 25%;">Menu Utama</th>
-                <th style="width: 35%;">Isi / Sub-Fitur</th>
-                <th style="width: 40%;">Tujuan Manajerial</th>
-            </tr>
-        </thead>
-        <tbody>
-            <tr>
-                <td><strong>1. Report Finance</strong><br><span class="badge badge-blue">Executive Hub</span></td>
-                <td>Sub-tab terpadu:<br>&bull; Laba Rugi (Global)<br>&bull; Laba Rugi (Mesin)<br>&bull; Laporan Neraca<br>&bull; Trial Balance<br>&bull; General Ledger</td>
-                <td>Laporan komprehensif akuntansi, evaluasi kesehatan keuangan, dan audit trail pergerakan kas &amp; utang-piutang.</td>
-            </tr>
-            <tr>
-                <td><strong>2. Report Produksi</strong><br><span class="badge badge-amber">Operasional</span></td>
-                <td>Rekapitulasi SPK harian, output cetak per shift/operator, dan rasio waste paper per jenis kertas.</td>
-                <td>Evaluasi produktivitas lantai pabrik, efisiensi waktu pengerjaan, dan pengendalian tingkat kerusakan bahan.</td>
-            </tr>
-            <tr>
-                <td><strong>3. Report PO VS PB</strong><br><span class="badge badge-green">Supply Chain</span></td>
-                <td>Analisa perbandingan Purchase Order (PO bahan baku) terhadap Penerimaan Barang (PB gudang).</td>
-                <td>Pengawasan ketepatan kirim supplier, pencegahan over-order, dan rekonsiliasi faktur pembelian bahan baku.</td>
-            </tr>
-        </tbody>
-    </table>
-
-    <h2>4.2 Rincian 5 Laporan Keuangan Utama &amp; Fitur Interaktif Terkini</h2>
-    <div class="flow-step">
-        <strong>1. Laporan Laba Rugi (Global) &mdash; Multi-Step Income Statement:</strong>
-        <p style="margin-top: 4px; margin-bottom: 0;">
-            Menyajikan perhitungan pendapatan kotor, retur/diskon, Pendapatan Bersih (100% basis), Harga Pokok Penjualan (HPP bahan baku), Laba Kotor (Gross Profit), Beban Operasional (Penjualan, Komisi, Umum, Gaji), Laba Operasional (EBIT), Pendapatan/Beban Lain-Lain, hingga Laba/Rugi Bersih Periode Berjalan lengkap dengan Margin %.
-        </p>
-    </div>
-    <div class="flow-step">
-        <strong>2. Laporan Laba Rugi per Mesin Cetak (RAnalisaAccounting Indigama):</strong>
-        <p style="margin-top: 4px; margin-bottom: 0;">
-            Menganalisis margin keuntungan riil yang disumbangkan oleh masing-masing unit mesin offset (Komori Lithrone, Ryobi, Sakurai Oliver) dengan membandingkan pendapatan cetak terhadap biaya riil kertas, tinta, plat, listrik mesin, dan waste sheet.
-        </p>
-    </div>
-    <div class="flow-step">
-        <strong>3. Laporan Neraca (Balance Sheet) &mdash; Skontro 2 Kolom Sehat &amp; Balance:</strong>
-        <p style="margin-top: 4px; margin-bottom: 0;">
-            Menampilkan posisi keuangan perusahaan dengan perbandingan <em>Total Aktiva (Aset Lancar + Aset Tetap)</em> terhadap <em>Total Pasiva (Kewajiban Jangka Pendek + Ekuitas Modal)</em>. Dilengkapi indikator kesehatan likuiditas (Current Ratio) dan solvabilitas (Debt to Equity). Neraca dipastikan <strong>100% Balance (Aktiva == Pasiva)</strong>.
-        </p>
-    </div>
-    <div class="flow-step">
-        <strong>4. Trial Balance (Neraca Saldo Rekapitulasi):</strong>
-        <p style="margin-top: 4px; margin-bottom: 0;">
-            Tabel rekapitulasi mutasi Debit dan Kredit seluruh Chart of Accounts (COA) untuk memastikan tidak ada pencatatan yang pincang sebelum penutupan buku akhir bulan. Dilengkapi tombol ekspor PDF server-side.
-        </p>
-    </div>
-    <div class="flow-step">
-        <strong>5. General Ledger (Buku Besar Komprehensif):</strong>
-        <p style="margin-top: 4px; margin-bottom: 0;">
-            Menampilkan histori kartu ledger per akun COA (misal: Kas, Bank BCA, Piutang Usaha, Penjualan, Utang PPN). Dilengkapi filter akun, tanggal transaksi, running balance saldo akhir, wrap teks uraian yang rapi tanpa tumpang tindih, serta tombol server-side Preview &amp; Download PDF resmi.
-        </p>
-    </div>
-
-    <div class="box-highlight" style="margin-top: 12px; margin-bottom: 8px;">
-        <strong>Penyempurnaan Tampilan &amp; Navigasi Terbaru (Update Fix):</strong>
-        <ul style="margin-top: 4px; margin-bottom: 0; padding-left: 18px;">
-            <li><strong>Live Preview &amp; Download PDF (Server-Side DomPDF):</strong> General Ledger dan Trial Balance kini memiliki tombol <em>Preview PDF</em> (tab browser interaktif) dan <em>Download PDF</em> (file langsung unduh) tanpa blank screen dan berformat bersih.</li>
-            <li><strong>Optimalisasi Dark Mode Nyaman &amp; Kontras Tinggi:</strong> Modul finance diselaraskan dengan kontras tinggi, teks dan badge jelas terbaca, serta proteksi <em>print-safe</em> (otomatis kembali ke latar putih saat dicetak ke PDF/kertas).</li>
-            <li><strong>Tabel Responsif &amp; Akses Cepat Master COA:</strong> Tabel pembukuan lebar didukung <em>smooth horizontal scroll</em> tanpa terpotong, serta tombol shortcut langsung menuju Master COA terhubung 100% aktif tanpa error 404.</li>
-        </ul>
-    </div>
-
-    <div class="page-break"></div>
-
-    <!-- ============================================================== -->
-    <!-- HALAMAN 5: KESIMPULAN & CHECKLIST KESIAPAN USER                -->
-    <!-- ============================================================== -->
-    <div class="header-bar">
-        <span class="header-title">5. Kesimpulan, Keamanan &amp; Checklist Kesiapan</span>
-        <span class="header-sub">TTC Enterprise ERP &bull; Dokumen Presentasi</span>
-    </div>
-
-    <h2>5.1 Matriks Nilai Tambah bagi Manajemen &amp; User</h2>
-    <table>
-        <thead>
-            <tr>
-                <th style="width: 20%;">Peran User</th>
-                <th style="width: 40%;">Sebelumnya (Manual / Spreadsheet)</th>
-                <th style="width: 40%;">Setelah Menggunakan Sistem Baru</th>
-            </tr>
-        </thead>
-        <tbody>
-            <tr>
-                <td><strong>Direksi / Owner</strong></td>
-                <td>Menunggu rekap manual akhir bulan, risiko selisih data kas dan piutang, sulit memantau performa per mesin.</td>
-                <td>Dapat melihat Laba Rugi real-time, profitabilitas mesin, dan Neraca keuangan kapan saja dalam 1 klik dari gadget/laptop.</td>
-            </tr>
-            <tr>
-                <td><strong>Tim Marketing</strong></td>
-                <td>Hitungan komisi dan titipan adjustment rawan salah hitung, arsip PO terpisah-pisah.</td>
-                <td>Perhitungan komisi 2% dan adjustment otomatis transparan, status voucher pembayaran komisi tercatat rapi.</td>
-            </tr>
-            <tr>
-                <td><strong>Tim Produksi / PPIC</strong></td>
-                <td>Data waste sheet dan lembar cetak sering tidak sinkron dengan bagian keuangan.</td>
-                <td>Pencatatan hasil baik vs rusak langsung terhubung ke analisa HPP mesin dan Surat Jalan pengiriman.</td>
-            </tr>
-            <tr>
-                <td><strong>Tim Finance &amp; Pajak</strong></td>
-                <td>Harus membuat faktur dan jurnal satu per satu, rawan selisih antara invoice dan buku besar.</td>
-                <td>Tinggal tarik Surat Jalan siap tagih, pilih PPN 11% atau Non-PPN, jurnal piutang &amp; kas/bank ter-posting otomatis.</td>
-            </tr>
-        </tbody>
-    </table>
-
-    <h2>5.2 Keamanan &amp; Integritas Data</h2>
-    <ul>
-        <li><strong>Role-Based Access Control:</strong> Hak akses dipisahkan ketat (Admin, Marketing, Produksi, Gudang, Finance, Direksi). Bagian produksi tidak dapat melihat harga invoice/komisi, dan bagian marketing tidak dapat mengubah jurnal akuntansi.</li>
-        <li><strong>Audit Trail:</strong> Setiap pembuatan, perubahan, dan penghapusan data mencatat waktu transaksi dan identitas pengguna.</li>
-        <li><strong>Database Relational Integrity:</strong> Data yang sudah memiliki referensi transaksi (misal: Customer yang sudah memiliki Invoice) terkunci aman dan tidak dapat terhapus secara tidak sengaja.</li>
-    </ul>
-
-    <h2>5.3 Penutup</h2>
-    <div class="box-highlight">
-        Sistem TTC Enterprise ERP telah siap 100% untuk tahap demonstrasi dan operasional harian. Seluruh alur kerja telah divalidasi dengan data transaksi riil <em>Bismillah MACRO.xlsm</em> dan arsitektur <em>Indigama 02</em>.
-    </div>
-
-    <table style="border: none; margin-top: 35px;">
-        <tr style="background: none;">
-            <td style="border: none; text-align: center; width: 50%;">
-                Mengetahui,<br>
-                <strong>Manajemen PT. TTC</strong><br><br><br><br>
-                ( __________________________ )
+    <table class="cover-metrics">
+        <tr>
+            <td>
+                <span class="metric-val">14 Grup</span>
+                <span class="metric-lbl">Navigasi ERP Terpadu</span>
             </td>
-            <td style="border: none; text-align: center; width: 50%;">
-                Disiapkan oleh,<br>
-                <strong>Tim Implementasi Sistem</strong><br><br><br><br>
-                ( __________________________ )
+            <td>
+                <span class="metric-val">10 Menu</span>
+                <span class="metric-lbl">Finance Ringkas &amp; NPB/LPJ</span>
+            </td>
+            <td>
+                <span class="metric-val">8 Menu</span>
+                <span class="metric-lbl">HRD v2 &amp; Kontrak Fleksibel</span>
+            </td>
+            <td>
+                <span class="metric-val">115 COA</span>
+                <span class="metric-lbl">Buku Besar &amp; Neraca Balance</span>
             </td>
         </tr>
     </table>
+
+    <div class="cover-meta-box">
+        <strong>PT. TEKNOGRAFI TRI CAWANASKA (TTC)</strong><br>
+        Alamat: Pergudangan Sentral Singosari, Ardimulyo, Singosari, Malang &bull; Telp: +62812 3339 0799<br>
+        <strong>Versi Rilis:</strong> 3.0 (Full ERP Upgrade &mdash; Audited, Migrated &amp; Synchronized)<br>
+        <strong>Tanggal Dokumen:</strong> 27 November 2026<br>
+        <strong>Disusun untuk:</strong> Direksi / Owner, Manajemen, Tim Marketing, PPIC &amp; Produksi, Purchase &amp; Warehouse, Tim Finance, dan Tim HRD
+    </div>
+</div>
+
+<div class="page-break"></div>
+
+<!-- ====================================================================== -->
+<!-- HALAMAN 2: RINGKASAN EKSEKUTIF & STRUKTUR 14 GRUP MODUL                -->
+<!-- ====================================================================== -->
+<div class="header-bar">
+    <table>
+        <tr>
+            <td><span class="header-title">1. Ringkasan Eksekutif &amp; Peta 14 Grup Modul ERP</span></td>
+            <td class="header-sub">TTC Enterprise ERP v3.0 &bull; PT. Teknografi Tri Cawanaska</td>
+        </tr>
+    </table>
+</div>
+
+<div class="box-highlight">
+    <strong>Visi Sistem:</strong> Mengintegrasikan seluruh siklus manufaktur percetakan offset &amp; flexo packaging &mdash; mulai dari penawaran harga, pengadaan bahan baku, produksi 4 tahap, pengiriman, pengelolaan SDM &amp; penggajian, pengajuan biaya (NPB/LPJ), hingga terbitnya 6 Laporan Keuangan PSAK secara otomatis, presisi, dan <em>auditable</em>.
+</div>
+
+<h2>1.1 Tiga Pilar Penyelarasan &amp; Dashboard Eksekutif</h2>
+<table class="data-table">
+    <thead>
+        <tr>
+            <th style="width: 24%;">Komponen Asal</th>
+            <th style="width: 34%;">Karakteristik &amp; Keunggulan</th>
+            <th style="width: 42%;">Implementasi di TTC Enterprise ERP v3.0</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td><strong>Bismillah MACRO.xlsm</strong></td>
+            <td>Data riil sales order percetakan, perhitungan titipan harga (<em>adjustment unit</em>), komisi marketing 2%, dan voucher komisi.</td>
+            <td>Terintegrasi penuh pada modul <em>Operasional &amp; Sales Commission</em>, Invoice, dan jurnal otomatis akun <code>6101</code> (Beban Komisi Penjualan).</td>
+        </tr>
+        <tr>
+            <td><strong>Sistem Indigama 02</strong></td>
+            <td>Standar ERP manufaktur percetakan: Approval Form, OC, SPK, 115 Master COA, Analisa Laba Rugi Mesin, dan Payroll Borongan.</td>
+            <td>Seluruh 115 COA Indigama, alur produksi 4 tahap, format laporan keuangan (termasuk Laba Rugi per Mesin), dan skema borongan diadopsi presisi.</td>
+        </tr>
+        <tr>
+            <td><strong>TTC Modern Laravel 10 + Filament 3</strong></td>
+            <td>Antarmuka modern responsif, keamanan RBAC (Filament Shield), database MariaDB/MySQL relasional, dan ekspor DomPDF server-side.</td>
+            <td>Dilengkapi <strong>Dashboard Eksekutif</strong> (KPI bisnis, grafik Sales vs Purchase bulanan, filter tahun), tema kontras tinggi <em>dark-mode &amp; print-safe</em>, serta menu Finance &amp; HRD yang diringkas.</td>
+        </tr>
+    </tbody>
+</table>
+
+<h2>1.2 Peta Struktur Sidebar Aktif (14 Grup Navigasi Terintegrasi)</h2>
+<p>Untuk memudahkan operasional harian tanpa penumpukan sub-menu, seluruh fitur sistem dikelompokkan dalam 14 grup navigasi dengan penggabungan menu transaksional pada grup <strong>Pra Cetak</strong>, <strong>Finance</strong>, dan <strong>HRD</strong>:</p>
+
+<table class="data-table">
+    <thead>
+        <tr>
+            <th style="width: 5%;" class="text-center">No</th>
+            <th style="width: 20%;">Grup Navigasi</th>
+            <th style="width: 11%;" class="text-center">Menu Tampil</th>
+            <th style="width: 64%;">Cakupan Sub-Modul &amp; Fokus Operasional</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr><td class="text-center">1</td><td><strong>Marketing</strong></td><td class="text-center">5</td><td>Master Customer, Approval Form (BOM FG), Finish Good Item, Order Confirmation (HPP Flexo &amp; Plate), Sales Order.</td></tr>
+        <tr><td class="text-center">2</td><td><strong>Purchase</strong></td><td class="text-center">10</td><td>Purchase Request (PR), Multi-Supplier PO Auto-Split, Master Item/Supplier/Satuan/Konversi, External &amp; Internal Return.</td></tr>
+        <tr><td class="text-center">3</td><td><strong>PPIC</strong></td><td class="text-center">2</td><td>Master Proses Produksi, Master Surat Perintah Kerja (SPK) dengan autofill spesifikasi teknis dari OC.</td></tr>
+        <tr><td class="text-center">4</td><td><strong>Subcount</strong></td><td class="text-center">2</td><td>Subcount Out (khusus SPK Maklon/Subcount) &amp; Subcount In (penerimaan hasil subkontraktor).</td></tr>
+        <tr><td class="text-center">5</td><td><strong>Pra Cetak</strong></td><td class="text-center"><span class="badge badge-blue">3 Ringkas</span></td><td>Proses Pra Cetak (KPI &amp; grafik inline), Material &amp; Stok Plate Flexo (deduksi fraksional), Arsip &amp; Rak Plate (repeat order).</td></tr>
+        <tr><td class="text-center">6</td><td><strong>Printing</strong></td><td class="text-center">5</td><td>Laporan Printing, IMR Printing, Master Mesin, Master Operator, Master Note Waste (pencatatan qty kerusakan).</td></tr>
+        <tr><td class="text-center">7</td><td><strong>Die Making</strong></td><td class="text-center">4</td><td>Laporan Die Making, IMR Die Making (terhubung SPK BOM &amp; Issue Warehouse), Master Mesin, Master Operator.</td></tr>
+        <tr><td class="text-center">8</td><td><strong>Finishing</strong></td><td class="text-center">5</td><td>Laporan Finishing, Packaging (satuan penuh/sisa &amp; buffer stock), IMR Finish, Master Mesin, Master Operator.</td></tr>
+        <tr><td class="text-center">9</td><td><strong>Dispatch</strong></td><td class="text-center">3</td><td>Surat Jalan (kunci anti-double invoice), Berita Acara Complaint, Modul Blokir Customer.</td></tr>
+        <tr><td class="text-center">10</td><td><strong>Warehouse</strong></td><td class="text-center">6</td><td>Penerimaan Barang (LPB), Pengeluaran Material (Issue), Stok &amp; History Material, Stok &amp; History Finish Good.</td></tr>
+        <tr><td class="text-center">11</td><td><strong>Finance</strong></td><td class="text-center"><span class="badge badge-green">10 Inti</span></td><td>Invoice &amp; Piutang, Tagihan &amp; Bayar PO, NPB &amp; LPJ, Kas, Bank, Operasional &amp; Komisi, Jurnal Memorial, General Ledger, Sinkron Finance-HRD, Master COA.</td></tr>
+        <tr><td class="text-center">12</td><td><strong>HRD</strong></td><td class="text-center"><span class="badge badge-purple">8 Inti</span></td><td>Dashboard HRD, Karyawan 360&deg; &amp; Kontrak, Absensi (Cut-Off 26-25), Izin/Cuti/Lembur, Penggajian, Payroll Borongan, Pinjaman, Pengaturan Shift &amp; Payroll.</td></tr>
+        <tr><td class="text-center">13</td><td><strong>Report</strong></td><td class="text-center">3</td><td>Report Finance (6 Laporan dalam Tab Terpadu + PDF), Report Produksi, Report PO vs PB.</td></tr>
+        <tr><td class="text-center">14</td><td><strong>Manajemen Akses</strong></td><td class="text-center">1</td><td>Pengguna &amp; Role/Permission berbasis Filament Shield untuk isolasi data lintas departemen.</td></tr>
+    </tbody>
+</table>
+
+<div class="page-break"></div>
+
+<!-- ====================================================================== -->
+<!-- HALAMAN 3: FLOWCHART END-TO-END SISTEM ERP                             -->
+<!-- ====================================================================== -->
+<div class="header-bar">
+    <table>
+        <tr>
+            <td><span class="header-title">2. Flowchart Arsitektur &amp; Alur Kerja End-to-End</span></td>
+            <td class="header-sub">TTC Enterprise ERP v3.0 &bull; Diagram Alur Terintegrasi</td>
+        </tr>
+    </table>
+</div>
+
+<h2>2.1 Diagram Alur Besar Lintas Departemen (Order-to-Cash &amp; Back-Office)</h2>
+<p>Diagram berikut memetakan hubungan data otomatis dari pesanan masuk hingga laporan keuangan manajemen (kode diagram Mermaid siap tempel juga tersedia di <code>flowchart_sistem_erp_ttc.mmd</code>):</p>
+
+<table class="flow-grid">
+    <tr>
+        <td style="width: 23%;">
+            <div class="fnode">
+                <strong>1. MARKETING</strong>
+                Customer &rarr; Approval Form &rarr; OC (DP &amp; HPP) &rarr; Sales Order (SO)
+            </div>
+        </td>
+        <td class="farrow">&rarr;</td>
+        <td style="width: 23%;">
+            <div class="fnode">
+                <strong>2. PPIC</strong>
+                Master Proses &rarr; Terbitkan SPK (Autofill Spek OC &amp; BOM)
+            </div>
+        </td>
+        <td class="farrow">&rarr;</td>
+        <td style="width: 23%;">
+            <div class="fnode amber">
+                <strong>3. PURCHASE &amp; GUDANG</strong>
+                PR &rarr; Multi-Supplier PO &rarr; LPB &rarr; Stok &amp; Issue Material
+            </div>
+        </td>
+        <td class="farrow">&rarr;</td>
+        <td style="width: 23%;">
+            <div class="fnode amber">
+                <strong>4. PRODUKSI 4 TAHAP</strong>
+                Pra Cetak &rarr; Printing &rarr; Die Making (&harr; Subcount) &rarr; Finishing
+            </div>
+        </td>
+    </tr>
+    <tr>
+        <td colspan="6"></td>
+        <td class="farrow-down">&darr;</td>
+    </tr>
+    <tr>
+        <td>
+            <div class="fnode green">
+                <strong>8. REPORT MANAJEMEN</strong>
+                6 Laporan Keuangan PSAK, Report Produksi &amp; PO vs PB
+            </div>
+        </td>
+        <td class="farrow">&larr;</td>
+        <td>
+            <div class="fnode green">
+                <strong>7. FINANCE (10 MENU)</strong>
+                Invoice, Tagihan PO, NPB/LPJ, Kas/Bank, GL &amp; Sync HRD
+            </div>
+        </td>
+        <td class="farrow">&larr;</td>
+        <td>
+            <div class="fnode purple">
+                <strong>6. HRD v2 (8 MENU)</strong>
+                Karyawan 360&deg;, Absensi 26-25, Approval, Payroll &amp; Borongan
+            </div>
+        </td>
+        <td class="farrow">&larr;</td>
+        <td>
+            <div class="fnode">
+                <strong>5. DISPATCH &amp; FG</strong>
+                Stok Finish Good &rarr; Cek Blokir &rarr; Surat Jalan (&amp; Complaint)
+            </div>
+        </td>
+    </tr>
+</table>
+<div style="text-align: center; font-size: 7.8px; color: #475569; margin-bottom: 8px;">
+    <em>Catatan integrasi:</em> Surat Jalan (5) langsung memicu Invoice di Finance (7); LPB Gudang (3) memicu Tagihan PO di Finance (7); Penggajian &amp; BPJS HRD (6) terhubung 2 arah ke NPB/LPJ &amp; Jurnal PSAK di Finance (7).
+</div>
+
+<h2>2.2 Ringkasan 8 Tahap Alur Bisnis Utama</h2>
+<div class="flow-step">
+    <span class="step-num">1</span> <strong>MARKETING &amp; PRE-ORDER:</strong>
+    Master Customer &amp; Finish Good &rarr; Approval Form (Set BOM) &rarr; Order Confirmation (Kalkulator HPP Flexo, DP, TOP) &rarr; Sales Order (SO).
+</div>
+<div class="flow-step amber">
+    <span class="step-num amber">2</span> <strong>PROCURE-TO-PAY (PURCHASE &amp; WAREHOUSE):</strong>
+    Cek stok bahan &rarr; Jika kurang buat PR &rarr; Multi-Supplier PO Auto-Split &rarr; Terima di LPB (plate otomatis masuk stok Prepress) &rarr; External Return bila rusak &rarr; Issue Material ke produksi &amp; Internal Return sisa bahan.
+</div>
+<div class="flow-step amber">
+    <span class="step-num amber">3</span> <strong>PPIC &amp; PRODUKSI 4 TAHAP + SUBCOUNT:</strong>
+    Terbit SPK &rarr; <strong>Pra Cetak</strong> (ambil/buat Plate dari Rak Arsip via IMR) &rarr; <strong>Printing</strong> (IMR Printing, catat hasil baik &amp; waste) &rarr; <strong>Die Making</strong> (IMR Die Making) &rarr; <em>Subcount Out/In (jika perlu)</em> &rarr; <strong>Finishing &amp; Packaging</strong> (unit fleksibel &amp; buffer stock).
+</div>
+<div class="flow-step">
+    <span class="step-num">4</span> <strong>WAREHOUSE FINISH GOOD &amp; DISPATCH:</strong>
+    Hasil jadi masuk Finish Good Stock &amp; History &rarr; Cek status Blokir Customer &rarr; Terbit Surat Jalan (Driver &amp; Armada) &rarr; Berita Acara Complaint bila ada retur/klaim.
+</div>
+<div class="flow-step green">
+    <span class="step-num green">5</span> <strong>FINANCE: INVOICING, TAGIHAN PO &amp; KAS/BANK:</strong>
+    Tarik Surat Jalan ke Invoice (PPN 11% / Non-PPN) &rarr; Catat pembayaran di Tab Invoice &rarr; Hitung Sales Commission 2% &bull; Tarik LPB ke Tagihan PO &rarr; Catat Payment Order di Tab PO Billing &rarr; Posting otomatis Double-Entry ke General Ledger.
+</div>
+<div class="flow-step green">
+    <span class="step-num green">6</span> <strong>FINANCE: NPB, APPROVAL OWNER &amp; LPJ:</strong>
+    Buat NPB (tarik saldo Kas/Bank &amp; pos HRD) &rarr; Approval Owner (penuh/parsial, misal 100 jt &rarr; ACC 80 jt) &rarr; Input Bank Masuk manual di menu Bank &rarr; Realisasi belanja &rarr; Penyelesaian NPB (LPJ) + upload bukti (mode Tracking Anti-Dobel / Auto-Journal Talangan 2144).
+</div>
+<div class="flow-step purple">
+    <span class="step-num purple">7</span> <strong>HRD v2 &amp; SINKRONISASI FINANCE &harr; HRD:</strong>
+    Master Karyawan 360&deg; (Shift &amp; Kontrak 1B/3B/6B/1T/Manual) &rarr; Absensi Fingerprint Cut-Off 26&ndash;25 &rarr; Approval Izin/Cuti/Lembur/Pinjaman &rarr; Penggajian (Generate Otomatis / Import Excel TTC / Borongan) &rarr; Command Center Sync ke Jurnal PSAK &amp; NPB/LPJ.
+</div>
+<div class="flow-step teal">
+    <span class="step-num teal">8</span> <strong>PELAPORAN EKSEKUTIF (REPORT):</strong>
+    General Ledger &rarr; Laba Rugi Global (Multi-Step), Laba Rugi per Mesin Cetak, Neraca Skontro 100% Balance, Trial Balance, Laporan Hutang &amp; Piutang (+ Kasbon HRD), Report Produksi, dan Report PO vs PB.
+</div>
+
+<div class="page-break"></div>
+
+<!-- ====================================================================== -->
+<!-- HALAMAN 4: DETAIL MODUL OPERASIONAL                                    -->
+<!-- ====================================================================== -->
+<div class="header-bar">
+    <table>
+        <tr>
+            <td><span class="header-title">3. Modul Operasional: Marketing, Purchase, Produksi &amp; Logistik</span></td>
+            <td class="header-sub">TTC Enterprise ERP v3.0 &bull; Siklus Manufaktur</td>
+        </tr>
+    </table>
+</div>
+
+<h2>3.1 Modul Marketing &amp; Sales Commission (Adopsi Bismillah MACRO)</h2>
+<table class="two-col">
+    <tr>
+        <td>
+            <div class="card-panel">
+                <div class="card-panel-title">Alur Pre-Sales &amp; Pemesanan</div>
+                <ul>
+                    <li><strong>Master Customer &amp; Finish Good Item:</strong> Kelola legalitas, NPWP, multi-alamat kirim, status PKP/Non-PPN, serta katalog item produk jadi beserta resep BOM.</li>
+                    <li><strong>Approval Form (AF):</strong> Validasi teknis desain, plate CTP/Flexo, jenis kertas, warna, dan finishing. Status create terkunci <em>Draft</em> dengan tombol <strong>Set BOM Finish Good</strong> aktif sampai semua item memiliki resep.</li>
+                    <li><strong>Order Confirmation (OC):</strong> Mengunci harga/unit, DP, TOP, lead time, dilengkapi <strong>Kalkulator HPP Flexo</strong> &amp; dual-mode harga plate (auto-calculated).</li>
+                    <li><strong>Sales Order (SO):</strong> Mendukung multi-item dalam 1 PO, pengaturan <em>buffer stock</em>, serta anti-duplikasi nomor SO.</li>
+                </ul>
+            </div>
+        </td>
+        <td>
+            <div class="card-panel">
+                <div class="card-panel-title">Formula Komisi &amp; Adjustment (DOC_Comm)</div>
+                <table class="data-table" style="margin-bottom: 2px;">
+                    <thead>
+                        <tr>
+                            <th style="width: 36%;">Komponen</th>
+                            <th style="width: 64%;">Rumus &amp; Dampak Akuntansi</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr><td><strong>Revenue Gross</strong></td><td><code>Qty Kirim &times; Harga Jual</code> (Potensi bruto)</td></tr>
+                        <tr><td><strong>Adjustment (Titipan)</strong></td><td><code>Qty &times; Titipan/Unit</code> (Penyesuaian harga)</td></tr>
+                        <tr><td><strong>Rev. After Adj.</strong></td><td><code>Revenue Gross - Adjustment</code> (Basis komisi)</td></tr>
+                        <tr><td><strong>Komisi Sales (2%)</strong></td><td><code>2% &times; Rev. After Adj.</code> &rarr; Beban <code>6101</code></td></tr>
+                        <tr><td><strong>Net Revenue TTC</strong></td><td><code>Rev. After Adj. - Komisi</code> (Hak bersih TTC)</td></tr>
+                    </tbody>
+                </table>
+                <div style="font-size: 7.8px; color: #475569; margin-top: 3px;">Dilengkapi status voucher <strong>PAID / UNPAID</strong> serta tombol cetak <strong>Preview &amp; Download PDF</strong>.</div>
+            </div>
+        </td>
+    </tr>
+</table>
+
+<h2>3.2 Modul Purchase &amp; Warehouse (Procure-to-Pay &amp; Kontrol Stok)</h2>
+<ul>
+    <li><strong>Purchase Request (PR) &rarr; Multi-Supplier PO Auto-Split:</strong> Satu PR dengan beberapa material berbeda supplier dapat otomatis dipecah menjadi beberapa dokumen Purchase Order (PO) per supplier beserta perhitungan PPN PDF yang akurat.</li>
+    <li><strong>Penerimaan Barang (LPB) &amp; Routing Otomatis Plate:</strong> Penerimaan bahan baku dari PO otomatis memperbarui <em>Material Stock</em> &amp; <em>Material History</em>. Khusus pembelian material plate flexo langsung ter-routing otomatis ke stok <strong>Pra Cetak</strong>.</li>
+    <li><strong>Pengeluaran Material (Issue) &amp; Retur:</strong> Pengeluaran bahan ke lantai produksi dikontrol berbasis SPK dan dokumen <strong>IMR</strong> (mencegah pengeluaran bahan tanpa permintaan sah). Dilengkapi <strong>External Return</strong> (barang rusak ke supplier) dan <strong>Internal Return</strong> (pengembalian sisa bahan produksi ke gudang).</li>
+</ul>
+
+<h2>3.3 Modul PPIC, Produksi 4 Tahap &amp; Subcount</h2>
+<table class="data-table">
+    <thead>
+        <tr>
+            <th style="width: 22%;">Tahap / Modul</th>
+            <th style="width: 78%;">Fitur Kunci &amp; Integrasi Lantai Pabrik</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td><strong>PPIC &amp; Master SPK</strong><br><span class="badge badge-blue">Perencanaan</span></td>
+            <td>Pengelolaan <em>Master Proses Produksi</em> dan penerbitan <strong>SPK</strong> dengan <em>autofill</em> spesifikasi teknis cetak dari OC, urutan SO terbaru di atas, dan pelaporan multi-proses 1-kali (<em>1-time multi-process reporting</em>).</td>
+        </tr>
+        <tr>
+            <td><strong>Tahap 1: Pra Cetak</strong><br><span class="badge badge-blue">3 Menu Ringkas</span></td>
+            <td>Alur 4 tahap prepress Flexo dengan KPI cards &amp; grafik inline di halaman <em>Proses Pra Cetak</em>, deduksi stok plate fraksional, pelacakan <strong>plate rusak &amp; pop-up ringkasan biaya</strong>, serta <strong>Arsip &amp; Rak Plate</strong> untuk repeat order &amp; serah terima paralel via IMR.</td>
+        </tr>
+        <tr>
+            <td><strong>Tahap 2: Printing</strong><br><span class="badge badge-amber">Cetak Offset/Flexo</span></td>
+            <td>Permintaan bahan &amp; plate melalui <strong>IMR Printing</strong>, pencatatan hasil cetak baik (<em>good run</em>) vs rusak (<em>waste sheet</em>) dengan <em>Master Note Waste</em> berbasis qty, dan filter mesin/operator sebagai dasar HPP riil per mesin.</td>
+        </tr>
+        <tr>
+            <td><strong>Tahap 3: Die Making</strong><br><span class="badge badge-amber">Pond / Die Cut</span></td>
+            <td>Modul <strong>Laporan Die Making</strong> &amp; <strong>IMR Die Making</strong> yang terhubung langsung ke BOM SPK dan proses <em>Warehouse Issue Material</em>, lengkap dengan master mesin dan operator pond.</td>
+        </tr>
+        <tr>
+            <td><strong>Subcount (Maklon)</strong><br><span class="badge badge-gray">Eksternal</span></td>
+            <td><strong>Subcount Out</strong> (dropdown otomatis menyaring khusus SPK bertipe <code>SUBCOUNT/MAKLON</code>) dan <strong>Subcount In</strong> beserta bukti cetak PDF serah terima vendor maklon.</td>
+        </tr>
+        <tr>
+            <td><strong>Tahap 4: Finishing &amp; Packaging</strong><br><span class="badge badge-green">Barang Jadi</span></td>
+            <td>Pelaporan <strong>Finishing</strong> &amp; <strong>IMR Finish</strong>, input <strong>Packaging</strong> dengan satuan fleksibel (<code>m / pcs / lbr / roll</code>), pemisahan <em>Satuan Penuh</em> vs <em>Satuan Sisa</em>, dan transfer <em>buffer stock</em> langsung ke <em>Finish Good Stock</em>.</td>
+        </tr>
+    </tbody>
+</table>
+
+<h2>3.4 Modul Dispatch &amp; Pengendalian Pengiriman</h2>
+<ul>
+    <li><strong>Surat Jalan (Anti-Double Invoicing):</strong> Mencatat qty kirim riil, toleransi pengiriman, nama driver, dan nopol armada. Surat Jalan yang telah dibuatkan Invoice otomatis terkunci agar tidak pernah ditagih dua kali.</li>
+    <li><strong>Modul Blokir &amp; Berita Acara Complaint:</strong> Menahan pengiriman bila customer diblokir (misal tunggakan piutang), serta dokumentasi resmi keluhan pelanggan dengan cetak PDF Berita Acara.</li>
+</ul>
+
+<div class="page-break"></div>
+
+<!-- ====================================================================== -->
+<!-- HALAMAN 5: MODUL FINANCE MODERN (10 MENU INTI)                         -->
+<!-- ====================================================================== -->
+<div class="header-bar">
+    <table>
+        <tr>
+            <td><span class="header-title">4. Modul Finance &amp; Akuntansi Modern (10 Menu Inti)</span></td>
+            <td class="header-sub">TTC Enterprise ERP v3.0 &bull; Penyederhanaan Navigasi &amp; Akuntansi</td>
+        </tr>
+    </table>
+</div>
+
+<h2>4.1 Restrukturisasi Sidebar Finance (Dirampingkan: 19 Menu &rarr; 10 Menu Inti)</h2>
+<p>Agar tim Finance bekerja cepat tanpa berpindah terlalu banyak sub-menu, transaksi berpasangan kini digabung dengan tab filter dan <em>Relation Manager</em> di dalam dokumen induknya:</p>
+
+<table class="data-table">
+    <thead>
+        <tr>
+            <th style="width: 5%;" class="text-center">No</th>
+            <th style="width: 28%;">Menu Finance Tampil (10 Inti)</th>
+            <th style="width: 39%;">Sub-Fitur yang Digabung di Dalamnya</th>
+            <th style="width: 28%;">Integrasi Otomatis</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr><td class="text-center">1</td><td><strong>Invoice &amp; Piutang</strong></td><td>Daftar Invoice + Tab <em>Pembayaran Invoice</em> (RelationManager) + Toggle PPN/Non-PPN.</td><td>Surat Jalan &rarr; Jurnal Piutang &amp; PPN</td></tr>
+        <tr><td class="text-center">2</td><td><strong>Tagihan PO</strong></td><td>PoBilling (Bruto vs DP Netto) + Tab <em>Payment Order (PoBillPay)</em> + Voucher PDF.</td><td>LPB Gudang &rarr; Jurnal Hutang &amp; Bank</td></tr>
+        <tr><td class="text-center">3</td><td><strong>Nota Pengajuan Biaya (NPB)</strong></td><td>Pengajuan NPB + Tombol <em>Approval NPB Owner</em> + Tab <em>Penyelesaian (LPJ)</em>.</td><td>Tarik Saldo COA &amp; Pos Gaji/BPJS HRD</td></tr>
+        <tr><td class="text-center">4</td><td><strong>Transaksi Kas</strong></td><td><em>Kas Masuk</em> &amp; <em>Kas Keluar</em> digabung dalam 1 menu dengan tab &amp; tombol cepat.</td><td>Posting langsung ke COA Kas (<code>111x</code>)</td></tr>
+        <tr><td class="text-center">5</td><td><strong>Transaksi Bank</strong></td><td><em>Bank Masuk</em> &amp; <em>Bank Keluar</em> digabung dalam 1 menu (termasuk input modal/pinjaman).</td><td>Posting langsung ke COA Bank (<code>111x</code>)</td></tr>
+        <tr><td class="text-center">6</td><td><strong>Operasional &amp; Komisi</strong></td><td>Biaya Operasional + shortcut langsung ke halaman <em>Sales Commission (2%)</em>.</td><td>Beban Operasional &amp; Komisi (<code>6101</code>)</td></tr>
+        <tr><td class="text-center">7</td><td><strong>Jurnal Memorial</strong></td><td>Jurnal penyesuaian, penyusutan aset, koreksi, dan talangan non-kas Indigama.</td><td>Multi-line Double-Entry seimbang</td></tr>
+        <tr><td class="text-center">8</td><td><strong>General Ledger</strong></td><td>Buku Besar transparan per COA + filter periode + Preview &amp; Download PDF.</td><td>Sumber tunggal seluruh laporan</td></tr>
+        <tr><td class="text-center">9</td><td><strong>Sinkronisasi Finance &amp; HRD</strong></td><td>Command Center bayar gaji massal, setor BPJS, &amp; pantau realisasi HRD ke NPB.</td><td>Jurnal PSAK 2-arah HRD &harr; Finance</td></tr>
+        <tr><td class="text-center">10</td><td><strong>Master Akun (COA)</strong></td><td>115 Master COA Indigama + tombol cepat <em>Class COA</em> &amp; <em>Metode Pembayaran</em>.</td><td>Searchable <code>kode_akun + nama_akun</code></td></tr>
+    </tbody>
+</table>
+
+<h2>4.2 Penagihan Customer: PPN 11% vs Non-PPN &amp; Matching Pembayaran</h2>
+<table class="data-table">
+    <thead>
+        <tr>
+            <th style="width: 21%;">Kategori Pajak</th>
+            <th style="width: 39%;">Alur &amp; Fitur pada Form Invoice</th>
+            <th style="width: 40%;">Ayat Jurnal Otomatis (Double-Entry)</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td><strong>PPN 11% (PKP)</strong><br><span class="badge badge-green">Pakai Faktur</span></td>
+            <td>Pilih PPN 11% &rarr; sistem otomatis menghitung DPP, PPN 11%, pemotongan DP, dan Sisa Tagihan. Tersedia <strong>1-Click Toggle PPN &harr; Non-PPN</strong> yang otomatis merevisi jurnal.</td>
+            <td>(D) <code>1121</code> Piutang Usaha (Gross)<br>(K) <code>4101</code> Penjualan Usaha (DPP)<br>(K) <code>2121</code> Utang PPN Keluaran (11%)</td>
+        </tr>
+        <tr>
+            <td><strong>Non-PPN (0%)</strong><br><span class="badge badge-gray">Tanpa Faktur</span></td>
+            <td>PPN = Rp 0, Grand Total sama dengan subtotal. Faktur PDF menampilkan nilai riil transaksi sinkron 100% dengan kalimat <em>Terbilang</em> &amp; stempel <strong>LUNAS (PAID)</strong>.</td>
+            <td>(D) <code>1121</code> Piutang Usaha<br>(K) <code>4101</code> Penjualan Usaha</td>
+        </tr>
+    </tbody>
+</table>
+<ul>
+    <li><strong>Pelunasan Fleksibel &amp; Gelondongan:</strong> Mendukung pelunasan penuh (<em>Paid</em>) maupun cicilan bertahap (<em>Partial</em>). Untuk 1 transfer customer yang melunasi banyak invoice, kasir dapat memakai tombol <em>Create &amp; Create Another</em> dengan referensi transfer seragam &amp; auto-fill keterangan.</li>
+    <li><strong>Jurnal Pelunasan Otomatis (TreasuryService):</strong> <code>(D) Kas/Bank Tujuan (111x)</code> dan <code>(K) Piutang Usaha (1121)</code> langsung tercatat ke Buku Besar saat pembayaran disimpan.</li>
+</ul>
+
+<h2>4.3 Tagihan PO (PoBilling) &amp; Payment Order (PoBillPay)</h2>
+<ul>
+    <li><strong>Pemisahan Bruto vs DP Netto:</strong> Tagihan dari supplier menampilkan nilai bruto, potongan uang muka (DP), PPN masukan, dan sisa tagihan (AP) secara transparan.</li>
+    <li><strong>Pembayaran &amp; Pencarian Cepat:</strong> Pembayaran supplier diakses langsung dari tab <em>Payment Order</em> di dalam Tagihan PO, dilengkapi pencarian <em>No. Billing</em>, filter status belum lunas, pengelompokan, kolom sisa tagihan, dan cetak <strong>Payment Voucher PDF</strong>.</li>
+</ul>
+
+<div class="page-break"></div>
+
+<!-- ====================================================================== -->
+<!-- HALAMAN 6: ALUR KHUSUS NPB, APPROVAL OWNER & LPJ                       -->
+<!-- ====================================================================== -->
+<div class="header-bar">
+    <table>
+        <tr>
+            <td><span class="header-title">5. Alur Khusus: NPB, Approval Owner &amp; Penyelesaian (LPJ)</span></td>
+            <td class="header-sub">TTC Enterprise ERP v3.0 &bull; Tata Kelola Pengajuan Dana</td>
+        </tr>
+    </table>
+</div>
+
+<h2>5.1 Diagram Alur Pengajuan Modal / Biaya (NPB) sampai LPJ</h2>
+<table class="flow-grid">
+    <tr>
+        <td style="width: 18.5%; vertical-align: stretch;" class="fnode">
+            <strong>1. Buat NPB</strong>
+            Rincian 5 Kategori A&ndash;E + Tarik Saldo Kas/Bank &amp; HRD
+        </td>
+        <td class="farrow">&rarr;</td>
+        <td style="width: 18.5%; vertical-align: stretch;" class="fnode amber">
+            <strong>2. Approval Owner</strong>
+            Review Kepala &rarr; ACC Penuh / Parsial (100 Jt &rarr; 80 Jt)
+        </td>
+        <td class="farrow">&rarr;</td>
+        <td style="width: 21%; vertical-align: stretch;" class="fnode purple">
+            <strong>3. Input Bank Manual</strong>
+            Menu Bank (Masuk): Debit Bank / Kredit 3100, 2142, 2144
+        </td>
+        <td class="farrow">&rarr;</td>
+        <td style="width: 18.5%; vertical-align: stretch;" class="fnode">
+            <strong>4. Belanja Aktual</strong>
+            Bank/Kas Keluar, Operasional, atau Talangan Indigama
+        </td>
+        <td class="farrow">&rarr;</td>
+        <td style="width: 18.5%; vertical-align: stretch;" class="fnode green">
+            <strong>5. LPJ (Settlement)</strong>
+            Upload Nota &amp; Selisih Anggaran &rarr; Status SETTLED
+        </td>
+    </tr>
+</table>
+
+<div class="box-amber">
+    <strong>Kebijakan Kunci Pencairan NPB &amp; Kontrol Akun Bank (Anti Auto-Dobel COA):</strong><br>
+    Jika diajukan NPB modal/operasional sebesar <strong>Rp 100.000.000</strong> lalu Owner menyetujui parsial sebesar <strong>Rp 80.000.000</strong>,
+    sistem mencatat nominal ACC <code>Rp 80.000.000</code> sebagai plafon pencairan &amp; dasar LPJ, namun <strong>tidak otomatis mengisi saldo akun Bank di COA</strong>
+    (<em>post_to_ledger</em> default <strong>OFF</strong>). Pemasukan dana riil ke rekening Bank tetap diinput manual oleh Finance di menu <strong>Transaksi Bank (Masuk)</strong>
+    saat uang benar-benar masuk rekening koran, sehingga saldo Bank di Buku Besar selalu cocok 100% tanpa risiko jurnal ganda.
+</div>
+
+<h2>5.2 Fitur Unggulan Modul NPB (Nota Pengajuan Biaya)</h2>
+<ul>
+    <li><strong>Penomoran Otomatis Standar Perusahaan:</strong> Format <code>NPB/{DEPT}/{ROMAWI_BULAN}/{TAHUN}</code> (misal <code>NPB/KEU/XI/2026</code>) dengan urutan otomatis bila terdapat lebih dari 1 pengajuan dalam sebulan.</li>
+    <li><strong>Tarik Posisi Saldo Kas/Bank &amp; Pos HRD 1-Klik:</strong> Tombol otomatis menarik saldo kas/bank aktual dari Buku Besar (BRI Giro, BRI Tabungan, BCA Giro, dll.) ditambah rekening non-COA manual (Petty Cash / rekening operasional), serta menarik angka estimasi <strong>Gaji, Borongan &amp; BPJS dari HRD</strong>.</li>
+    <li><strong>5 Kategori Rincian Anggaran (A&ndash;E) &amp; Proyeksi 2 Bulan:</strong>
+        (A) Kewajiban Tetap Perusahaan, (B) Utilitas &amp; Operasional, (C) Kebutuhan Produksi &amp; Fasilitas, (D) Pengadaan &amp; Pengurusan, dan (E) Administrasi &amp; Legalitas &mdash; lengkap dengan label karakter biaya (<em>Bulanan</em> vs <em>Insidental</em>) dan fitur <em>Salin Pos Bulanan ke Bulan Berikutnya</em>.
+    </li>
+    <li><strong>Sumber Pendanaan &amp; Persetujuan Parsial:</strong> Mendukung klasifikasi sumber dana <code>MODAL_PEMILIK (3100)</code>, <code>HUTANG_PEMILIK (2142)</code>, <code>PINJAMAN_INDIGAMA (2144)</code>, dan <code>DANA_INTERNAL</code>, serta pencatatan nominal diajukan vs nominal disetujui/dicairkan secara transparan.</li>
+    <li><strong>Otorisasi 4 Pihak &amp; Stempel Digital:</strong> Format cetak <strong>PDF A4 Portrait</strong> lengkap dengan kop PT TTC, logo, ringkasan kekurangan pendanaan, catatan standar, 4 kotak tanda tangan (Keuangan, Kepala, Direktur, Owner), dan stempel <strong>APPROVED</strong> otomatis saat disetujui.</li>
+</ul>
+
+<h2>5.3 Fitur Penyelesaian NPB (LPJ / Settlement)</h2>
+<table class="data-table">
+    <thead>
+        <tr>
+            <th style="width: 26%;">Aspek LPJ</th>
+            <th style="width: 74%;">Mekanisme di Sistem TTC Enterprise ERP</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td><strong>Akses Terpadu &amp; Auto-Load</strong></td>
+            <td>Berada langsung sebagai Tab <em>Penyelesaian (LPJ)</em> di dalam dokumen NPB. Begitu dibuat, seluruh pos anggaran NPB dan realisasi pembayaran HRD otomatis termuat ke tabel pertanggungjawaban.</td>
+        </tr>
+        <tr>
+            <td><strong>Bukti Transaksi &amp; Pos Insidental</strong></td>
+            <td>Finance mengisi tanggal realisasi, nominal aktual, metode bayar (Bank TTC, Petty Cash, atau <strong>Talangan Non-Kas 2144 PT Indigama</strong>), nomor referensi transfer, upload foto/PDF nota, serta dapat menambah pos insidental baru di luar rencana awal.</td>
+        </tr>
+        <tr>
+            <td><strong>Kalkulasi Selisih &amp; Sisa Dana</strong></td>
+            <td>Otomatis menghitung <strong>Selisih Anggaran</strong> (<em>Hemat / Over Budget</em> dalam Rp &amp; %) dan <strong>Sisa Dana Akhir</strong> beserta tindak lanjutnya (<em>Carry-Over Bulan Berikutnya</em>, <em>Dikembalikan ke Kas/Owner</em>, <em>Reimburse</em>, atau <em>Nihil</em>).</td>
+        </tr>
+        <tr>
+            <td><strong>2 Mode Posting (Anti-Dobel)</strong></td>
+            <td>
+                &bull; <strong>Mode Tracking LPJ Saja:</strong> Menutup dokumen LPJ (status <code>SETTLED</code>) tanpa menjurnal ulang bila mutasi bank telah dicatat di Transaksi Bank.<br>
+                &bull; <strong>Mode Auto-Journal:</strong> Memposting beban &amp; otomatis membentuk <em>Jurnal Memorial</em> untuk pos talangan <code>2144 Pinjaman PT Indigama</code>.
+            </td>
+        </tr>
+        <tr>
+            <td><strong>Cetak Laporan LPJ PDF</strong></td>
+            <td>Ekspor <strong>PDF A4 Landscape</strong> siap cetak yang menyajikan perbandingan Anggaran vs Realisasi vs Selisih per kategori A&ndash;E, posisi arus kas akhir, daftar nomor bukti, dan 4 kolom pengesahan.</td>
+        </tr>
+    </tbody>
+</table>
+
+<div class="page-break"></div>
+
+<!-- ====================================================================== -->
+<!-- HALAMAN 7: MODUL HRD v2 (8 MENU INTI) & SINKRONISASI FINANCE-HRD       -->
+<!-- ====================================================================== -->
+<div class="header-bar">
+    <table>
+        <tr>
+            <td><span class="header-title">6. Modul HRD v2 Modern (8 Menu Inti) &amp; Sinkronisasi Finance</span></td>
+            <td class="header-sub">TTC Enterprise ERP v3.0 &bull; Kepegawaian 360&deg; &amp; Payroll PSAK</td>
+        </tr>
+    </table>
+</div>
+
+<h2>6.1 Penyederhanaan Navigasi HRD (Dirampingkan: 19 Menu &rarr; 8 Menu Inti)</h2>
+<p>Seluruh 19 halaman HRD diringkas menjadi <strong>8 menu utama</strong> pada sidebar dengan tombol navigasi cepat dan <em>back-link</em> ke seluruh 11 halaman pendukung:</p>
+
+<table class="data-table">
+    <thead>
+        <tr>
+            <th style="width: 5%;" class="text-center">No</th>
+            <th style="width: 27%;">Menu HRD Tampil (8 Inti)</th>
+            <th style="width: 68%;">Fitur Utama &amp; Sub-Halaman Terintegrasi</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr><td class="text-center">1</td><td><strong>Dashboard HRD</strong></td><td>Command Center KPI: Karyawan Aktif, Pending Approval, <strong>Monitor Kontrak Habis Dinamis</strong> (filter &le; 30/60/90 hari / semua), Profil Belum Lengkap, dan tombol pintas semua modul HRD.</td></tr>
+        <tr><td class="text-center">2</td><td><strong>Karyawan &amp; Master</strong></td><td>Profil 360&deg; (Tab Dokumen, Disiplin SP/Scorsing, Riwayat Gaji, Pinjaman), Import/Export Excel (termasuk kolom Kontrak), Master Departemen, &amp; <strong>Kontrak Fleksibel</strong>.</td></tr>
+        <tr><td class="text-center">3</td><td><strong>Absensi &amp; Rekap</strong></td><td>Import Fingerprint CSV/Excel (ZKTeco/Solution/Fingerspot), <strong>Cut-Off Tgl 26&ndash;25</strong>, Kalender Hari Libur 2026 1-klik, dan halaman Rekap Absensi Bulanan + PDF.</td></tr>
+        <tr><td class="text-center">4</td><td><strong>Izin, Cuti &amp; Lembur</strong></td><td>Izin/Sakit/Scorsing (<code>GP/25</code>), Cuti (otomatis melewati Minggu &amp; Hari Libur + Rekap Cuti Tahunan), Lembur lintas malam (+ Uang Makan Lembur <code>&gt; 2 jam</code>), dan <strong>Pusat Approval 4 Tab</strong>.</td></tr>
+        <tr><td class="text-center">5</td><td><strong>Penggajian</strong></td><td>Skema <strong>Bulanan / Harian / Freelance</strong> via <strong>Generate Otomatis</strong> ATAU <strong>Import Excel Payroll TTC</strong> (auto-deteksi periode, BPJS PT 3,7%, sinkron Kasbon), Bonus &amp; Potongan, Slip Gaji &amp; Rekap PDF.</td></tr>
+        <tr><td class="text-center">6</td><td><strong>Payroll Borongan</strong></td><td>Input batch mingguan/bulanan pekerja borongan &amp; part-time (Protol, Packing, Lain + Tunj. Hadir/Makan/Lain) lengkap cetak PDF Daftar Tanda Terima.</td></tr>
+        <tr><td class="text-center">7</td><td><strong>Pinjaman Karyawan</strong></td><td>Pengajuan kasbon + Tab <em>Pembayaran Cicilan</em> (RelationManager), auto-potong cicilan saat Gaji <em>Paid</em> (anti-dobel via <code>gaji_id</code>), Rekap Pinjaman, &amp; PDF bukti pinjaman.</td></tr>
+        <tr><td class="text-center">8</td><td><strong>Pengaturan Payroll &amp; Shift</strong></td><td>Konfigurasi terpusat: 4 Shift (<code>NON-SHIFT</code>, <code>SHIFT-1</code>, <code>SHIFT-2</code>, <code>SHIFT-3</code> overnight), toleransi telat, tarif lembur &amp; borongan, BPJS, kuota cuti, dan <strong>ambang peringatan kontrak</strong>.</td></tr>
+    </tbody>
+</table>
+
+<h2>6.2 Manajemen Masa Kontrak Kerja Fleksibel (Update Terbaru)</h2>
+<div class="box-green">
+    <strong>Masa Kontrak Tidak Lagi Terkunci 30 Hari:</strong> HRD kini dapat memilih durasi kontrak per karyawan secara fleksibel:
+    <strong><code>1 Bulan</code>, <code>3 Bulan</code>, <code>6 Bulan</code>, <code>1 Tahun</code>, <code>2 Tahun</code>, <code>Input Manual</code>, atau <code>Karyawan Tetap</code></strong>.
+    Sistem otomatis menghitung <em>Tanggal Habis Kontrak</em> dari <em>Tanggal Mulai Kontrak</em> (tetap bisa diedit manual kapan saja),
+    menyediakan tombol aksi cepat 1-klik <strong>"Kontrak" (Perpanjang Kontrak)</strong> di tabel Karyawan, serta <strong>filter rentang pantau kontrak dinamis</strong>
+    pada Dashboard HRD &amp; Pengaturan HRD.
+</div>
+
+<h2>6.3 Alur Penggajian &amp; Sinkronisasi Jurnal Multi-Line PSAK (Finance &harr; HRD)</h2>
+<table class="flow-grid">
+    <tr>
+        <td style="width: 23%;">
+            <div class="fnode purple">
+                <strong>1. Data Absensi &amp; Approval</strong>
+                Cut-Off 26&ndash;25 + Shift 1/2/3 + Izin/Scorsing + Cuti + Lembur
+            </div>
+        </td>
+        <td class="farrow">&rarr;</td>
+        <td style="width: 23%;">
+            <div class="fnode purple">
+                <strong>2. Hitung / Import Gaji</strong>
+                Generate Otomatis, Import Excel TTC, atau Payroll Borongan
+            </div>
+        </td>
+        <td class="farrow">&rarr;</td>
+        <td style="width: 23%;">
+            <div class="fnode green">
+                <strong>3. Sync Command Center</strong>
+                Tarik ke NPB/LPJ &amp; Bayar Massal + Potong Kasbon Otomatis
+            </div>
+        </td>
+        <td class="farrow">&rarr;</td>
+        <td style="width: 23%;">
+            <div class="fnode green">
+                <strong>4. Jurnal PSAK &amp; Setor BPJS</strong>
+                Posting Multi-Line ke General Ledger &amp; Laporan Keuangan
+            </div>
+        </td>
+    </tr>
+</table>
+
+<table class="data-table">
+    <thead>
+        <tr>
+            <th style="width: 26%;">Transaksi Sinkronisasi</th>
+            <th style="width: 37%;">Posisi Debit (D)</th>
+            <th style="width: 37%;">Posisi Kredit (K)</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td><strong>Pembayaran Gaji Massal (PSAK)</strong></td>
+            <td><code>5201 / 6101 / 6201 / 6301</code> Beban Gaji per Dept.<br><code>6502</code> Beban BPJS Perusahaan (3,7% / Iuran PT)</td>
+            <td><code>111x</code> Kas/Bank (Netto Take Home Pay)<br><code>1131</code> Piutang Karyawan (Potongan Kasbon)<br><code>2133</code> Utang / BPJS Terutang (Karyawan + PT)</td>
+        </tr>
+        <tr>
+            <td><strong>Penyetoran BPJS ke Negara</strong></td>
+            <td><code>2133</code> Utang / BPJS Terutang</td>
+            <td><code>111x</code> Rekening Bank Pembayar</td>
+        </tr>
+        <tr>
+            <td><strong>Paket 5 PDF Resmi HRD</strong></td>
+            <td colspan="2">1) Slip Gaji Satuan/Massal &bull; 2) Rekap Payroll (Lampiran NPB) &bull; 3) Daftar Tanda Terima Borongan &bull; 4) Bukti &amp; Rekap Pinjaman &bull; 5) Rekap Absensi Bulanan.</td>
+        </tr>
+    </tbody>
+</table>
+
+<div class="page-break"></div>
+
+<!-- ====================================================================== -->
+<!-- HALAMAN 8: STRUKTUR MENU REPORT & 6 LAPORAN KEUANGAN EKSEKUTIF         -->
+<!-- ====================================================================== -->
+<div class="header-bar">
+    <table>
+        <tr>
+            <td><span class="header-title">7. Struktur Menu Report &amp; 6 Laporan Keuangan Eksekutif</span></td>
+            <td class="header-sub">TTC Enterprise ERP v3.0 &bull; Business Intelligence &amp; PSAK</td>
+        </tr>
+    </table>
+</div>
+
+<h2>7.1 Tiga Menu Utama Report Manajemen</h2>
+<table class="data-table">
+    <thead>
+        <tr>
+            <th style="width: 24%;">Menu Utama</th>
+            <th style="width: 38%;">Cakupan Sub-Laporan</th>
+            <th style="width: 38%;">Tujuan Manajerial</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td><strong>1. Report Finance</strong><br><span class="badge badge-blue">Executive Hub</span></td>
+            <td>6 Tab Terpadu: Laba Rugi Global, Laba Rugi per Mesin, Neraca, Trial Balance, General Ledger, dan <strong>Laporan Hutang &amp; Piutang</strong>.</td>
+            <td>Evaluasi profitabilitas real-time, posisi likuiditas, audit buku besar, dan kontrol piutang/hutang usaha serta kasbon karyawan.</td>
+        </tr>
+        <tr>
+            <td><strong>2. Report Produksi</strong><br><span class="badge badge-amber">Operasional</span></td>
+            <td>Rekap SPK harian, produktivitas cetak per mesin/shift/operator, dan rasio <em>waste sheet</em>.</td>
+            <td>Pemantauan efisiensi lantai pabrik dan pengendalian tingkat kerusakan bahan baku.</td>
+        </tr>
+        <tr>
+            <td><strong>3. Report PO vs PB</strong><br><span class="badge badge-green">Supply Chain</span></td>
+            <td>Perbandingan qty Purchase Order terhadap Penerimaan Barang (LPB) di gudang.</td>
+            <td>Kontrol ketepatan pengiriman supplier, pencegahan over-order, dan rekonsiliasi tagihan PO.</td>
+        </tr>
+    </tbody>
+</table>
+
+<h2>7.2 Rincian 6 Laporan Keuangan Utama (Server-Side DomPDF)</h2>
+<div class="flow-step">
+    <strong>1. Laporan Laba Rugi Global (Multi-Step Income Statement):</strong>
+    Menyajikan Pendapatan Kotor, Retur/Diskon, Pendapatan Bersih (basis 100%), HPP Bahan Baku &amp; Tenaga Kerja Produksi, Laba Kotor (<em>Gross Profit</em>), Beban Operasional (Penjualan, Komisi <code>6101</code>, Umum, Gaji, BPJS), Laba Operasional (EBIT), Pendapatan/Beban Lain-Lain, hingga Laba/Rugi Bersih lengkap dengan rasio <strong>Margin %</strong>.
+</div>
+<div class="flow-step">
+    <strong>2. Laporan Laba Rugi per Mesin Cetak (RAnalisaAccounting Indigama):</strong>
+    Menganalisis kontribusi margin keuntungan riil masing-masing mesin cetak offset/flexo (Komori, Ryobi, Sakurai, dll.) dengan membandingkan nilai pendapatan cetak terhadap biaya aktual kertas, tinta, plate, listrik mesin, dan <em>waste sheet</em>.
+</div>
+<div class="flow-step green">
+    <strong>3. Laporan Neraca (Balance Sheet &mdash; Skontro 2 Kolom 100% Balance):</strong>
+    Membandingkan Total Aktiva (Kas/Bank, Piutang Usaha, Piutang Karyawan, Persediaan, Aset Tetap) terhadap Total Pasiva (Hutang Usaha, Hutang PPN, BPJS Terutang, Pinjaman Indigama <code>2144</code>, Modal Pemilik <code>3100</code>, Laba Berjalan). Dilengkapi indikator <em>Current Ratio</em> &amp; <em>Debt to Equity</em> dan dijamin <strong>100% Balance (Selisih = Rp 0)</strong>.
+</div>
+<div class="flow-step">
+    <strong>4. Trial Balance (Neraca Saldo Rekapitulasi):</strong>
+    Rekapitulasi saldo awal, mutasi Debit, mutasi Kredit, dan saldo akhir seluruh 115 COA untuk menjamin pembukuan seimbang mutlak sebelum tutup buku bulanan.
+</div>
+<div class="flow-step">
+    <strong>5. General Ledger (Buku Besar Komprehensif):</strong>
+    Kartu mutasi detail per akun COA dengan pencarian <code>kode + nama akun</code>, filter rentang tanggal transparan, kolom <em>running balance</em>, pembungkus teks uraian rapi, dan ekspor <strong>Preview &amp; Download PDF</strong>.
+</div>
+<div class="flow-step purple">
+    <strong>6. Laporan Hutang &amp; Piutang (AR / AP + Monitoring Kasbon HRD):</strong>
+    Menyajikan daftar piutang customer belum lunas (AR), hutang supplier PO belum lunas (AP), umur tagihan, serta <strong>monitoring saldo Pinjaman / Kasbon Karyawan HRD</strong> (akun <code>1131</code>) dalam satu layar terpadu beserta cetak PDF resmi.
+</div>
+
+<div class="box-highlight" style="margin-top: 8px;">
+    <strong>Penyempurnaan Antarmuka &amp; Pengalaman Pengguna Terbaru (v3.0 UI Polish):</strong>
+    <ul style="margin-top: 3px; margin-bottom: 0;">
+        <li><strong>Full-Width Responsive &amp; Header Anti-Terjepit:</strong> Seluruh halaman tabel lebar mendukung lebar penuh + <em>smooth horizontal scroll</em>, judul halaman &amp; tombol aksi tertata rapi dengan <em>flex-wrap</em>, serta dropdown filter bebas tumpang tindih ikon panah.</li>
+        <li><strong>Live Preview &amp; Download PDF (Server-Side DomPDF):</strong> Tersedia di seluruh laporan keuangan, NPB/LPJ, dokumen operasional (OC, PO, SO, SJ, Invoice, IMR), dan 5 dokumen HRD.</li>
+        <li><strong>Dark Mode Kontras Tinggi &amp; Print-Safe:</strong> Tampilan nyaman di mode terang maupun gelap, dan otomatis kembali ke latar putih bersih saat dicetak.</li>
+    </ul>
+</div>
+
+<div class="page-break"></div>
+
+<!-- ====================================================================== -->
+<!-- HALAMAN 9: MATRIKS NILAI TAMBAH, KEAMANAN & PENGESAHAN                 -->
+<!-- ====================================================================== -->
+<div class="header-bar">
+    <table>
+        <tr>
+            <td><span class="header-title">8. Nilai Tambah Manajemen, Keamanan &amp; Pengesahan</span></td>
+            <td class="header-sub">TTC Enterprise ERP v3.0 &bull; Kesiapan Operasional</td>
+        </tr>
+    </table>
+</div>
+
+<h2>8.1 Matriks Nilai Tambah bagi Manajemen &amp; Seluruh Departemen</h2>
+<table class="data-table">
+    <thead>
+        <tr>
+            <th style="width: 19%;">Peran / Divisi</th>
+            <th style="width: 39%;">Kondisi Sebelumnya (Manual / Terpisah)</th>
+            <th style="width: 42%;">Setelah Menggunakan TTC Enterprise ERP v3.0</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td><strong>Direksi / Owner</strong></td>
+            <td>Menunggu rekap akhir bulan, sulit memantau margin per mesin, pengajuan dana &amp; realisasinya tersebar di Excel/chat.</td>
+            <td>Memantau Laba Rugi, Neraca 100% Balance, profit per mesin, dan memberi <strong>Approval NPB (penuh/parsial) + audit LPJ</strong> secara real-time.</td>
+        </tr>
+        <tr>
+            <td><strong>Tim Marketing</strong></td>
+            <td>Hitungan HPP plate, komisi 2%, dan titipan adjustment rawan salah; arsip OC/SO terpisah.</td>
+            <td>Kalkulator HPP Flexo, komisi 2% &amp; adjustment otomatis dari <em>Bismillah MACRO</em>, voucher PDF siap cetak, dan kontrol blokir customer.</td>
+        </tr>
+        <tr>
+            <td><strong>PPIC, Pra Cetak &amp; Produksi</strong></td>
+            <td>Stok plate, serah terima bahan, dan <em>waste sheet</em> sering tidak sinkron dengan gudang &amp; HPP keuangan.</td>
+            <td>Alur 4 tahap terstruktur (Pra Cetak &rarr; Printing &rarr; Die Making &rarr; Finishing + Subcount) dengan kontrol IMR, arsip rak plate, dan HPP mesin otomatis.</td>
+        </tr>
+        <tr>
+            <td><strong>Purchase &amp; Warehouse</strong></td>
+            <td>PO lintas supplier dibuat berulang, stok bahan &amp; plate sulit dilacak saat keluar masuk produksi.</td>
+            <td>Multi-supplier PO auto-split dari PR, LPB otomatis routing plate ke prepress, serta kartu stok &amp; histori Material/Finish Good real-time.</td>
+        </tr>
+        <tr>
+            <td><strong>Tim Finance &amp; Pajak</strong></td>
+            <td>Menu terlalu banyak (19 sub-menu), rawan faktur/jurnal ganda, rekonsiliasi Bank vs NPB dan gaji melelahkan.</td>
+            <td><strong>10 menu inti ringkas</strong>, 1-klik toggle PPN/Non-PPN, kontrol input Bank manual pasca-ACC NPB, LPJ anti-dobel, dan jurnal PSAK otomatis.</td>
+        </tr>
+        <tr>
+            <td><strong>Tim HRD &amp; Payroll</strong></td>
+            <td>Absensi shift, cut-off 26&ndash;25, masa kontrak bervariasi, kasbon, dan borongan direkap manual di banyak file Excel.</td>
+            <td><strong>8 menu inti ringkas</strong>, kontrak fleksibel (1B/3B/6B/1T/Manual) + monitor habis kontrak dinamis, import Fingerprint &amp; Excel Payroll TTC, borongan, 5 PDF resmi, dan sync langsung ke Finance.</td>
+        </tr>
+    </tbody>
+</table>
+
+<h2>8.2 Keamanan, Tata Kelola &amp; Integritas Data</h2>
+<ul>
+    <li><strong>Role-Based Access Control (Filament Shield):</strong> Hak akses dibatasi ketat per jabatan (Super Admin, Direksi/Owner, Marketing, PPIC, Produksi, Warehouse, Finance, HRD). Data sensitif seperti gaji karyawan, margin invoice, dan jurnal akuntansi hanya dapat diakses oleh peran yang berwenang.</li>
+    <li><strong>Anti-Double Posting &amp; Kontrol Akuntansi:</strong> Kunci anti-double invoicing pada Surat Jalan, pemisahan persetujuan NPB dari input manual Bank Masuk, opsi mode LPJ (<em>Tracking Saja</em> vs <em>Auto-Journal</em>), serta guard <code>gaji_id</code> pada sinkronisasi cicilan pinjaman menjamin bebas pencatatan ganda.</li>
+    <li><strong>Integritas Relasional &amp; Audit Trail:</strong> Database MySQL/MariaDB menjaga referensi antar transaksi agar data historis tidak terhapus tidak sengaja, dengan pencatatan identitas pembuat, penyetuju (<em>approved_by</em>), dan waktu transaksi.</li>
+</ul>
+
+<h2>8.3 Penutup &amp; Lembar Pengesahan</h2>
+<div class="box-highlight">
+    Sistem <strong>TTC Enterprise ERP Versi 3.0</strong> telah melalui tahap migrasi database penuh, verifikasi fungsional end-to-end (Finance, NPB/LPJ, HRD v2, Kontrak Fleksibel, Sinkronisasi PSAK, &amp; Neraca Balance), serta sinkronisasi kode pada cabang <code>branch-juan</code>. Sistem siap digunakan penuh untuk operasional harian PT. Teknografi Tri Cawanaska.
+</div>
+
+<table style="width: 100%; border-collapse: collapse; margin-top: 28px;">
+    <tr>
+        <td style="border: none; text-align: center; width: 50%; font-size: 9px;">
+            Mengetahui,<br>
+            <strong>Manajemen PT. Teknografi Tri Cawanaska</strong><br><br><br><br><br>
+            ( _______________________________ )
+        </td>
+        <td style="border: none; text-align: center; width: 50%; font-size: 9px;">
+            Disiapkan oleh,<br>
+            <strong>Tim Implementasi &amp; Pengembangan Sistem</strong><br><br><br><br><br>
+            ( _______________________________ )
+        </td>
+    </tr>
+</table>
 
 </body>
 </html>
