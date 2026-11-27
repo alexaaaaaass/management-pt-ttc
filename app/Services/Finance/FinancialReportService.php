@@ -40,7 +40,7 @@ class FinancialReportService
         $bebanNonOperasional = [];
 
         foreach ($coas as $coa) {
-            if (strtoupper((string) $coa->posting) === 'NO' || (int) $coa->level <= 2) {
+            if (strtoupper((string) $coa->posting) === 'NO' || ((int) $coa->level > 0 && (int) $coa->level <= 2)) {
                 // Tetap proses jika akun header ternyata memiliki mutasi langsung
                 $hasDirect = $movementsByCoa->has($coa->id);
                 if (! $hasDirect) {
@@ -49,8 +49,16 @@ class FinancialReportService
             }
 
             $code = trim((string) $coa->kode_akun);
-            $codeInt = (int) preg_replace('/\D/', '', substr($code, 0, 4));
-            if ($codeInt < 4000 || $codeInt >= 8000) {
+            $firstDigit = substr($code, 0, 1);
+            $accountType = strtolower(trim((string) ($coa->account_type ?? '')));
+            $accountClass = strtolower(trim((string) ($coa->account_class ?? '')));
+
+            // Akun neraca (Asset/Liability/Equity — termasuk 602.101 Kasbon Karyawan yang bertipe Asset) bukan bagian Laba Rugi
+            if (in_array($accountType, ['asset', 'liability', 'equity'], true)) {
+                continue;
+            }
+
+            if (! in_array($firstDigit, ['4', '5', '6', '7'], true)) {
                 continue;
             }
 
@@ -58,8 +66,15 @@ class FinancialReportService
             $debit = (float) ($mov->total_debit ?? 0);
             $kredit = (float) ($mov->total_kredit ?? 0);
 
-            if (str_starts_with($code, '4')) {
-                if (str_starts_with($code, '44')) {
+            if ($firstDigit === '4') {
+                $isContraRevenue = str_starts_with($code, '44')
+                    || str_starts_with($code, '402.')
+                    || str_contains($accountClass, 'contra');
+                $isOtherRevenue = str_starts_with($code, '45')
+                    || str_starts_with($code, '403.')
+                    || str_contains($accountClass, 'other');
+
+                if ($isContraRevenue) {
                     // Retur & Diskon Penjualan (mengurangi pendapatan)
                     $nilai = $debit - $kredit;
                     if (abs($nilai) > 0.001) {
@@ -69,8 +84,8 @@ class FinancialReportService
                             'nominal'   => $nilai,
                         ];
                     }
-                } elseif (str_starts_with($code, '45')) {
-                    // Pendapatan Lain-lain
+                } elseif ($isOtherRevenue) {
+                    // Pendapatan Lain-lain & Bunga Bank
                     $nilai = $kredit - $debit;
                     if (abs($nilai) > 0.001) {
                         $pendapatanLain[] = [
@@ -80,7 +95,7 @@ class FinancialReportService
                         ];
                     }
                 } else {
-                    // Pendapatan Usaha Utama (41xx, 42xx, 43xx)
+                    // Pendapatan Usaha Utama (401.xxx, 41xx, 42xx, 43xx)
                     $nilai = $kredit - $debit;
                     if (abs($nilai) > 0.001) {
                         $pendapatanUsaha[] = [
@@ -90,7 +105,7 @@ class FinancialReportService
                         ];
                     }
                 }
-            } elseif (str_starts_with($code, '5')) {
+            } elseif ($firstDigit === '5') {
                 $nilai = $debit - $kredit;
                 if (abs($nilai) > 0.001) {
                     $hppItems[] = [
@@ -99,7 +114,7 @@ class FinancialReportService
                         'nominal'   => $nilai,
                     ];
                 }
-            } elseif (str_starts_with($code, '6')) {
+            } elseif ($firstDigit === '6') {
                 $nilai = $debit - $kredit;
                 if (abs($nilai) > 0.001) {
                     $row = [
@@ -107,17 +122,36 @@ class FinancialReportService
                         'nama_akun' => $coa->nama_akun,
                         'nominal'   => $nilai,
                     ];
-                    if (str_starts_with($code, '61')) {
+
+                    if (str_contains($accountClass, 'other expense') || in_array($code, ['603.102', '603.103'], true)) {
+                        $bebanNonOperasional[] = $row;
+                    } elseif (
+                        str_starts_with($code, '61')
+                        || str_starts_with($code, '601.')
+                        || str_contains($accountClass, 'selling')
+                        || str_contains($accountClass, 'marketing')
+                    ) {
                         $bebanPenjualan[] = $row;
-                    } elseif (str_starts_with($code, '62')) {
-                        $bebanAdminUmum[] = $row;
-                    } elseif (str_starts_with($code, '63')) {
+                    } elseif (
+                        str_starts_with($code, '63')
+                        || str_starts_with($code, '65')
+                        || str_starts_with($code, '602.0')
+                        || str_contains($accountClass, 'payroll')
+                        || str_contains($accountClass, 'labor')
+                    ) {
                         $bebanTenagaKerja[] = $row;
-                    } else {
+                    } elseif (
+                        str_starts_with($code, '64')
+                        || str_starts_with($code, '66')
+                        || str_contains($accountClass, 'tax')
+                        || str_contains($accountClass, 'license')
+                    ) {
                         $bebanPajakK3Lain[] = $row;
+                    } else {
+                        $bebanAdminUmum[] = $row;
                     }
                 }
-            } elseif (str_starts_with($code, '7')) {
+            } elseif ($firstDigit === '7') {
                 $nilai = $debit - $kredit;
                 if (abs($nilai) > 0.001) {
                     $bebanNonOperasional[] = [
@@ -369,7 +403,11 @@ class FinancialReportService
             $totDebit = $openDebit + $mutDebit;
             $totKredit = $openKredit + $mutKredit;
 
-            if (str_starts_with($code, '1') || str_starts_with($code, '8')) {
+            $firstDigit = substr($code, 0, 1);
+            $accountType = strtolower(trim((string) ($coa->account_type ?? '')));
+            $accountClass = strtolower(trim((string) ($coa->account_class ?? '')));
+
+            if ($accountType === 'asset' || $firstDigit === '1' || $firstDigit === '8') {
                 // Kelompok Aset & Penyesuaian Neraca: saldo bersih normal di sisi Debit
                 $saldo = round($totDebit - $totKredit, 2);
                 if (abs($saldo) < 0.001) {
@@ -380,14 +418,22 @@ class FinancialReportService
                     'nama_akun' => $coa->nama_akun,
                     'nominal'   => $saldo,
                 ];
-                if (str_starts_with($code, '11') || str_starts_with($code, '10')) {
+                $isCurrentAsset = str_starts_with($code, '101.')
+                    || str_starts_with($code, '11')
+                    || str_starts_with($accountClass, 'current');
+                $isFixedAsset = str_starts_with($code, '102.')
+                    || str_starts_with($code, '12')
+                    || str_contains($accountClass, 'fixed asset')
+                    || str_contains($accountClass, 'contra asset');
+
+                if ($isCurrentAsset) {
                     $asetLancar[] = $row;
-                } elseif (str_starts_with($code, '12')) {
+                } elseif ($isFixedAsset) {
                     $asetTetap[] = $row;
                 } else {
                     $asetLainnya[] = $row;
                 }
-            } elseif (str_starts_with($code, '2')) {
+            } elseif ($accountType === 'liability' || $firstDigit === '2') {
                 // Kelompok Kewajiban: saldo bersih normal di sisi Kredit
                 $saldo = round($totKredit - $totDebit, 2);
                 if (abs($saldo) < 0.001) {
@@ -398,12 +444,16 @@ class FinancialReportService
                     'nama_akun' => $coa->nama_akun,
                     'nominal'   => $saldo,
                 ];
-                if (str_starts_with($code, '21')) {
+                $isCurrentLiability = str_starts_with($code, '201.')
+                    || str_starts_with($code, '21')
+                    || str_starts_with($accountClass, 'current');
+
+                if ($isCurrentLiability) {
                     $kewajibanLancar[] = $row;
                 } else {
                     $kewajibanJangkaPanjang[] = $row;
                 }
-            } elseif (str_starts_with($code, '3')) {
+            } elseif ($accountType === 'equity' || $firstDigit === '3') {
                 // Kelompok Modal / Ekuitas: saldo bersih normal di sisi Kredit (Prive mengurangi modal)
                 $saldo = round($totKredit - $totDebit, 2);
                 if (abs($saldo) < 0.001) {
@@ -414,9 +464,9 @@ class FinancialReportService
                     'nama_akun' => $coa->nama_akun,
                     'nominal'   => $saldo,
                 ];
-            } elseif (str_starts_with($code, '4')) {
+            } elseif ($firstDigit === '4') {
                 $labaBerjalanPendapatan += ($totKredit - $totDebit);
-            } elseif (str_starts_with($code, '5') || str_starts_with($code, '6') || str_starts_with($code, '7')) {
+            } elseif (in_array($firstDigit, ['5', '6', '7'], true)) {
                 $labaBerjalanBeban += ($totDebit - $totKredit);
             }
         }
@@ -503,7 +553,10 @@ class FinancialReportService
         foreach ($allMovementsInPeriod->groupBy('coa_id') as $cId => $group) {
             $coa = $group->first()?->coa;
             $code = trim((string) ($coa?->kode_akun ?? ''));
-            $isCreditNormal = str_starts_with($code, '2') || str_starts_with($code, '3') || str_starts_with($code, '4');
+            $normal = strtolower(trim((string) ($coa?->normal_balance ?? '')));
+            $isCreditNormal = $normal !== ''
+                ? ($normal === 'credit')
+                : (str_starts_with($code, '2') || str_starts_with($code, '3') || str_starts_with($code, '4'));
 
             $openDebit = (float) ($coa?->saldo_debit ?? 0);
             $openKredit = (float) ($coa?->saldo_kredit ?? 0);
