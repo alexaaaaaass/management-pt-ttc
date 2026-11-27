@@ -38,16 +38,21 @@ class ListGajis extends ListRecords
                 ->modalDescription('Unggah file Excel laporan penggajian TTC (format resmi bulanan multi-sheet maupun template datar standar).')
                 ->form([
                     Forms\Components\FileUpload::make('attachment')
-                        ->label('File Excel Payroll (.xlsx, .xls)')
+                        ->label('File Excel / CSV Payroll (.xlsx, .xls, .csv)')
                         ->acceptedFileTypes([
                             'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
                             'application/vnd.ms-excel',
                             'application/octet-stream',
+                            'application/zip',
+                            'application/x-zip-compressed',
+                            'text/csv',
+                            'text/plain',
+                            'application/csv',
                         ])
                         ->disk('local')
                         ->directory('payroll-imports')
                         ->required()
-                        ->helperText('File format .xlsx / .xls. Contoh file resmi: 11._NOVEMBER_PAYROLL_2026_TTC.xlsx.'),
+                        ->helperText('Mendukung .xlsx, .xls, dan .csv (template resmi maupun workbook bulanan TTC).'),
 
                     Forms\Components\Grid::make(2)
                         ->schema([
@@ -77,8 +82,14 @@ class ListGajis extends ListRecords
                         ->default(true),
                 ])
                 ->action(function (array $data) {
+                    $rawAttachment = $data['attachment'] ?? null;
+                    $relativePath = is_array($rawAttachment) ? reset($rawAttachment) : $rawAttachment;
+
                     try {
-                        $relativePath = $data['attachment'];
+                        if (! is_string($relativePath) || $relativePath === '' || ! Storage::disk('local')->exists($relativePath)) {
+                            throw new \RuntimeException('File upload tidak ditemukan di penyimpanan sementara. Silakan unggah ulang file Excel/CSV.');
+                        }
+
                         $fullPath = Storage::disk('local')->path($relativePath);
 
                         $service = app(PayrollExcelImportService::class);
@@ -109,12 +120,18 @@ class ListGajis extends ListRecords
                                 ->send();
                         }
                     } catch (\Throwable $e) {
+                        report($e);
+
                         Notification::make()
                             ->title('Gagal Mengimpor Excel')
                             ->body($e->getMessage())
                             ->danger()
                             ->persistent()
                             ->send();
+                    } finally {
+                        if (is_string($relativePath) && $relativePath !== '') {
+                            Storage::disk('local')->delete($relativePath);
+                        }
                     }
                 }),
 

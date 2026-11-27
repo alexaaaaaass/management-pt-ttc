@@ -37,7 +37,7 @@ class PayrollExcelImportService
             throw new \InvalidArgumentException("File Excel tidak ditemukan pada path: {$filePath}");
         }
 
-        $spreadsheet = IOFactory::load($filePath);
+        $spreadsheet = $this->loadSpreadsheet($filePath);
         $sheetNames = $spreadsheet->getSheetNames();
 
         // Check if multi-sheet TTC workbook format
@@ -48,6 +48,145 @@ class PayrollExcelImportService
         }
 
         return $this->importGenericSheetFormat($spreadsheet, $options);
+    }
+
+    /**
+     * Load file Excel (.xlsx, .xls) maupun CSV (.csv dengan delimiter ',' atau ';') secara aman.
+     */
+    protected function loadSpreadsheet(string $filePath): Spreadsheet
+    {
+        $ext = strtolower(pathinfo($filePath, PATHINFO_EXTENSION));
+        $isCsv = in_array($ext, ['csv', 'txt'], true);
+
+        if (! $isCsv) {
+            try {
+                $identified = IOFactory::identify($filePath);
+                $isCsv = ($identified === 'Csv');
+            } catch (\Throwable) {
+                $isCsv = false;
+            }
+        }
+
+        if ($isCsv) {
+            $sample = '';
+            $fh = @fopen($filePath, 'rb');
+            if ($fh) {
+                for ($i = 0; $i < 10 && ! feof($fh); $i++) {
+                    $sample .= (string) fgets($fh);
+                }
+                fclose($fh);
+            }
+            $commaCount = substr_count($sample, ',');
+            $semiCount = substr_count($sample, ';');
+            $tabCount = substr_count($sample, "\t");
+
+            $delimiter = ',';
+            if ($semiCount > $commaCount && $semiCount >= $tabCount) {
+                $delimiter = ';';
+            } elseif ($tabCount > $commaCount && $tabCount > $semiCount) {
+                $delimiter = "\t";
+            }
+
+            $reader = new \PhpOffice\PhpSpreadsheet\Reader\Csv();
+            $reader->setDelimiter($delimiter);
+            $reader->setEnclosure('"');
+            $reader->setInputEncoding('UTF-8');
+
+            return $reader->load($filePath);
+        }
+
+        return IOFactory::load($filePath);
+    }
+
+    /**
+     * Membaca nilai numerik dari sel Excel/CSV secara aman (tahan error formula & format "Rp 3.800.000").
+     */
+    protected function readNumericCell(\PhpOffice\PhpSpreadsheet\Worksheet\Worksheet $sheet, string $coord): float
+    {
+        $cell = $sheet->getCell($coord);
+
+        try {
+            $raw = $cell->getCalculatedValue();
+        } catch (\Throwable) {
+            $raw = $cell->getOldCalculatedValue();
+            if ($raw === null) {
+                $raw = $cell->getValue();
+            }
+        }
+
+        if ($raw === null || $raw === '' || is_bool($raw)) {
+            return 0.0;
+        }
+
+        if (is_int($raw) || is_float($raw)) {
+            return (float) $raw;
+        }
+
+        $str = trim((string) $raw);
+        if ($str === '' || $str === '-' || str_starts_with($str, '#')) {
+            return 0.0;
+        }
+
+        // Bersihkan prefix mata uang & spasi
+        $str = preg_replace('/^Rp\.?\s*/i', '', $str) ?? $str;
+        $str = str_replace([' ', "\xc2\xa0"], '', $str);
+
+        if (is_numeric($str)) {
+            return (float) $str;
+        }
+
+        // Format Indonesia (3.800.000 atau 3.800.000,50) vs US (3,800,000.50)
+        $hasDot = str_contains($str, '.');
+        $hasComma = str_contains($str, ',');
+
+        if ($hasDot && $hasComma) {
+            if (strrpos($str, ',') > strrpos($str, '.')) {
+                $str = str_replace('.', '', $str);
+                $str = str_replace(',', '.', $str);
+            } else {
+                $str = str_replace(',', '', $str);
+            }
+        } elseif ($hasDot && preg_match('/^-?\d{1,3}(\.\d{3})+$/', $str)) {
+            $str = str_replace('.', '', $str);
+        } elseif ($hasComma && preg_match('/^-?\d{1,3}(,\d{3})+$/', $str)) {
+            $str = str_replace(',', '', $str);
+        } elseif ($hasComma) {
+            $str = str_replace(',', '.', $str);
+        }
+
+        return is_numeric($str) ? (float) $str : 0.0;
+    }
+
+    /**
+     * Dapatkan departemen default secara aman (tidak pernah gagal FK jika tabel departemen kosong).
+     */
+    protected function resolveDefaultDepartemenId(): int
+    {
+        $dept = MasterDepartemen::first();
+        if ($dept) {
+            return (int) $dept->id;
+        }
+
+        return (int) MasterDepartemen::create([
+            'kode'            => 'UMU',
+            'nama_departemen' => 'Umum',
+            'deskripsi'       => 'Departemen default hasil impor payroll',
+            'status'          => 'Aktif',
+        ])->id;
+    }
+
+    /**
+     * Generate NIP unik otomatis jika kolom NIP/Kode kosong.
+     */
+    protected function generateUniqueNip(): string
+    {
+        $seq = Karyawan::count() + 1;
+        do {
+            $candidate = 'K' . str_pad((string) $seq, 3, '0', STR_PAD_LEFT);
+            $seq++;
+        } while (Karyawan::where('nip', $candidate)->exists());
+
+        return $candidate;
     }
 
     /**
@@ -129,7 +268,7 @@ class PayrollExcelImportService
             for ($r = 4; $r <= $sheetBpjs->getHighestRow(); $r++) {
                 $kodeBpjs = trim((string) $sheetBpjs->getCell('B' . $r)->getValue());
                 if ($kodeBpjs !== '' && strtoupper($kodeBpjs) !== 'TOTAL') {
-                    $bpjsPtVal = round((float) $sheetBpjs->getCell('E' . $r)->getCalculatedValue(), 2);
+                    $bpjsPtVal = round($this->readNumericCell($sheetBpjs, 'E' . $r), 2);
                     if ($bpjsPtVal > 0) {
                         $bpjsPerusahaanMap[$kodeBpjs] = $bpjsPtVal;
                     }
@@ -143,7 +282,7 @@ class PayrollExcelImportService
         if ($sheetKasbon) {
             for ($r = 4; $r <= $sheetKasbon->getHighestRow(); $r++) {
                 $kodeKb = trim((string) $sheetKasbon->getCell('B' . $r)->getValue());
-                $cicilanKb = round((float) $sheetKasbon->getCell('E' . $r)->getCalculatedValue(), 2);
+                $cicilanKb = round($this->readNumericCell($sheetKasbon, 'E' . $r), 2);
                 $ketKb = trim((string) $sheetKasbon->getCell('G' . $r)->getValue());
                 if ($kodeKb !== '' && $cicilanKb > 0) {
                     $totalHutang = $cicilanKb;
@@ -206,21 +345,21 @@ class PayrollExcelImportService
                     continue;
                 }
 
-                $gp = (float) $sheetSummary->getCell('D' . $r)->getCalculatedValue();
-                $tKompetensi = (float) $sheetSummary->getCell('E' . $r)->getCalculatedValue();
-                $tJabatan = (float) $sheetSummary->getCell('F' . $r)->getCalculatedValue();
-                $tHadir = (float) $sheetSummary->getCell('G' . $r)->getCalculatedValue();
-                $lembur = (float) $sheetSummary->getCell('H' . $r)->getCalculatedValue();
-                $bonus = (float) $sheetSummary->getCell('I' . $r)->getCalculatedValue();
-                $tLain = (float) $sheetSummary->getCell('J' . $r)->getCalculatedValue();
+                $gp = $this->readNumericCell($sheetSummary, 'D' . $r);
+                $tKompetensi = $this->readNumericCell($sheetSummary, 'E' . $r);
+                $tJabatan = $this->readNumericCell($sheetSummary, 'F' . $r);
+                $tHadir = $this->readNumericCell($sheetSummary, 'G' . $r);
+                $lembur = $this->readNumericCell($sheetSummary, 'H' . $r);
+                $bonus = $this->readNumericCell($sheetSummary, 'I' . $r);
+                $tLain = $this->readNumericCell($sheetSummary, 'J' . $r);
 
-                $potAbsen = (float) $sheetSummary->getCell('K' . $r)->getCalculatedValue();
-                $potTerlambat = (float) $sheetSummary->getCell('L' . $r)->getCalculatedValue();
-                $potKasbon = (float) $sheetSummary->getCell('M' . $r)->getCalculatedValue();
-                $potTabungan = (float) $sheetSummary->getCell('N' . $r)->getCalculatedValue();
-                $potTarget = (float) $sheetSummary->getCell('O' . $r)->getCalculatedValue();
-                $potBpjs = (float) $sheetSummary->getCell('P' . $r)->getCalculatedValue();
-                $thpExcel = (float) $sheetSummary->getCell('Q' . $r)->getCalculatedValue();
+                $potAbsen = $this->readNumericCell($sheetSummary, 'K' . $r);
+                $potTerlambat = $this->readNumericCell($sheetSummary, 'L' . $r);
+                $potKasbon = $this->readNumericCell($sheetSummary, 'M' . $r);
+                $potTabungan = $this->readNumericCell($sheetSummary, 'N' . $r);
+                $potTarget = $this->readNumericCell($sheetSummary, 'O' . $r);
+                $potBpjs = $this->readNumericCell($sheetSummary, 'P' . $r);
+                $thpExcel = $this->readNumericCell($sheetSummary, 'Q' . $r);
 
                 // Skip baris template kosong (misal K08-K32 yang GP dan THP-nya 0)
                 if ($gp <= 0 && $thpExcel <= 0 && $tJabatan <= 0 && $tKompetensi <= 0) {
@@ -238,7 +377,7 @@ class PayrollExcelImportService
                         continue;
                     }
 
-                    $defaultDept = MasterDepartemen::first()?->id ?? 1;
+                    $defaultDept = $this->resolveDefaultDepartemenId();
                     $karyawan = Karyawan::create([
                         'nip'                          => $kode,
                         'nama'                         => $realNama,
@@ -402,11 +541,34 @@ class PayrollExcelImportService
 
         if (empty($colMap['nama'])) {
             throw ValidationException::withMessages([
-                'file' => 'Kolom "Nama Karyawan" tidak ditemukan dalam baris header tabel Excel.',
+                'file' => 'Kolom "Nama Karyawan" tidak ditemukan dalam baris header tabel Excel/CSV.',
             ]);
         }
 
-        $periode = ! empty($options['periode']) ? trim((string) $options['periode']) : now()->format('Y-m');
+        // Auto-deteksi periode dari baris judul (misal "PERIODE: 2026-11" atau "BULAN NOVEMBER 2026") bila input periode dikosongkan
+        $detectedPeriode = null;
+        for ($pr = 1; $pr < $headerRow; $pr++) {
+            for ($pc = 1; $pc <= min(6, $colLimit); $pc++) {
+                $pCol = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($pc);
+                $pText = trim((string) $sheet->getCell($pCol . $pr)->getValue());
+                if ($pText === '') {
+                    continue;
+                }
+                if (preg_match('/(20\d{2})[-\/](0[1-9]|1[0-2])/', $pText, $pm)) {
+                    $detectedPeriode = $pm[1] . '-' . $pm[2];
+                    break 2;
+                }
+                if (preg_match('/(?:BULAN|PERIODE)\s*:?\s*([A-Za-z]+)\s+(20\d{2})/i', $pText, $pm)) {
+                    $mNum = $this->parseIndonesianMonth($pm[1]);
+                    if ($mNum) {
+                        $detectedPeriode = sprintf('%04d-%02d', (int) $pm[2], $mNum);
+                        break 2;
+                    }
+                }
+            }
+        }
+
+        $periode = ! empty($options['periode']) ? trim((string) $options['periode']) : ($detectedPeriode ?: now()->format('Y-m'));
         $statusSlip = $options['status'] ?? 'Draft';
         $autoCreateKaryawan = $options['auto_create_karyawan'] ?? true;
         $tipePayroll = $options['tipe_payroll'] ?? 'Bulanan';
@@ -430,22 +592,30 @@ class PayrollExcelImportService
         try {
             for ($r = $headerRow + 1; $r <= $highestRow; $r++) {
                 $nama = trim((string) $sheet->getCell(($colMap['nama'] ?? 'A') . $r)->getValue());
-                if (empty($nama) || strtoupper($nama) === 'TOTAL') {
+                if (empty($nama) || strtoupper($nama) === 'TOTAL' || str_starts_with(strtoupper($nama), 'JUMLAH')) {
                     continue;
                 }
 
                 $kode = ! empty($colMap['kode']) ? trim((string) $sheet->getCell($colMap['kode'] . $r)->getValue()) : null;
                 $jabatan = ! empty($colMap['jabatan']) ? trim((string) $sheet->getCell($colMap['jabatan'] . $r)->getValue()) : 'Staff';
+                if ($jabatan === '' || is_numeric($jabatan)) {
+                    $jabatan = 'Staff Umum';
+                }
 
-                $getVal = function (?string $col) use ($sheet, $r) {
-                    if (! $col) return 0.0;
-                    return (float) $sheet->getCell($col . $r)->getCalculatedValue();
+                $getVal = function (?string $col) use ($sheet, $r): float {
+                    if (! $col) {
+                        return 0.0;
+                    }
+
+                    return $this->readNumericCell($sheet, $col . $r);
                 };
 
                 $gp = $getVal($colMap['gaji_pokok'] ?? null);
                 $tJabatan = $getVal($colMap['tunjangan_jabatan'] ?? null);
                 $tKompetensi = $getVal($colMap['tunjangan_kompetensi'] ?? null);
                 $tIntensif = $getVal($colMap['tunjangan_intensif'] ?? null);
+                $tMakan = $getVal($colMap['tunjangan_makan'] ?? null);
+                $tHadir = $getVal($colMap['tunjangan_hadir'] ?? null);
                 $lembur = $getVal($colMap['total_lembur'] ?? null);
                 $bonus = $getVal($colMap['total_bonus'] ?? null);
                 $tLain = $getVal($colMap['tunjangan_lain'] ?? null);
@@ -453,13 +623,17 @@ class PayrollExcelImportService
                 $potHadir = $getVal($colMap['potongan_kehadiran'] ?? null);
                 $potPinjaman = $getVal($colMap['potongan_pinjaman'] ?? null);
                 $potBpjs = $getVal($colMap['potongan_bpjs'] ?? null);
+                $potPph21 = $getVal($colMap['potongan_pph21'] ?? null);
                 $potLain = $getVal($colMap['potongan_lain'] ?? null);
+                $bpjsPerusahaan = ! empty($colMap['bpjs_perusahaan'])
+                    ? $getVal($colMap['bpjs_perusahaan'])
+                    : ($potBpjs > 0 && $gp > 0 ? round($gp * 0.037, 2) : 0.0);
 
-                $totPendapatan = round($gp + $tJabatan + $tKompetensi + $tIntensif + $lembur + $bonus + $tLain, 2);
-                $totPotongan = round($potHadir + $potPinjaman + $potBpjs + $potLain, 2);
+                $totPendapatan = round($gp + $tJabatan + $tKompetensi + $tIntensif + $tMakan + $tHadir + $lembur + $bonus + $tLain, 2);
+                $totPotongan = round($potHadir + $potPinjaman + $potBpjs + $potPph21 + $potLain, 2);
                 $gajiBersih = max(0.0, round($totPendapatan - $totPotongan, 2));
 
-                if ($gp <= 0 && $gajiBersih <= 0) {
+                if ($gp <= 0 && $gajiBersih <= 0 && $totPendapatan <= 0) {
                     continue;
                 }
 
@@ -477,15 +651,21 @@ class PayrollExcelImportService
                         continue;
                     }
 
-                    $defaultDept = MasterDepartemen::first()?->id ?? 1;
+                    $defaultDept = $this->resolveDefaultDepartemenId();
                     $karyawan = Karyawan::create([
-                        'nip'            => $kode ?: ('K' . str_pad((string) (Karyawan::count() + 1), 3, '0', STR_PAD_LEFT)),
-                        'nama'           => $nama,
-                        'departemen_id'  => $defaultDept,
-                        'jabatan'        => $jabatan,
-                        'status_pegawai' => 'Aktif',
-                        'tipe_gaji'      => $tipePayroll,
-                        'gaji_pokok'     => $gp,
+                        'nip'                          => $kode ?: $this->generateUniqueNip(),
+                        'nama'                         => $nama,
+                        'departemen_id'                => $defaultDept,
+                        'jabatan'                      => $jabatan,
+                        'status_pegawai'               => 'Aktif',
+                        'tipe_gaji'                    => $tipePayroll,
+                        'gaji_pokok'                   => $gp,
+                        'tunjangan_jabatan'            => $tJabatan,
+                        'tunjangan_kompetensi'         => $tKompetensi,
+                        'tunjangan_intensif'           => $tIntensif,
+                        'tunjangan_makan'              => $tMakan,
+                        'tunjangan_hadir'              => $tHadir,
+                        'bpjs_ketenagakerjaan_nominal' => $potBpjs,
                     ]);
                     $karyawanCreatedCount++;
                 }
@@ -507,8 +687,8 @@ class PayrollExcelImportService
                     'tunjangan_jabatan'    => $tJabatan,
                     'tunjangan_kompetensi' => $tKompetensi,
                     'tunjangan_intensif'   => $tIntensif,
-                    'tunjangan_makan'      => 0,
-                    'tunjangan_hadir'      => 0,
+                    'tunjangan_makan'      => $tMakan,
+                    'tunjangan_hadir'      => $tHadir,
                     'tunjangan_lain'       => $tLain,
                     'total_lembur'         => $lembur,
                     'total_bonus'          => $bonus,
@@ -517,7 +697,8 @@ class PayrollExcelImportService
                     'potongan_kehadiran'   => $potHadir,
                     'potongan_pinjaman'    => $potPinjaman,
                     'potongan_bpjs'        => $potBpjs,
-                    'potongan_pph21'       => 0,
+                    'bpjs_perusahaan'      => $bpjsPerusahaan,
+                    'potongan_pph21'       => $potPph21,
                     'potongan_lain'        => $potLain,
                     'total_potongan'       => $totPotongan,
                     'gaji_bersih'          => $gajiBersih,
@@ -672,7 +853,7 @@ class PayrollExcelImportService
             throw new \InvalidArgumentException("File Excel tidak ditemukan: {$filePath}");
         }
 
-        $spreadsheet = IOFactory::load($filePath);
+        $spreadsheet = $this->loadSpreadsheet($filePath);
         $sheet = $spreadsheet->getActiveSheet();
         $highestRow = $sheet->getHighestRow();
 
@@ -693,7 +874,7 @@ class PayrollExcelImportService
         $periode = ! empty($options['periode']) ? trim((string) $options['periode']) : now()->format('Y-m');
         $status = $options['status'] ?? 'Draft';
         $tglTransaksi = $options['tanggal_transaksi'] ?? now()->toDateString();
-        $kodeGudang = $options['kode_gudang'] ?? 'GUDANG-PUSAT';
+        $kodeGudang = $options['kode_gudang'] ?? 'TTC';
 
         $items = [];
         $totBorongan = 0.0;
@@ -708,24 +889,24 @@ class PayrollExcelImportService
 
             $nik = trim((string) $sheet->getCell('C' . $r)->getValue()) ?: null;
             $jenis = trim((string) $sheet->getCell('D' . $r)->getValue()) ?: 'Borongan Produksi';
-            $protolQty = (float) $sheet->getCell('E' . $r)->getCalculatedValue();
-            $protolTarif = (float) $sheet->getCell('F' . $r)->getCalculatedValue();
+            $protolQty = $this->readNumericCell($sheet, 'E' . $r);
+            $protolTarif = $this->readNumericCell($sheet, 'F' . $r);
             $protolGaji = round($protolQty * $protolTarif, 2);
 
-            $packQty = (float) $sheet->getCell('G' . $r)->getCalculatedValue();
-            $packTarif = (float) $sheet->getCell('H' . $r)->getCalculatedValue();
+            $packQty = $this->readNumericCell($sheet, 'G' . $r);
+            $packTarif = $this->readNumericCell($sheet, 'H' . $r);
             $packGaji = round($packQty * $packTarif, 2);
 
-            $lainQty = (float) $sheet->getCell('I' . $r)->getCalculatedValue();
-            $lainTarif = (float) $sheet->getCell('J' . $r)->getCalculatedValue();
+            $lainQty = $this->readNumericCell($sheet, 'I' . $r);
+            $lainTarif = $this->readNumericCell($sheet, 'J' . $r);
             $lainGaji = round($lainQty * $lainTarif, 2);
 
-            $tunjHadir = (float) $sheet->getCell('K' . $r)->getCalculatedValue();
-            $tunjMakan = (float) $sheet->getCell('L' . $r)->getCalculatedValue();
-            $tunjLain = (float) $sheet->getCell('M' . $r)->getCalculatedValue();
+            $tunjHadir = $this->readNumericCell($sheet, 'K' . $r);
+            $tunjMakan = $this->readNumericCell($sheet, 'L' . $r);
+            $tunjLain = $this->readNumericCell($sheet, 'M' . $r);
             $subTunj = round($tunjHadir + $tunjMakan + $tunjLain, 2);
 
-            $pot = (float) $sheet->getCell('N' . $r)->getCalculatedValue();
+            $pot = $this->readNumericCell($sheet, 'N' . $r);
             $ket = trim((string) $sheet->getCell('O' . $r)->getValue()) ?: null;
 
             $subBorongan = round($protolGaji + $packGaji + $lainGaji, 2);
@@ -888,39 +1069,85 @@ class PayrollExcelImportService
     protected function mapColumns(array $headers): array
     {
         $map = [];
-        foreach ($headers as $col => $header) {
+        foreach ($headers as $col => $rawHeader) {
+            $header = preg_replace('/\s+/', ' ', strtolower(trim((string) $rawHeader))) ?? '';
+
+            if ($header === '' || $header === 'no' || $header === 'no.') {
+                continue;
+            }
+
+            // Skip kolom agregat total potongan / total pendapatan agar tidak menimpa komponen
+            if (str_contains($header, 'total potongan') || str_contains($header, 'total pendapatan') || str_contains($header, 'jumlah potongan')) {
+                continue;
+            }
+
+            $isPotongan = str_contains($header, 'pot.') || str_contains($header, 'potongan') || str_starts_with($header, 'pot ');
+            $isTunjangan = str_contains($header, 'tunj') || preg_match('/^t\.\s*/', $header) === 1;
+
+            // 1. Komponen POTONGAN diperiksa terlebih dahulu agar tidak tertukar dengan Tunjangan/Kehadiran
+            if ($isPotongan) {
+                if (str_contains($header, 'hadir') || str_contains($header, 'absen') || str_contains($header, 'alpha') || str_contains($header, 'telat') || str_contains($header, 'scorsing')) {
+                    $map['potongan_kehadiran'] = $col;
+                } elseif (str_contains($header, 'kasbon') || str_contains($header, 'pinjam')) {
+                    $map['potongan_pinjaman'] = $col;
+                } elseif (str_contains($header, 'bpjs') || str_contains($header, 'tenaga kerja') || str_contains($header, 'ketenagakerjaan')) {
+                    $map['potongan_bpjs'] = $col;
+                } elseif (str_contains($header, 'pph') || str_contains($header, 'pajak')) {
+                    $map['potongan_pph21'] = $col;
+                } elseif (str_contains($header, 'lain')) {
+                    $map['potongan_lain'] = $col;
+                }
+                continue;
+            }
+
+            // 2. Komponen TUNJANGAN / T.* diperiksa sebelum 'jabatan' polos agar "T. Jabatan" tidak menimpa kolom "Jabatan"
+            if ($isTunjangan) {
+                if (str_contains($header, 'jabatan')) {
+                    $map['tunjangan_jabatan'] = $col;
+                } elseif (str_contains($header, 'kompetensi')) {
+                    $map['tunjangan_kompetensi'] = $col;
+                } elseif (str_contains($header, 'makan')) {
+                    $map['tunjangan_makan'] = $col;
+                } elseif (str_contains($header, 'hadir')) {
+                    $map['tunjangan_hadir'] = $col;
+                } elseif (str_contains($header, 'insentif') || str_contains($header, 'intensif')) {
+                    $map['tunjangan_intensif'] = $col;
+                } elseif (str_contains($header, 'lain')) {
+                    $map['tunjangan_lain'] = $col;
+                }
+                continue;
+            }
+
+            // 3. Kolom identitas, gaji pokok, lembur, bonus, potongan non-prefiks, dan THP
             if (str_contains($header, 'kode') || str_contains($header, 'nik') || str_contains($header, 'nip')) {
                 $map['kode'] = $col;
             } elseif (str_contains($header, 'nama')) {
                 $map['nama'] = $col;
             } elseif (str_contains($header, 'jabatan') || str_contains($header, 'posisi')) {
                 $map['jabatan'] = $col;
-            } elseif (str_contains($header, 'pokok') || $header === 'gaji' || str_contains($header, 'gaji pokok')) {
+            } elseif (str_contains($header, 'thp') || str_contains($header, 'take home') || str_contains($header, 'gaji bersih') || str_contains($header, 'bersih')) {
+                $map['gaji_bersih'] = $col;
+            } elseif (str_contains($header, 'pokok') || $header === 'gaji') {
                 $map['gaji_pokok'] = $col;
-            } elseif (str_contains($header, 'jabatan') && str_contains($header, 'tunj')) {
-                $map['tunjangan_jabatan'] = $col;
-            } elseif (str_contains($header, 'kompetensi')) {
-                $map['tunjangan_kompetensi'] = $col;
-            } elseif (str_contains($header, 'insentif') || str_contains($header, 'hadir')) {
+            } elseif (str_contains($header, 'insentif') || str_contains($header, 'intensif')) {
                 $map['tunjangan_intensif'] = $col;
             } elseif (str_contains($header, 'lembur')) {
                 $map['total_lembur'] = $col;
             } elseif (str_contains($header, 'bonus')) {
                 $map['total_bonus'] = $col;
-            } elseif (str_contains($header, 'lain') && ! str_contains($header, 'pot')) {
-                $map['tunjangan_lain'] = $col;
             } elseif (str_contains($header, 'absen') || str_contains($header, 'alpha') || str_contains($header, 'telat')) {
                 $map['potongan_kehadiran'] = $col;
             } elseif (str_contains($header, 'kasbon') || str_contains($header, 'pinjam')) {
                 $map['potongan_pinjaman'] = $col;
+            } elseif (str_contains($header, 'bpjs') && (str_contains($header, 'pt') || str_contains($header, 'perusahaan') || str_contains($header, '3,7') || str_contains($header, '3.7'))) {
+                $map['bpjs_perusahaan'] = $col;
             } elseif (str_contains($header, 'bpjs') || str_contains($header, 'tenaga kerja') || str_contains($header, 'ketenagakerjaan')) {
                 $map['potongan_bpjs'] = $col;
-            } elseif (str_contains($header, 'pot') && str_contains($header, 'lain')) {
-                $map['potongan_lain'] = $col;
-            } elseif (str_contains($header, 'thp') || str_contains($header, 'take home') || str_contains($header, 'bersih')) {
-                $map['gaji_bersih'] = $col;
+            } elseif (str_contains($header, 'pph') || str_contains($header, 'pajak')) {
+                $map['potongan_pph21'] = $col;
             }
         }
+
         return $map;
     }
 

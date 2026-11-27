@@ -50,13 +50,18 @@ class ListKaryawans extends ListRecords
                     ->modalDescription('Gunakan file hasil Export Excel Karyawan atau Template resmi untuk menambah karyawan baru atau memperbarui massal gaji pokok, tunjangan, PIN fingerprint, shift, rekening bank, dan BPJS.')
                     ->form([
                         FileUpload::make('file_excel')
-                            ->label('File Excel Karyawan (.xlsx / .xls)')
+                            ->label('File Excel / CSV Karyawan (.xlsx / .xls / .csv)')
                             ->disk('local')
                             ->directory('temp-karyawan')
                             ->acceptedFileTypes([
                                 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
                                 'application/vnd.ms-excel',
                                 'application/octet-stream',
+                                'application/zip',
+                                'application/x-zip-compressed',
+                                'text/csv',
+                                'text/plain',
+                                'application/csv',
                             ])
                             ->required(),
                     ])

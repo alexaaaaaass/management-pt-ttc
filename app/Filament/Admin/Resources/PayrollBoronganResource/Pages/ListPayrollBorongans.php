@@ -25,11 +25,16 @@ class ListPayrollBorongans extends ListRecords
                 ->modalDescription('Unggah file Excel daftar upah borongan pekerja / freelance produksi.')
                 ->form([
                     Forms\Components\FileUpload::make('attachment')
-                        ->label('File Excel Borongan (.xlsx, .xls)')
+                        ->label('File Excel / CSV Borongan (.xlsx, .xls, .csv)')
                         ->acceptedFileTypes([
                             'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
                             'application/vnd.ms-excel',
                             'application/octet-stream',
+                            'application/zip',
+                            'application/x-zip-compressed',
+                            'text/csv',
+                            'text/plain',
+                            'application/csv',
                         ])
                         ->disk('local')
                         ->directory('payroll-imports')
@@ -56,8 +61,15 @@ class ListPayrollBorongans extends ListRecords
                         ]),
                 ])
                 ->action(function (array $data) {
+                    $rawAttachment = $data['attachment'] ?? null;
+                    $relativePath = is_array($rawAttachment) ? reset($rawAttachment) : $rawAttachment;
+
                     try {
-                        $fullPath = Storage::disk('local')->path($data['attachment']);
+                        if (! is_string($relativePath) || $relativePath === '' || ! Storage::disk('local')->exists($relativePath)) {
+                            throw new \RuntimeException('File upload tidak ditemukan di penyimpanan sementara. Silakan unggah ulang.');
+                        }
+
+                        $fullPath = Storage::disk('local')->path($relativePath);
                         $service = app(PayrollExcelImportService::class);
                         $res = $service->importBoronganSpreadsheet($fullPath, $data);
 
@@ -67,11 +79,18 @@ class ListPayrollBorongans extends ListRecords
                             ->success()
                             ->send();
                     } catch (\Throwable $e) {
+                        report($e);
+
                         Notification::make()
                             ->title('Gagal Impor Borongan')
                             ->body($e->getMessage())
                             ->danger()
+                            ->persistent()
                             ->send();
+                    } finally {
+                        if (is_string($relativePath) && $relativePath !== '') {
+                            Storage::disk('local')->delete($relativePath);
+                        }
                     }
                 }),
 
