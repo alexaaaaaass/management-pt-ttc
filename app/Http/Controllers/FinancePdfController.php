@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Models\Invoice;
 use App\Models\JournalEntry;
+use App\Models\NpbRequest;
+use App\Models\NpbSettlement;
 use App\Models\OperasionalPay;
 use App\Models\PoBillPay;
 use App\Models\TransKas;
@@ -677,17 +679,119 @@ class FinancePdfController extends Controller
 
     /*
     |--------------------------------------------------------------------------
+    | HUTANG, PIUTANG & PINJAMAN (AR / AP / PINJAMAN INDIGAMA)
+    |--------------------------------------------------------------------------
+    */
+
+    public function previewHutangPiutang(Request $request, FinancialReportService $service)
+    {
+        @set_time_limit(300);
+        @ini_set('memory_limit', '512M');
+
+        $data = $service->getDebtReceivableReport($request->query('as_of_date'));
+
+        $pdf = Pdf::loadView('pdf.hutang-piutang', [
+            'logoBase64' => $this->getLogoBase64(),
+            'data'       => $data,
+        ])->setPaper('A4', 'landscape');
+
+        return $pdf->stream('Laporan_Hutang_Piutang_' . $data['as_of_date'] . '.pdf');
+    }
+
+    public function downloadHutangPiutang(Request $request, FinancialReportService $service)
+    {
+        @set_time_limit(300);
+        @ini_set('memory_limit', '512M');
+
+        $data = $service->getDebtReceivableReport($request->query('as_of_date'));
+
+        $pdf = Pdf::loadView('pdf.hutang-piutang', [
+            'logoBase64' => $this->getLogoBase64(),
+            'data'       => $data,
+        ])->setPaper('A4', 'landscape');
+
+        return $pdf->download('Laporan_Hutang_Piutang_' . $data['as_of_date'] . '.pdf');
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | NOTA PENGAJUAN BIAYA (NPB) & PENYELESAIAN NPB (LPJ)
+    |--------------------------------------------------------------------------
+    */
+
+    public function previewNpb(NpbRequest $npbRequest)
+    {
+        @set_time_limit(180);
+        $npbRequest->loadMissing(['fundPositions.coa', 'items.coa']);
+
+        $pdf = Pdf::loadView('pdf.npb-request', [
+            'logoBase64' => $this->getLogoBase64(),
+            'npb'        => $npbRequest,
+        ])->setPaper('A4', 'portrait');
+
+        $safeName = preg_replace('/[^A-Za-z0-9_-]/', '_', $npbRequest->nomor_pengajuan);
+        return $pdf->stream("NPB_{$safeName}.pdf");
+    }
+
+    public function downloadNpb(NpbRequest $npbRequest)
+    {
+        @set_time_limit(180);
+        $npbRequest->loadMissing(['fundPositions.coa', 'items.coa']);
+
+        $pdf = Pdf::loadView('pdf.npb-request', [
+            'logoBase64' => $this->getLogoBase64(),
+            'npb'        => $npbRequest,
+        ])->setPaper('A4', 'portrait');
+
+        $safeName = preg_replace('/[^A-Za-z0-9_-]/', '_', $npbRequest->nomor_pengajuan);
+        return $pdf->download("NPB_{$safeName}.pdf");
+    }
+
+    public function previewNpbSettlement(NpbSettlement $npbSettlement)
+    {
+        @set_time_limit(180);
+        $npbSettlement->loadMissing(['npbRequest', 'items.coaBeban', 'items.coaSumber']);
+
+        $pdf = Pdf::loadView('pdf.npb-settlement', [
+            'logoBase64' => $this->getLogoBase64(),
+            'settlement' => $npbSettlement,
+        ])->setPaper('A4', 'landscape');
+
+        $safeName = preg_replace('/[^A-Za-z0-9_-]/', '_', $npbSettlement->nomor_penyelesaian);
+        return $pdf->stream("LPJ_NPB_{$safeName}.pdf");
+    }
+
+    public function downloadNpbSettlement(NpbSettlement $npbSettlement)
+    {
+        @set_time_limit(180);
+        $npbSettlement->loadMissing(['npbRequest', 'items.coaBeban', 'items.coaSumber']);
+
+        $pdf = Pdf::loadView('pdf.npb-settlement', [
+            'logoBase64' => $this->getLogoBase64(),
+            'settlement' => $npbSettlement,
+        ])->setPaper('A4', 'landscape');
+
+        $safeName = preg_replace('/[^A-Za-z0-9_-]/', '_', $npbSettlement->nomor_penyelesaian);
+        return $pdf->download("LPJ_NPB_{$safeName}.pdf");
+    }
+
+    /*
+    |--------------------------------------------------------------------------
     | GENERAL LEDGER (BUKU BESAR & JURNAL UMUM)
     |--------------------------------------------------------------------------
     */
 
     public function previewGeneralLedger(Request $request, FinancialReportService $service)
     {
+        @set_time_limit(300);
+        @ini_set('memory_limit', '512M');
+
         $data = $service->getGeneralLedgerReport(
             $request->query('start_date'),
             $request->query('end_date'),
             $request->query('coa_id'),
-            $request->query('ref_type')
+            $request->query('ref_type'),
+            $request->query('search')
         );
 
         $pdf = Pdf::loadView('pdf.general-ledger', [
@@ -700,11 +804,15 @@ class FinancePdfController extends Controller
 
     public function downloadGeneralLedger(Request $request, FinancialReportService $service)
     {
+        @set_time_limit(300);
+        @ini_set('memory_limit', '512M');
+
         $data = $service->getGeneralLedgerReport(
             $request->query('start_date'),
             $request->query('end_date'),
             $request->query('coa_id'),
-            $request->query('ref_type')
+            $request->query('ref_type'),
+            $request->query('search')
         );
 
         $pdf = Pdf::loadView('pdf.general-ledger', [
@@ -723,6 +831,9 @@ class FinancePdfController extends Controller
 
     public function previewTrialBalance(Request $request, FinancialReportService $service)
     {
+        @set_time_limit(300);
+        @ini_set('memory_limit', '512M');
+
         $group = $request->query('group');
         $onlyActive = (bool) $request->query('only_active', true);
         $data = $service->getTrialBalanceReport($group, $onlyActive);
@@ -737,6 +848,9 @@ class FinancePdfController extends Controller
 
     public function downloadTrialBalance(Request $request, FinancialReportService $service)
     {
+        @set_time_limit(300);
+        @ini_set('memory_limit', '512M');
+
         $group = $request->query('group');
         $onlyActive = (bool) $request->query('only_active', true);
         $data = $service->getTrialBalanceReport($group, $onlyActive);

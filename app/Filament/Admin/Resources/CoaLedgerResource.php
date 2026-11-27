@@ -20,7 +20,7 @@ class CoaLedgerResource extends Resource
     protected static ?string $navigationLabel = 'General Ledger (Jurnal Umum)';
     protected static ?string $modelLabel = 'General Ledger (Jurnal Umum)';
     protected static ?string $pluralModelLabel = 'General Ledger (Jurnal Umum)';
-    protected static ?int $navigationSort = 6;
+    protected static ?int $navigationSort = 8;
     protected static ?string $navigationIcon = 'heroicon-o-book-open';
 
     public static function canCreate(): bool
@@ -74,6 +74,11 @@ class CoaLedgerResource extends Resource
                         'PO_BILLING' => 'Billing of PO',
                         'PO_BILL_PAY' => 'Payment Order',
                         'PAYROLL' => 'Payroll / Gaji',
+                        'PINJAMAN_CAIR' => 'Pencairan Kasbon HRD',
+                        'PINJAMAN_BAYAR' => 'Pelunasan Kasbon HRD',
+                        'BPJS_REMITTANCE' => 'Setoran BPJS',
+                        'NPB_DISBURSEMENT' => 'Pencairan NPB (Modal/Pinjaman)',
+                        'NPB_SETTLEMENT' => 'Realisasi LPJ NPB',
                         'JOURNAL_MEMORIAL' => 'Memorial',
                         default => $state ?: '-',
                     })
@@ -164,6 +169,11 @@ Tables\Columns\TextColumn::make('balance_after')
                         'PO_BILLING' => 'Billing of PO',
                         'PO_BILL_PAY' => 'Payment Order',
                         'PAYROLL' => 'Payroll / Gaji',
+                        'PINJAMAN_CAIR' => 'Pencairan Kasbon HRD',
+                        'PINJAMAN_BAYAR' => 'Pelunasan Kasbon HRD',
+                        'BPJS_REMITTANCE' => 'Setoran BPJS',
+                        'NPB_DISBURSEMENT' => 'Pencairan NPB (Modal/Pinjaman)',
+                        'NPB_SETTLEMENT' => 'Realisasi LPJ NPB',
                         'JOURNAL_MEMORIAL' => 'Memorial',
                     ]),
 

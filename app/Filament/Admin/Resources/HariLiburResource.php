@@ -18,7 +18,9 @@ class HariLiburResource extends Resource
 
     protected static ?string $navigationGroup = 'HRD';
 
-    protected static ?int $navigationSort = 4;
+    protected static ?int $navigationSort = 3;
+
+    protected static bool $shouldRegisterNavigation = false;
 
     protected static ?string $navigationIcon = 'heroicon-o-calendar-days';
 

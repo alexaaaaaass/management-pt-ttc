@@ -17,7 +17,8 @@ class PotTunjanganResource extends Resource
 {
     protected static ?string $model = PotTunjangan::class;
     protected static ?string $navigationGroup = 'HRD';
-    protected static ?int $navigationSort = 8;
+    protected static ?int $navigationSort = 5;
+    protected static bool $shouldRegisterNavigation = false;
     protected static ?string $navigationIcon = 'heroicon-o-scissors';
 
     public static function getNavigationLabel(): string
@@ -91,7 +92,7 @@ class PotTunjanganResource extends Resource
         $kompetensi = \App\Support\MoneyHelper::clean($get('potongan_kompetensi')) ?? 0;
         $intensif = \App\Support\MoneyHelper::clean($get('potongan_intensif')) ?? 0;
 
-        $set('total_potongan', round($jabatan + $kompetensi + $intensif, 2));
+        $set('total_potongan', \App\Support\MoneyHelper::format(round($jabatan + $kompetensi + $intensif, 2), 0));
     }
 
     public static function table(Table $table): Table
@@ -109,20 +110,24 @@ class PotTunjanganResource extends Resource
                     ->badge(),
 
                 TextColumn::make('potongan_jabatan')
-                    ->money('IDR')
-                    ->label('Pot. Jabatan'),
+                    ->label('Pot. Jabatan')
+                    ->formatStateUsing(fn ($state) => 'Rp ' . number_format((float) $state, 0, ',', '.'))
+                    ->alignRight(),
 
                 TextColumn::make('potongan_kompetensi')
-                    ->money('IDR')
-                    ->label('Pot. Kompetensi'),
+                    ->label('Pot. Kompetensi')
+                    ->formatStateUsing(fn ($state) => 'Rp ' . number_format((float) $state, 0, ',', '.'))
+                    ->alignRight(),
 
                 TextColumn::make('potongan_intensif')
-                    ->money('IDR')
-                    ->label('Pot. Intensif'),
+                    ->label('Pot. Intensif')
+                    ->formatStateUsing(fn ($state) => 'Rp ' . number_format((float) $state, 0, ',', '.'))
+                    ->alignRight(),
 
                 TextColumn::make('total_potongan')
-                    ->money('IDR')
                     ->label('Total Potongan')
+                    ->formatStateUsing(fn ($state) => 'Rp ' . number_format((float) $state, 0, ',', '.'))
+                    ->alignRight()
                     ->weight('bold')
                     ->color('danger'),
 

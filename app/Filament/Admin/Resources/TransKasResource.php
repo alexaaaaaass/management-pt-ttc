@@ -27,14 +27,14 @@ class TransKasResource extends Resource
 {
     protected static ?string $model = TransKas::class;
     protected static ?string $navigationGroup = 'Finance';
-    protected static ?int $navigationSort = 7;
+    protected static ?int $navigationSort = 4;
     protected static ?string $navigationIcon = 'heroicon-o-banknotes';
     protected static ?string $modelLabel = 'Transaksi Kas';
-    protected static ?string $pluralModelLabel = 'Transaksi Kas Masuk & Kas Keluar';
+    protected static ?string $pluralModelLabel = 'Transaksi Kas';
 
     public static function getNavigationLabel(): string
     {
-        return 'Kas Masuk & Kas Keluar';
+        return 'Kas (Masuk & Keluar)';
     }
 
     public static function getDefaultKasCoaId(): ?int
@@ -44,28 +44,6 @@ class TransKasResource extends Resource
                 ->where('posting', 'Yes')
                 ->orderBy('kode_akun')
                 ->value('id');
-    }
-
-    public static function getNavigationItems(): array
-    {
-        if (! static::canAccess()) {
-            return [];
-        }
-
-        return [
-            \Filament\Navigation\NavigationItem::make('Kas Masuk')
-                ->group(static::getNavigationGroup())
-                ->icon('heroicon-o-arrow-down-circle')
-                ->isActiveWhen(fn (): bool => request()->routeIs(static::getRouteBaseName() . '.*') && (request()->query('activeTab') === 'KAS_MASUK' || request()->query('type') === 'KAS_MASUK'))
-                ->sort(7)
-                ->url(static::getUrl('index', ['activeTab' => 'KAS_MASUK'])),
-            \Filament\Navigation\NavigationItem::make('Kas Keluar')
-                ->group(static::getNavigationGroup())
-                ->icon('heroicon-o-arrow-up-circle')
-                ->isActiveWhen(fn (): bool => request()->routeIs(static::getRouteBaseName() . '.*') && (request()->query('activeTab') === 'KAS_KELUAR' || request()->query('type') === 'KAS_KELUAR'))
-                ->sort(8)
-                ->url(static::getUrl('index', ['activeTab' => 'KAS_KELUAR'])),
-        ];
     }
 
     public static function form(Form $form): Form
@@ -127,9 +105,9 @@ class TransKasResource extends Resource
 
                                 TextInput::make('gudang')
                                     ->label('Gudang')
-                                    ->default('UGRMS')
-                                    ->datalist(['UGRMS', 'TTC'])
-                                    ->placeholder('Contoh: UGRMS / TTC'),
+                                    ->default('TTC')
+                                    ->datalist(['TTC', 'UGRMS'])
+                                    ->placeholder('Contoh: TTC'),
                             ]),
 
                         Grid::make(2)

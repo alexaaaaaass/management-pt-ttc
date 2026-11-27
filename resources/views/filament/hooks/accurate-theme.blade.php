@@ -154,4 +154,34 @@
     .fi-ta-table {
         width: 100% !important;
     }
+
+    /* 10. Perapian Header Halaman & Breadcrumb (Anti-Judul Tertekuk Sempit) */
+    .fi-header {
+        flex-wrap: wrap !important;
+        align-items: center !important;
+        gap: 0.75rem 1.25rem !important;
+    }
+
+    .fi-header > div:first-child {
+        flex: 1 1 260px !important;
+        min-width: 240px !important;
+    }
+
+    .fi-header-heading {
+        font-size: 1.5rem !important;
+        line-height: 1.25 !important;
+        letter-spacing: -0.015em !important;
+        white-space: normal !important;
+    }
+
+    .fi-header-subheading {
+        font-size: 0.85rem !important;
+        margin-top: 0.2rem !important;
+    }
+
+    .fi-header .fi-ac {
+        flex-wrap: wrap !important;
+        justify-content: flex-end !important;
+        gap: 0.5rem !important;
+    }
 </style>

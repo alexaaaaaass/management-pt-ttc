@@ -19,6 +19,16 @@ class Lembur extends Model
         'jam_selesai',
         'durasi_lembur',
         'keterangan',
+        'status',
+        'approved_by',
+        'approved_at',
+        'catatan_approval',
+    ];
+
+    protected $casts = [
+        'tanggal_lembur' => 'date',
+        'durasi_lembur'  => 'float',
+        'approved_at'    => 'datetime',
     ];
 
     public function karyawan()
@@ -29,12 +39,22 @@ class Lembur extends Model
     protected static function booted()
     {
         static::creating(function ($data) {
-
-            $date = now()->format('Ymd');
-            $count = self::whereDate('created_at', now())->count() + 1;
-            $urutan = str_pad($count, 3, '0', STR_PAD_LEFT);
-
-            $data->kode_lembur = "LMB-{$date}-{$urutan}";
+            if (empty($data->kode_lembur) || strtoupper(trim($data->kode_lembur)) === 'AUTO') {
+                $date = now()->format('Ymd');
+                $prefix = "LMB-{$date}-";
+                $seq = 1;
+                $last = self::where('kode_lembur', 'like', "{$prefix}%")->orderByDesc('id')->value('kode_lembur');
+                if ($last && preg_match('/-(\d+)$/', $last, $m)) {
+                    $seq = ((int) $m[1]) + 1;
+                }
+                while (self::where('kode_lembur', $prefix . str_pad((string) $seq, 3, '0', STR_PAD_LEFT))->exists()) {
+                    $seq++;
+                }
+                $data->kode_lembur = $prefix . str_pad((string) $seq, 3, '0', STR_PAD_LEFT);
+            }
+            if (empty($data->status)) {
+                $data->status = 'Pending';
+            }
         });
     }
 }

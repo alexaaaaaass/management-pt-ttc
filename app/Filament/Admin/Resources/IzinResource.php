@@ -10,168 +10,184 @@ use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
 
-
 class IzinResource extends Resource
 {
     protected static ?string $model = Izin::class;
     protected static ?string $navigationGroup = 'HRD';
-    protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
-    protected static ?int $navigationSort = 6;
-   public static function form(Form $form): Form
-{
-    return $form->schema([
+    protected static ?string $navigationIcon = 'heroicon-o-document-text';
+    protected static ?int $navigationSort = 4;
+    protected static bool $shouldRegisterNavigation = false;
 
-        Forms\Components\Section::make('Form Izin')
-            ->schema([
+    public static function getNavigationLabel(): string
+    {
+        return 'Izin, Sakit & Scorsing';
+    }
 
-                Forms\Components\Select::make('karyawan_id')
+    public static function form(Form $form): Form
+    {
+        return $form->schema([
+            Forms\Components\Section::make('Form Izin / Sakit / Alpha / Scorsing')
+                ->schema([
+                    Forms\Components\Select::make('karyawan_id')
+                        ->label('Karyawan')
+                        ->relationship('karyawan', 'nama')
+                        ->searchable()
+                        ->preload()
+                        ->required()
+                        ->live()
+                        ->afterStateHydrated(function ($state, callable $set, $record) {
+                            if (! $record || ! $record->karyawan) {
+                                return;
+                            }
+                            $k = $record->karyawan;
+                            $set('nip', $k->nip);
+                            $set('jabatan', $k->jabatan);
+                            $set('departemen', $k->departemen?->nama_departemen);
+                            $set('kantor', $k->kantor);
+                        })
+                        ->afterStateUpdated(function ($state, callable $set) {
+                            $k = \App\Models\Karyawan::with('departemen')->find($state);
+                            if (! $k) {
+                                return;
+                            }
+                            $set('nip', $k->nip);
+                            $set('jabatan', $k->jabatan);
+                            $set('departemen', $k->departemen?->nama_departemen);
+                            $set('kantor', $k->kantor);
+                        }),
+
+                    Forms\Components\TextInput::make('nip')->disabled()->dehydrated(false),
+                    Forms\Components\TextInput::make('jabatan')->disabled()->dehydrated(false),
+                    Forms\Components\TextInput::make('departemen')->disabled()->dehydrated(false),
+                    Forms\Components\TextInput::make('kantor')->disabled()->dehydrated(false),
+
+                    Forms\Components\DatePicker::make('tanggal_izin')
+                        ->label('Tanggal')
+                        ->default(now())
+                        ->required(),
+
+                    Forms\Components\Select::make('jenis_izin')
+                        ->label('Jenis Izin / Ketidakhadiran')
+                        ->options(Izin::JENIS_OPTIONS)
+                        ->required(),
+
+                    Forms\Components\Select::make('status')
+                        ->label('Status Approval')
+                        ->options([
+                            'Pending'  => 'Pending',
+                            'Approved' => 'Approved',
+                            'Rejected' => 'Rejected',
+                        ])
+                        ->default('Pending')
+                        ->disabled()
+                        ->dehydrated(),
+
+                    Forms\Components\TimePicker::make('jam_mulai')
+                        ->label('Jam Mulai (Opsional)')
+                        ->seconds(false)
+                        ->displayFormat('H:i')
+                        ->format('H:i:s'),
+
+                    Forms\Components\TimePicker::make('jam_selesai')
+                        ->label('Jam Selesai (Opsional)')
+                        ->seconds(false)
+                        ->displayFormat('H:i')
+                        ->format('H:i:s'),
+
+                    Forms\Components\FileUpload::make('lampiran')
+                        ->label('Lampiran Surat Dokter / Bukti (PDF / JPG / PNG)')
+                        ->directory('izin')
+                        ->acceptedFileTypes(['application/pdf', 'image/jpeg', 'image/png', 'image/webp'])
+                        ->maxSize(5120)
+                        ->openable()
+                        ->downloadable()
+                        ->columnSpanFull(),
+
+                    Forms\Components\Textarea::make('keterangan')
+                        ->label('Keterangan')
+                        ->columnSpanFull(),
+                ])
+                ->columns(2),
+        ]);
+    }
+
+    public static function table(Table $table): Table
+    {
+        return $table
+            ->columns([
+                Tables\Columns\TextColumn::make('karyawan.nama')
                     ->label('Karyawan')
-                    ->afterStateHydrated(function ($state, callable $set, $record) {
-    if (!$record) return;
-
-    $karyawan = $record->karyawan;
-
-    if (!$karyawan) return;
-
-    $set('nip', $karyawan->nip);
-    $set('jabatan', $karyawan->jabatan);
-    $set('departemen', $karyawan->departemen?->nama_departemen);
-    $set('kantor', $karyawan->kantor);
-})
-                    ->relationship('karyawan', 'nama')
                     ->searchable()
-                    ->preload()
-                    ->required()
-                    ->reactive()
-                    ->afterStateUpdated(function ($state, callable $set) {
+                    ->sortable()
+                    ->weight('bold'),
 
-                        $karyawan = \App\Models\Karyawan::with('departemen')->find($state);
+                Tables\Columns\TextColumn::make('karyawan.nip')->label('NIP'),
 
-                        if (!$karyawan) return;
+                Tables\Columns\TextColumn::make('tanggal_izin')
+                    ->label('Tanggal')
+                    ->date('d/m/Y')
+                    ->sortable(),
 
-                        $set('nip', $karyawan->nip);
-                        $set('jabatan', $karyawan->jabatan);
-                        $set('departemen', $karyawan->departemen?->nama_departemen);
-                        $set('kantor', $karyawan->kantor);
+                Tables\Columns\TextColumn::make('jenis_izin')
+                    ->label('Jenis')
+                    ->badge()
+                    ->formatStateUsing(fn (?string $state) => match ($state) {
+                        'terlambat'           => 'Terlambat',
+                        'meninggalkan_kantor' => 'Meninggalkan Kantor',
+                        'pulang_awal'         => 'Pulang Awal',
+                        'dinas_luar'          => 'Dinas Luar',
+                        'sakit'               => 'Sakit',
+                        'sakit_surat_dokter'  => 'Sakit (S. Dokter)',
+                        'alpha'               => 'Alpha',
+                        'scorsing'            => 'Scorsing (Potong Gaji)',
+                        default               => $state ?: '-',
+                    })
+                    ->color(fn (?string $state) => match ($state) {
+                        'terlambat'           => 'warning',
+                        'alpha', 'scorsing'   => 'danger',
+                        'dinas_luar'          => 'info',
+                        'pulang_awal'         => 'warning',
+                        'sakit', 'sakit_surat_dokter' => 'primary',
+                        default               => 'gray',
                     }),
 
-                Forms\Components\TextInput::make('nip')
-                    ->disabled()
-                    ->dehydrated(false),
+                Tables\Columns\TextColumn::make('status')
+                    ->label('Status')
+                    ->badge()
+                    ->color(fn (?string $state) => match ($state) {
+                        'Approved' => 'success',
+                        'Rejected' => 'danger',
+                        default    => 'warning',
+                    }),
 
-                Forms\Components\TextInput::make('jabatan')
-                    ->disabled()
-                    ->dehydrated(false),
-
-                Forms\Components\TextInput::make('departemen')
-                    ->disabled()
-                    ->dehydrated(false),
-
-                Forms\Components\TextInput::make('kantor')
-                    ->disabled()
-                    ->dehydrated(false),
-
-                Forms\Components\DatePicker::make('tanggal_izin')
-                    ->label('Tanggal Izin')
-                    ->required(),
-
-                Forms\Components\Select::make('jenis_izin')
-                    ->options([
-                        'terlambat' => 'Izin Datang Terlambat',
-                        'meninggalkan_kantor' => 'Izin Meninggalkan Kantor',
-                        'pulang_awal' => 'Izin Pulang Awal',
-                        'dinas_luar' => 'Dinas Luar',
-                        'alpha' => 'Alpha',
-                    ])
-                    ->required(),
-Forms\Components\TimePicker::make('jam_mulai')
-    ->label('Jam Mulai')
-    ->seconds(false)
-    ->displayFormat('H:i')
-    ->format('H:i:s')
-    ->native(false),
-
-Forms\Components\TimePicker::make('jam_selesai')
-    ->label('Jam Selesai')
-    ->seconds(false)
-    ->displayFormat('H:i')
-    ->format('H:i:s')
-    ->native(false),
-
-                Forms\Components\Textarea::make('keterangan')
-                    ->columnSpanFull(),
-
+                Tables\Columns\TextColumn::make('keterangan')->limit(30),
             ])
-            ->columns(2),
-    ]);
-}
-
-public static function getNavigationLabel(): string
-{
-    return 'Izin';
-}
-    
-
-   public static function table(Table $table): Table
-{
-    return $table
-        ->columns([
-
-            Tables\Columns\TextColumn::make('karyawan.nama')
-                ->label('Karyawan')
-                ->searchable(),
-
-            Tables\Columns\TextColumn::make('karyawan.nip')
-                ->label('NIP'),
-
-            Tables\Columns\TextColumn::make('tanggal_izin')
-                ->date()
-                ->label('Tanggal'),
-
-            Tables\Columns\BadgeColumn::make('jenis_izin')
-                ->colors([
-                    'warning' => 'terlambat',
-                    'danger' => 'alpha',
-                    'info' => 'dinas_luar',
-                    'success' => 'pulang_awal',
-                ])
-                ->formatStateUsing(fn ($state) => match ($state) {
-                    'terlambat' => 'Terlambat',
-                    'meninggalkan_kantor' => 'Meninggalkan Kantor',
-                    'pulang_awal' => 'Pulang Awal',
-                    'dinas_luar' => 'Dinas Luar',
-                    'alpha' => 'Alpha',
-                }),
-
-            Tables\Columns\TextColumn::make('jam_mulai'),
-            Tables\Columns\TextColumn::make('jam_selesai'),
-
-            Tables\Columns\TextColumn::make('keterangan')
-                ->limit(30),
-
-        ])
-        ->actions([
-            Tables\Actions\EditAction::make(),
-            Tables\Actions\DeleteAction::make(),
-        ])
-        ->bulkActions([
-            Tables\Actions\DeleteBulkAction::make(),
-        ]);
-}
+            ->defaultSort('id', 'desc')
+            ->filters([
+                Tables\Filters\SelectFilter::make('jenis_izin')->options(Izin::JENIS_OPTIONS),
+                Tables\Filters\SelectFilter::make('status')
+                    ->options(['Pending' => 'Pending', 'Approved' => 'Approved', 'Rejected' => 'Rejected']),
+            ])
+            ->actions([
+                Tables\Actions\EditAction::make(),
+                Tables\Actions\DeleteAction::make(),
+            ])
+            ->bulkActions([
+                Tables\Actions\DeleteBulkAction::make(),
+            ]);
+    }
 
     public static function getRelations(): array
     {
-        return [
-            //
-        ];
+        return [];
     }
 
     public static function getPages(): array
     {
         return [
-            'index' => Pages\ListIzins::route('/'),
+            'index'  => Pages\ListIzins::route('/'),
             'create' => Pages\CreateIzin::route('/create'),
-            'edit' => Pages\EditIzin::route('/{record}/edit'),
+            'edit'   => Pages\EditIzin::route('/{record}/edit'),
         ];
     }
 }

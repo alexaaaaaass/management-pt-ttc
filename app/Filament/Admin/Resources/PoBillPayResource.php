@@ -25,8 +25,9 @@ use Filament\Tables\Table;
 class PoBillPayResource extends Resource
 {
     protected static ?string $model = PoBillPay::class;
-     protected static ?string $navigationGroup = 'Finance';
-protected static ?int $navigationSort = 12;
+    protected static ?string $navigationGroup = 'Finance';
+    protected static ?int $navigationSort = 2;
+    protected static bool $shouldRegisterNavigation = false;
     protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
 
   public static function form(Form $form): Form
@@ -91,7 +92,7 @@ protected static ?int $navigationSort = 12;
 
                         $sisaFormatted = \App\Support\MoneyHelper::format($bill->sisa_tagihan, 2) ?? '0';
 
-                        $set('gudang', 'UGRMS');
+                        $set('gudang', 'TTC');
                         $set('periode', $bill->periode);
                         $set('total_tagihan', $sisaFormatted);
 
@@ -299,12 +300,12 @@ protected static ?int $navigationSort = 12;
 
     public static function getModelLabel(): string
     {
-        return 'Payment Order / Pembayaran Order';
+        return 'Payment Order';
     }
 
     public static function getPluralModelLabel(): string
     {
-        return 'Payment Order / Pembayaran Order';
+        return 'Payment Order';
     }
 
    public static function table(Table $table): Table

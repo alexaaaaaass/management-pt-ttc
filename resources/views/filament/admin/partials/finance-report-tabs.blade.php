@@ -23,6 +23,13 @@
             'color'  => '#059669',
         ],
         [
+            'label'  => 'Hutang & Piutang',
+            'sub'    => 'Pinjaman Indigama, AP & AR',
+            'url'    => url('/admin/laporan-hutang-piutang'),
+            'active' => str_contains($currentPath, 'laporan-hutang-piutang'),
+            'color'  => '#e11d48',
+        ],
+        [
             'label'  => 'Trial Balance (Summary COA)',
             'sub'    => 'Neraca Saldo 255 Akun',
             'url'    => url('/admin/report-finaces'),
