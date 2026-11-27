@@ -22,7 +22,7 @@ class MasterCOAResource extends Resource
 
     protected static ?string $navigationIcon = 'heroicon-o-scale';
 
-    protected static ?int $navigationSort = 13;
+    protected static ?int $navigationSort = 10;
 
     protected static ?string $modelLabel = 'Master Account (COA)';
 
@@ -30,7 +30,7 @@ class MasterCOAResource extends Resource
 
     public static function getNavigationLabel(): string
     {
-        return 'Master Account (COA)';
+        return 'Master Akun (COA)';
     }
 
     public static function form(Form $form): Form

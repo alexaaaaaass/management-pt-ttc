@@ -2,8 +2,10 @@
 
 namespace App\Filament\Admin\Pages;
 
+use App\Filament\Admin\Resources\OperasionalPayResource;
 use App\Models\Invoice;
 use App\Models\OperasionalPay;
+use Filament\Actions;
 use Filament\Pages\Page;
 use Filament\Support\Enums\MaxWidth;
 
@@ -11,10 +13,22 @@ class SalesCommissionPage extends Page
 {
     protected static ?string $navigationIcon = 'heroicon-o-currency-dollar';
     protected static ?string $navigationGroup = 'Finance';
-    protected static ?int $navigationSort = 3;
+    protected static ?int $navigationSort = 6;
+    protected static bool $shouldRegisterNavigation = false;
     protected static ?string $navigationLabel = 'Sales Commission';
     protected static ?string $title = 'Rekap & Pembayaran Sales Commission (Marketing)';
     protected static string $view = 'filament.admin.pages.sales-commission-page';
+
+    protected function getHeaderActions(): array
+    {
+        return [
+            Actions\Action::make('backOperasional')
+                ->label('← Kembali ke Operasional & Komisi')
+                ->icon('heroicon-o-arrow-left')
+                ->color('gray')
+                ->url(fn () => OperasionalPayResource::getUrl('index')),
+        ];
+    }
 
     public function getMaxContentWidth(): MaxWidth
     {

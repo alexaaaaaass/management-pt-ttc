@@ -356,6 +356,36 @@ Route::middleware('auth')->group(function () {
     )->name('finance.report.neraca.download');
 
     Route::get(
+        '/finance/report/hutang-piutang/preview',
+        [\App\Http\Controllers\FinancePdfController::class, 'previewHutangPiutang']
+    )->name('finance.report.hutang-piutang.preview');
+
+    Route::get(
+        '/finance/report/hutang-piutang/download',
+        [\App\Http\Controllers\FinancePdfController::class, 'downloadHutangPiutang']
+    )->name('finance.report.hutang-piutang.download');
+
+    Route::get(
+        '/finance/npb/{npbRequest}/preview',
+        [\App\Http\Controllers\FinancePdfController::class, 'previewNpb']
+    )->name('finance.npb.preview');
+
+    Route::get(
+        '/finance/npb/{npbRequest}/download',
+        [\App\Http\Controllers\FinancePdfController::class, 'downloadNpb']
+    )->name('finance.npb.download');
+
+    Route::get(
+        '/finance/npb-settlement/{npbSettlement}/preview',
+        [\App\Http\Controllers\FinancePdfController::class, 'previewNpbSettlement']
+    )->name('finance.npb-settlement.preview');
+
+    Route::get(
+        '/finance/npb-settlement/{npbSettlement}/download',
+        [\App\Http\Controllers\FinancePdfController::class, 'downloadNpbSettlement']
+    )->name('finance.npb-settlement.download');
+
+    Route::get(
         '/finance/report/general-ledger/preview',
         [\App\Http\Controllers\FinancePdfController::class, 'previewGeneralLedger']
     )->name('finance.report.general-ledger.preview');
@@ -374,6 +404,37 @@ Route::middleware('auth')->group(function () {
         '/finance/report/trial-balance/download',
         [\App\Http\Controllers\FinancePdfController::class, 'downloadTrialBalance']
     )->name('finance.report.trial-balance.download');
+
+    /*
+    |----------------------------------------------------------------------
+    | HRD & Payroll PDF Reports
+    |----------------------------------------------------------------------
+    */
+
+    Route::get('/hrd/slip-gaji/{gaji}/preview', [\App\Http\Controllers\HrdPdfController::class, 'previewSlipGaji'])
+        ->name('hrd.slip-gaji.preview');
+    Route::get('/hrd/slip-gaji/{gaji}/download', [\App\Http\Controllers\HrdPdfController::class, 'downloadSlipGaji'])
+        ->name('hrd.slip-gaji.download');
+    Route::get('/hrd/slip-gaji-batch', [\App\Http\Controllers\HrdPdfController::class, 'batchSlipGaji'])
+        ->name('hrd.slip-gaji.batch');
+    Route::get('/hrd/rekap-payroll/preview', [\App\Http\Controllers\HrdPdfController::class, 'previewRekapPayroll'])
+        ->name('hrd.rekap-payroll.preview');
+    Route::get('/hrd/payroll-borongan/{payrollBorongan}/preview', [\App\Http\Controllers\HrdPdfController::class, 'previewPayrollBorongan'])
+        ->name('hrd.borongan.preview');
+    Route::get('/hrd/payroll-borongan/{payrollBorongan}/download', [\App\Http\Controllers\HrdPdfController::class, 'downloadPayrollBorongan'])
+        ->name('hrd.borongan.download');
+    Route::get('/hrd/pinjaman/{pengPinjaman}/preview', [\App\Http\Controllers\HrdPdfController::class, 'previewPinjaman'])
+        ->name('hrd.pinjaman.preview');
+    Route::get('/hrd/pinjaman-rekap/preview', [\App\Http\Controllers\HrdPdfController::class, 'previewRekapPinjaman'])
+        ->name('hrd.pinjaman.rekap.preview');
+    Route::get('/hrd/rekap-absensi/preview', [\App\Http\Controllers\HrdPdfController::class, 'previewRekapAbsensi'])
+        ->name('hrd.rekap-absensi.preview');
+    Route::get('/hrd/payroll/template', [\App\Http\Controllers\HrdPdfController::class, 'downloadPayrollTemplate'])
+        ->name('hrd.payroll.template');
+    Route::get('/hrd/borongan/template', [\App\Http\Controllers\HrdPdfController::class, 'downloadBoronganTemplate'])
+        ->name('hrd.borongan.template');
+    Route::get('/hrd/karyawan/export', [\App\Http\Controllers\HrdPdfController::class, 'exportKaryawanExcel'])
+        ->name('hrd.karyawan.export');
 
     // Route alias / redirect untuk Master COA agar URL /admin/master-c-o-a-s tidak pernah 404
     Route::redirect('/admin/master-c-o-a-s', '/admin/master-c-o-as');

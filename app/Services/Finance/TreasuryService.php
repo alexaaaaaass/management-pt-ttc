@@ -5,6 +5,7 @@ namespace App\Services\Finance;
 use App\Models\CoaClass;
 use App\Models\CoaMovement;
 use App\Models\Gaji;
+use App\Models\HrPayrollSetting;
 use App\Models\Invoice;
 use App\Models\InvPayment;
 use App\Models\JournalEntry;
@@ -12,6 +13,9 @@ use App\Models\JournalEntryLine;
 use App\Models\Karyawan;
 use App\Models\MasterCOA;
 use App\Models\OperasionalPay;
+use App\Models\PayrollBorongan;
+use App\Models\PembPinjaman;
+use App\Models\PengPinjaman;
 use App\Models\PoBilling;
 use App\Models\PoBillPay;
 use App\Models\PoBillPayItem;
@@ -214,14 +218,84 @@ class TreasuryService
 
     public function resolveBebanGajiCoa(?Gaji $gaji = null): ?MasterCOA
     {
-        $deptCode = strtoupper((string) ($gaji?->karyawan?->departemen?->kode ?? ''));
-        if (in_array($deptCode, ['PRNT', 'SPOTUV', 'SPOTHL', 'PROD', 'FIN'])) {
+        if ($gaji && ! empty($gaji->coa_beban_id)) {
+            $explicit = MasterCOA::find((int) $gaji->coa_beban_id);
+            if ($explicit) {
+                return $explicit;
+            }
+        }
+
+        $setting = HrPayrollSetting::first();
+        $deptCode = strtoupper(trim((string) ($gaji?->karyawan?->departemen?->kode ?? '')));
+        $deptName = strtolower(trim((string) ($gaji?->karyawan?->departemen?->nama_departemen ?? '')));
+        $jabatan = strtolower(trim((string) ($gaji?->karyawan?->jabatan ?? '')));
+
+        // 1. Cost Center Produksi (HPP / COGS — 5201)
+        $isProduction = in_array($deptCode, ['PRNT', 'PRT', 'SPOTUV', 'SPOTHL', 'PROD', 'FIN', 'FNSH', 'DIEM'], true)
+            || preg_match('/printing|produksi|finishing|die\s*making|spot\s*uv|spot\s*holo|operator|borongan/i', $deptName . ' ' . $jabatan)
+            || ($gaji && in_array($gaji->tipe_payroll, ['Borongan'], true));
+
+        if ($isProduction) {
+            if ($setting?->coa_beban_gaji_produksi_id) {
+                $cfg = MasterCOA::find((int) $setting->coa_beban_gaji_produksi_id);
+                if ($cfg) {
+                    return $cfg;
+                }
+            }
             $prodCoa = $this->resolveCoa(
                 ['5201', '5200'],
                 ['Gaji Produksi', 'Tenaga Kerja Langsung']
             );
             if ($prodCoa) {
                 return $prodCoa;
+            }
+        }
+
+        // 2. Cost Center Penjualan / Marketing (6101)
+        $isSales = in_array($deptCode, ['SLS', 'MKT', 'SALES'], true)
+            || preg_match('/sales|marketing|penjualan/i', $deptName . ' ' . $jabatan);
+
+        if ($isSales) {
+            if ($setting?->coa_beban_gaji_sales_id) {
+                $cfg = MasterCOA::find((int) $setting->coa_beban_gaji_sales_id);
+                if ($cfg) {
+                    return $cfg;
+                }
+            }
+            $salesCoa = $this->resolveCoa(
+                ['6101'],
+                ['Gaji Bagian Penjualan']
+            );
+            if ($salesCoa) {
+                return $salesCoa;
+            }
+        }
+
+        // 3. Cost Center Administrasi / Purchasing / Finance (6201)
+        $isAdmin = in_array($deptCode, ['PRCHS', 'ADM', 'FINANCE', 'ACC', 'KEU'], true)
+            || preg_match('/purchasing|administrasi|keuangan|finance|accounting/i', $deptName . ' ' . $jabatan);
+
+        if ($isAdmin) {
+            if ($setting?->coa_beban_gaji_admin_id) {
+                $cfg = MasterCOA::find((int) $setting->coa_beban_gaji_admin_id);
+                if ($cfg) {
+                    return $cfg;
+                }
+            }
+            $adminCoa = $this->resolveCoa(
+                ['6201'],
+                ['Gaji Administrasi']
+            );
+            if ($adminCoa) {
+                return $adminCoa;
+            }
+        }
+
+        // 4. Cost Center Umum / HRD / PPIC (6301)
+        if ($setting?->coa_beban_gaji_umum_id) {
+            $cfg = MasterCOA::find((int) $setting->coa_beban_gaji_umum_id);
+            if ($cfg) {
+                return $cfg;
             }
         }
 
@@ -235,6 +309,150 @@ class TreasuryService
                 'account_class'       => 'Expense - Labor',
                 'financial_statement' => 'Income Statement',
                 'normal_balance'      => 'Debit',
+            ]
+        );
+    }
+
+    public function resolveBebanBpjsCoa(): ?MasterCOA
+    {
+        $setting = HrPayrollSetting::first();
+        if ($setting?->coa_beban_bpjs_id) {
+            $cfg = MasterCOA::find((int) $setting->coa_beban_bpjs_id);
+            if ($cfg) {
+                return $cfg;
+            }
+        }
+
+        return $this->resolveCoa(
+            ['6502', '6501'],
+            ['Kontribusi BPJS Ketenagakerjaan', 'Kontribusi BPJS Kesehatan', 'BPJS'],
+            [
+                'kode_akun'           => '6502',
+                'nama_akun'           => 'Kontribusi BPJS Ketenagakerjaan',
+                'account_type'        => 'Expense',
+                'account_class'       => 'Expense - HSE',
+                'financial_statement' => 'Income Statement',
+                'normal_balance'      => 'Debit',
+            ]
+        );
+    }
+
+    public function resolvePiutangKaryawanCoa(): ?MasterCOA
+    {
+        $setting = HrPayrollSetting::first();
+        if ($setting?->coa_piutang_karyawan_id) {
+            $cfg = MasterCOA::find((int) $setting->coa_piutang_karyawan_id);
+            if ($cfg) {
+                return $cfg;
+            }
+        }
+
+        return $this->resolveCoa(
+            ['1131', '602.101'],
+            ['Piutang Karyawan', 'Kasbon Karyawan'],
+            [
+                'kode_akun'           => '1131',
+                'nama_akun'           => 'Piutang Karyawan',
+                'account_type'        => 'Asset',
+                'account_class'       => 'CURRENT ASSET',
+                'financial_statement' => 'Balance Sheet',
+                'normal_balance'      => 'Debit',
+            ]
+        );
+    }
+
+    public function resolveHutangGajiCoa(): ?MasterCOA
+    {
+        $setting = HrPayrollSetting::first();
+        if ($setting?->coa_hutang_gaji_id) {
+            $cfg = MasterCOA::find((int) $setting->coa_hutang_gaji_id);
+            if ($cfg) {
+                return $cfg;
+            }
+        }
+
+        return $this->resolveCoa(
+            ['2131', '201.401'],
+            ['Gaji Terutang', 'Hutang Gaji dan Upah'],
+            [
+                'kode_akun'           => '2131',
+                'nama_akun'           => 'Gaji Terutang',
+                'account_type'        => 'Liability',
+                'account_class'       => 'Current - Accrued',
+                'financial_statement' => 'Balance Sheet',
+                'normal_balance'      => 'Credit',
+            ]
+        );
+    }
+
+    public function resolveHutangBpjsCoa(): ?MasterCOA
+    {
+        $setting = HrPayrollSetting::first();
+        if ($setting?->coa_hutang_bpjs_id) {
+            $cfg = MasterCOA::find((int) $setting->coa_hutang_bpjs_id);
+            if ($cfg) {
+                return $cfg;
+            }
+        }
+
+        return $this->resolveCoa(
+            ['2133', '2134'],
+            ['Biaya Lainnya Terutang', 'Hutang BPJS', 'Hutang kepada Karyawan'],
+            [
+                'kode_akun'           => '2133',
+                'nama_akun'           => 'Biaya Lainnya Terutang',
+                'account_type'        => 'Liability',
+                'account_class'       => 'Current - Accrued',
+                'financial_statement' => 'Balance Sheet',
+                'normal_balance'      => 'Credit',
+            ]
+        );
+    }
+
+    public function resolveHutangPph21Coa(): ?MasterCOA
+    {
+        $setting = HrPayrollSetting::first();
+        if ($setting?->coa_hutang_pph21_id) {
+            $cfg = MasterCOA::find((int) $setting->coa_hutang_pph21_id);
+            if ($cfg) {
+                return $cfg;
+            }
+        }
+
+        return $this->resolveCoa(
+            ['2122', '201.301'],
+            ['PPh 21 Terutang', 'Hutang PPh 21'],
+            [
+                'kode_akun'           => '2122',
+                'nama_akun'           => 'PPh 21 Terutang',
+                'account_type'        => 'Liability',
+                'account_class'       => 'Current - Tax',
+                'financial_statement' => 'Balance Sheet',
+                'normal_balance'      => 'Credit',
+            ]
+        );
+    }
+
+    public function resolveHutangKaryawanLainCoa(): ?MasterCOA
+    {
+        $setting = HrPayrollSetting::first();
+        if ($setting?->coa_hutang_karyawan_lain_id) {
+            $cfg = MasterCOA::find((int) $setting->coa_hutang_karyawan_lain_id);
+            if ($cfg) {
+                return $cfg;
+            }
+        }
+
+        return $this->resolveCoa(
+            ['2134', '2133'],
+            ['Hutang kepada Karyawan', 'Biaya Lainnya Terutang'],
+            [
+                'kode_akun'           => '2134',
+                'nama_akun'           => 'Hutang kepada Karyawan',
+                'account_type'        => 'Liability',
+                'account_class'       => 'CURRENT LIABILITY',
+                'financial_statement' => 'Balance Sheet',
+                'normal_balance'      => 'Credit',
             ]
         );
     }
@@ -1227,41 +1445,51 @@ class TreasuryService
 
     /*
     |--------------------------------------------------------------------------
-    | PAYROLL HOOKS (Gaji)
+    | PAYROLL HOOKS — JURNAL MULTI-LINE PSAK (Gaji, BPJS, Kasbon, PPh 21)
     |--------------------------------------------------------------------------
     */
 
-    public function postPayroll(\App\Models\Gaji $gaji): void
+    public function postPayroll(Gaji $gaji): void
     {
-        if (empty($gaji->account_kas_id) || $gaji->status !== 'Paid') {
+        if (empty($gaji->account_kas_id) || $gaji->status !== 'Paid' || ! ($gaji->post_to_ledger ?? false)) {
             return;
         }
 
-        $nominal = (float) $gaji->gaji_bersih;
-        if ($nominal <= 0) {
+        $gaji->loadMissing(['karyawan.departemen']);
+
+        $thp = round(max(0.0, (float) $gaji->gaji_bersih), 2);
+        $potPinjaman = round(max(0.0, (float) ($gaji->potongan_pinjaman ?? 0)), 2);
+        $potBpjsKaryawan = round(max(0.0, (float) ($gaji->potongan_bpjs ?? 0)), 2);
+        $bpjsPerusahaan = round(max(0.0, (float) ($gaji->bpjs_perusahaan ?? 0)), 2);
+        $potPph21 = round(max(0.0, (float) ($gaji->potongan_pph21 ?? 0)), 2);
+        $potLain = round(max(0.0, (float) ($gaji->potongan_lain ?? 0)), 2);
+
+        // Beban Gaji yang diakui (Net Gross = THP + potongan titipan/kasbon/pajak/bpjs karyawan)
+        // Dijamin 100% seimbang: DEBIT (Beban Gaji + Beban BPJS PT) === KREDIT (Kas + Piutang Karyawan + BPJS Terutang + PPh21 + Pot.Lain)
+        $bebanGaji = round($thp + $potPinjaman + $potBpjsKaryawan + $potPph21 + $potLain, 2);
+        $totalBpjsTerutang = round($potBpjsKaryawan + $bpjsPerusahaan, 2);
+
+        if ($bebanGaji <= 0 && $bpjsPerusahaan <= 0) {
             return;
+        }
+
+        $bebanGajiCoa = $this->resolveBebanGajiCoa($gaji);
+        if (! $bebanGajiCoa) {
+            return;
+        }
+
+        // Simpan jejak COA Beban yang dipakai untuk audit Cost Center
+        if ((int) $gaji->coa_beban_id !== (int) $bebanGajiCoa->id) {
+            $gaji->updateQuietly(['coa_beban_id' => $bebanGajiCoa->id]);
         }
 
         $refNo = $gaji->kode_slip;
         $tanggal = $gaji->tanggal_pembayaran ? Carbon::parse($gaji->tanggal_pembayaran)->toDateString() : now()->toDateString();
         $namaKaryawan = $gaji->karyawan?->nama ?? "Karyawan #{$gaji->karyawan_id}";
-        $desc = "Pembayaran Gaji Karyawan {$namaKaryawan} Periode {$gaji->periode} ({$refNo})";
 
-        // 1. KREDIT: Kas/Bank berkurang
-        $this->postMovement([
-            'coa_id'         => $gaji->account_kas_id,
-            'tanggal'        => $tanggal,
-            'reference_type' => 'PAYROLL',
-            'reference_id'   => $gaji->id,
-            'reference_no'   => $refNo,
-            'movement_type'  => 'KREDIT',
-            'nominal'        => $nominal,
-            'remarks'        => $desc,
-        ]);
-
-        // 2. DEBIT: Beban Gaji bertambah (Double-Entry)
-        $bebanGajiCoa = $this->resolveBebanGajiCoa($gaji);
-        if ($bebanGajiCoa && (int) $bebanGajiCoa->id !== (int) $gaji->account_kas_id) {
+        // === SISI DEBIT ===
+        // 1. DEBIT: Beban Gaji (5201 Produksi / 6101 Sales / 6201 Admin / 6301 Umum)
+        if ($bebanGaji > 0) {
             $this->postMovement([
                 'coa_id'         => $bebanGajiCoa->id,
                 'tanggal'        => $tanggal,
@@ -1269,23 +1497,369 @@ class TreasuryService
                 'reference_id'   => $gaji->id,
                 'reference_no'   => $refNo,
                 'movement_type'  => 'DEBIT',
-                'nominal'        => $nominal,
-                'remarks'        => "Beban Gaji Karyawan {$namaKaryawan} Periode {$gaji->periode} ({$refNo})",
+                'nominal'        => $bebanGaji,
+                'remarks'        => "Beban Gaji {$namaKaryawan} Periode {$gaji->periode} ({$refNo})",
             ]);
+        }
+
+        // 2. DEBIT: Kontribusi BPJS Perusahaan (6502) bila ada porsi perusahaan (misal 3,7%)
+        if ($bpjsPerusahaan > 0) {
+            $bpjsBebanCoa = $this->resolveBebanBpjsCoa();
+            if ($bpjsBebanCoa) {
+                $this->postMovement([
+                    'coa_id'         => $bpjsBebanCoa->id,
+                    'tanggal'        => $tanggal,
+                    'reference_type' => 'PAYROLL',
+                    'reference_id'   => $gaji->id,
+                    'reference_no'   => $refNo,
+                    'movement_type'  => 'DEBIT',
+                    'nominal'        => $bpjsPerusahaan,
+                    'remarks'        => "Beban BPJS Perusahaan {$namaKaryawan} Periode {$gaji->periode} ({$refNo})",
+                ]);
+            }
+        }
+
+        // === SISI KREDIT ===
+        // 3. KREDIT: Kas/Bank Pembayar sebesar Take Home Pay (THP)
+        if ($thp > 0) {
+            $this->postMovement([
+                'coa_id'         => $gaji->account_kas_id,
+                'tanggal'        => $tanggal,
+                'reference_type' => 'PAYROLL',
+                'reference_id'   => $gaji->id,
+                'reference_no'   => $refNo,
+                'movement_type'  => 'KREDIT',
+                'nominal'        => $thp,
+                'remarks'        => "Transfer/Bayar Gaji (THP) {$namaKaryawan} Periode {$gaji->periode} ({$refNo})",
+            ]);
+        }
+
+        // 4. KREDIT: Piutang Karyawan / Kasbon (1131) berkurang saat dipotong di slip gaji
+        if ($potPinjaman > 0) {
+            $piutangKaryawanCoa = $this->resolvePiutangKaryawanCoa();
+            if ($piutangKaryawanCoa) {
+                $this->postMovement([
+                    'coa_id'         => $piutangKaryawanCoa->id,
+                    'tanggal'        => $tanggal,
+                    'reference_type' => 'PAYROLL',
+                    'reference_id'   => $gaji->id,
+                    'reference_no'   => $refNo,
+                    'movement_type'  => 'KREDIT',
+                    'nominal'        => $potPinjaman,
+                    'remarks'        => "Pelunasan Kasbon/Pinjaman via Gaji {$namaKaryawan} Periode {$gaji->periode} ({$refNo})",
+                ]);
+            }
+        }
+
+        // 5. KREDIT: Kewajiban Setor BPJS (2133) = Potongan Karyawan + Porsi Perusahaan
+        if ($totalBpjsTerutang > 0) {
+            $hutangBpjsCoa = $this->resolveHutangBpjsCoa();
+            if ($hutangBpjsCoa) {
+                $this->postMovement([
+                    'coa_id'         => $hutangBpjsCoa->id,
+                    'tanggal'        => $tanggal,
+                    'reference_type' => 'PAYROLL',
+                    'reference_id'   => $gaji->id,
+                    'reference_no'   => $refNo,
+                    'movement_type'  => 'KREDIT',
+                    'nominal'        => $totalBpjsTerutang,
+                    'remarks'        => "BPJS Terutang (Karyawan + PT) {$namaKaryawan} Periode {$gaji->periode} ({$refNo})",
+                ]);
+            }
+        }
+
+        // 6. KREDIT: PPh 21 Terutang (2122)
+        if ($potPph21 > 0) {
+            $pph21Coa = $this->resolveHutangPph21Coa();
+            if ($pph21Coa) {
+                $this->postMovement([
+                    'coa_id'         => $pph21Coa->id,
+                    'tanggal'        => $tanggal,
+                    'reference_type' => 'PAYROLL',
+                    'reference_id'   => $gaji->id,
+                    'reference_no'   => $refNo,
+                    'movement_type'  => 'KREDIT',
+                    'nominal'        => $potPph21,
+                    'remarks'        => "PPh 21 Terutang {$namaKaryawan} Periode {$gaji->periode} ({$refNo})",
+                ]);
+            }
+        }
+
+        // 7. KREDIT: Potongan Tabungan / Lainnya Karyawan (2134)
+        if ($potLain > 0) {
+            $hutangLainCoa = $this->resolveHutangKaryawanLainCoa();
+            if ($hutangLainCoa) {
+                $this->postMovement([
+                    'coa_id'         => $hutangLainCoa->id,
+                    'tanggal'        => $tanggal,
+                    'reference_type' => 'PAYROLL',
+                    'reference_id'   => $gaji->id,
+                    'reference_no'   => $refNo,
+                    'movement_type'  => 'KREDIT',
+                    'nominal'        => $potLain,
+                    'remarks'        => "Titipan/Tabungan/Potongan Lain {$namaKaryawan} Periode {$gaji->periode} ({$refNo})",
+                ]);
+            }
         }
     }
 
-    public function syncPayroll(\App\Models\Gaji $gaji): void
+    public function syncPayroll(Gaji $gaji): void
     {
         $this->deleteMovementsFor('PAYROLL', $gaji->id);
-        if ($gaji->status === 'Paid') {
+        if ($gaji->status === 'Paid' && ($gaji->post_to_ledger ?? false)) {
             $this->postPayroll($gaji);
         }
     }
 
-    public function deletePayroll(\App\Models\Gaji $gaji): void
+    public function deletePayroll(Gaji $gaji): void
     {
         $this->deleteMovementsFor('PAYROLL', $gaji->id);
+    }
+
+    public function postPayrollBorongan(PayrollBorongan $pb): void
+    {
+        if (empty($pb->account_kas_id) || $pb->status !== 'Paid' || ! $pb->post_to_ledger) {
+            return;
+        }
+
+        $nominal = round((float) $pb->grand_total, 2);
+        if ($nominal <= 0) {
+            return;
+        }
+
+        $refNo = $pb->kode_bukti;
+        $tanggal = $pb->tanggal_transaksi ? Carbon::parse($pb->tanggal_transaksi)->toDateString() : now()->toDateString();
+        $desc = "Pembayaran Payroll Borongan {$refNo} Periode {$pb->periode}";
+
+        // 1. KREDIT: Kas/Bank berkurang
+        $this->postMovement([
+            'coa_id'         => $pb->account_kas_id,
+            'tanggal'        => $tanggal,
+            'reference_type' => 'PAYROLL_BORONGAN',
+            'reference_id'   => $pb->id,
+            'reference_no'   => $refNo,
+            'movement_type'  => 'KREDIT',
+            'nominal'        => $nominal,
+            'remarks'        => $desc,
+        ]);
+
+        // 2. DEBIT: Beban Gaji Produksi / Tenaga Kerja Langsung (5201)
+        $setting = HrPayrollSetting::first();
+        $bebanCoa = ! empty($pb->coa_beban_id)
+            ? MasterCOA::find((int) $pb->coa_beban_id)
+            : ($setting?->coa_beban_gaji_produksi_id ? MasterCOA::find((int) $setting->coa_beban_gaji_produksi_id) : null);
+
+        if (! $bebanCoa) {
+            $bebanCoa = $this->resolveCoa(
+                ['5201', '5200', '6301'],
+                ['Gaji Produksi', 'Tenaga Kerja Langsung', 'Gaji Karyawan Umum']
+            );
+        }
+
+        if ($bebanCoa && (int) $bebanCoa->id !== (int) $pb->account_kas_id) {
+            if ((int) $pb->coa_beban_id !== (int) $bebanCoa->id) {
+                $pb->updateQuietly(['coa_beban_id' => $bebanCoa->id]);
+            }
+
+            $this->postMovement([
+                'coa_id'         => $bebanCoa->id,
+                'tanggal'        => $tanggal,
+                'reference_type' => 'PAYROLL_BORONGAN',
+                'reference_id'   => $pb->id,
+                'reference_no'   => $refNo,
+                'movement_type'  => 'DEBIT',
+                'nominal'        => $nominal,
+                'remarks'        => "Beban Tenaga Kerja Borongan {$refNo} Periode {$pb->periode}",
+            ]);
+        }
+    }
+
+    public function syncPayrollBorongan(PayrollBorongan $pb): void
+    {
+        $this->deleteMovementsFor('PAYROLL_BORONGAN', $pb->id);
+        if ($pb->status === 'Paid' && $pb->post_to_ledger) {
+            $this->postPayrollBorongan($pb);
+        }
+    }
+
+    public function deletePayrollBorongan(PayrollBorongan $pb): void
+    {
+        $this->deleteMovementsFor('PAYROLL_BORONGAN', $pb->id);
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | PINJAMAN / KASBON KARYAWAN & SETORAN BPJS HOOKS
+    |--------------------------------------------------------------------------
+    */
+
+    public function postPinjamanDisbursement(PengPinjaman $pinjaman): void
+    {
+        if (! $pinjaman->is_disbursed || ! $pinjaman->post_to_ledger || empty($pinjaman->account_kas_id)) {
+            return;
+        }
+
+        $nominal = round((float) $pinjaman->nilai_pinjaman, 2);
+        if ($nominal <= 0) {
+            return;
+        }
+
+        $piutangCoa = $this->resolvePiutangKaryawanCoa();
+        if (! $piutangCoa || (int) $piutangCoa->id === (int) $pinjaman->account_kas_id) {
+            return;
+        }
+
+        $refNo = $pinjaman->nomor_bukti ?: 'PJM-' . $pinjaman->id;
+        $tanggal = $pinjaman->tanggal_pencairan
+            ? Carbon::parse($pinjaman->tanggal_pencairan)->toDateString()
+            : ($pinjaman->tanggal_pengajuan ? Carbon::parse($pinjaman->tanggal_pengajuan)->toDateString() : now()->toDateString());
+        $nama = $pinjaman->karyawan?->nama ?? "Karyawan #{$pinjaman->karyawan_id}";
+
+        // 1. DEBIT: Piutang Karyawan (1131) bertambah
+        $this->postMovement([
+            'coa_id'         => $piutangCoa->id,
+            'tanggal'        => $tanggal,
+            'reference_type' => 'PINJAMAN_CAIR',
+            'reference_id'   => $pinjaman->id,
+            'reference_no'   => $refNo,
+            'movement_type'  => 'DEBIT',
+            'nominal'        => $nominal,
+            'remarks'        => "Pencairan Kasbon/Pinjaman Karyawan {$nama} ({$refNo})",
+        ]);
+
+        // 2. KREDIT: Kas/Bank Pembayar berkurang
+        $this->postMovement([
+            'coa_id'         => $pinjaman->account_kas_id,
+            'tanggal'        => $tanggal,
+            'reference_type' => 'PINJAMAN_CAIR',
+            'reference_id'   => $pinjaman->id,
+            'reference_no'   => $refNo,
+            'movement_type'  => 'KREDIT',
+            'nominal'        => $nominal,
+            'remarks'        => "Pengeluaran Kas Pencairan Kasbon {$nama} ({$refNo})",
+        ]);
+    }
+
+    public function syncPinjamanDisbursement(PengPinjaman $pinjaman): void
+    {
+        $this->deleteMovementsFor('PINJAMAN_CAIR', $pinjaman->id);
+        if ($pinjaman->is_disbursed && $pinjaman->post_to_ledger) {
+            $this->postPinjamanDisbursement($pinjaman);
+        }
+    }
+
+    public function deletePinjamanDisbursement(PengPinjaman $pinjaman): void
+    {
+        $this->deleteMovementsFor('PINJAMAN_CAIR', $pinjaman->id);
+    }
+
+    public function postPinjamanManualPayment(PembPinjaman $pemb): void
+    {
+        // Potongan pinjaman lewat slip gaji sudah dikredit otomatis di postPayroll -> anti dobel!
+        if (! empty($pemb->gaji_id) || ! $pemb->post_to_ledger || empty($pemb->account_kas_id)) {
+            return;
+        }
+
+        $nominal = round((float) $pemb->nominal_pembayaran, 2);
+        if ($nominal <= 0) {
+            return;
+        }
+
+        $piutangCoa = $this->resolvePiutangKaryawanCoa();
+        if (! $piutangCoa || (int) $piutangCoa->id === (int) $pemb->account_kas_id) {
+            return;
+        }
+
+        $refNo = $pemb->no_bukti ?: 'BYR-' . $pemb->id;
+        $tanggal = $pemb->tanggal_pembayaran ? Carbon::parse($pemb->tanggal_pembayaran)->toDateString() : now()->toDateString();
+        $nama = $pemb->karyawan?->nama ?? "Karyawan #{$pemb->karyawan_id}";
+
+        // 1. DEBIT: Kas/Bank bertambah
+        $this->postMovement([
+            'coa_id'         => $pemb->account_kas_id,
+            'tanggal'        => $tanggal,
+            'reference_type' => 'PINJAMAN_BAYAR',
+            'reference_id'   => $pemb->id,
+            'reference_no'   => $refNo,
+            'movement_type'  => 'DEBIT',
+            'nominal'        => $nominal,
+            'remarks'        => "Penerimaan Cicilan Kasbon Manual {$nama} ({$refNo})",
+        ]);
+
+        // 2. KREDIT: Piutang Karyawan (1131) berkurang
+        $this->postMovement([
+            'coa_id'         => $piutangCoa->id,
+            'tanggal'        => $tanggal,
+            'reference_type' => 'PINJAMAN_BAYAR',
+            'reference_id'   => $pemb->id,
+            'reference_no'   => $refNo,
+            'movement_type'  => 'KREDIT',
+            'nominal'        => $nominal,
+            'remarks'        => "Pelunasan Piutang Karyawan Manual {$nama} ({$refNo})",
+        ]);
+    }
+
+    public function syncPinjamanManualPayment(PembPinjaman $pemb): void
+    {
+        $this->deleteMovementsFor('PINJAMAN_BAYAR', $pemb->id);
+        if (empty($pemb->gaji_id) && $pemb->post_to_ledger) {
+            $this->postPinjamanManualPayment($pemb);
+        }
+    }
+
+    public function deletePinjamanManualPayment(PembPinjaman $pemb): void
+    {
+        $this->deleteMovementsFor('PINJAMAN_BAYAR', $pemb->id);
+    }
+
+    /**
+     * Posting Penyetoran Kewajiban BPJS ke Kas/Bank (DEBIT 2133 BPJS Terutang, KREDIT 111x Kas/Bank).
+     */
+    public function postBpjsRemittance(string $periode, float $nominal, int $accountKasId, string $tanggal, ?string $keterangan = null): int
+    {
+        $nominal = round($nominal, 2);
+        if ($nominal <= 0) {
+            throw ValidationException::withMessages(['nominal' => 'Nominal setor BPJS harus lebih besar dari 0.']);
+        }
+
+        $hutangBpjsCoa = $this->resolveHutangBpjsCoa();
+        if (! $hutangBpjsCoa || (int) $hutangBpjsCoa->id === $accountKasId) {
+            throw ValidationException::withMessages(['account_kas_id' => 'Akun BPJS Terutang / Kas Pembayar tidak valid.']);
+        }
+
+        $refId = (int) preg_replace('/\D/', '', $periode) ?: (int) now()->format('Ym');
+        $refNo = 'BPJS-' . str_replace('-', '', $periode);
+        $ket = $keterangan ?: "Penyetoran Iuran BPJS Ketenagakerjaan & Kesehatan Periode {$periode}";
+
+        DB::transaction(function () use ($hutangBpjsCoa, $accountKasId, $tanggal, $refId, $refNo, $nominal, $ket) {
+            $this->deleteMovementsFor('BPJS_REMITTANCE', $refId);
+
+            // DEBIT: Kewajiban BPJS Terutang (2133) berkurang
+            $this->postMovement([
+                'coa_id'         => $hutangBpjsCoa->id,
+                'tanggal'        => $tanggal,
+                'reference_type' => 'BPJS_REMITTANCE',
+                'reference_id'   => $refId,
+                'reference_no'   => $refNo,
+                'movement_type'  => 'DEBIT',
+                'nominal'        => $nominal,
+                'remarks'        => $ket,
+            ]);
+
+            // KREDIT: Kas/Bank berkurang
+            $this->postMovement([
+                'coa_id'         => $accountKasId,
+                'tanggal'        => $tanggal,
+                'reference_type' => 'BPJS_REMITTANCE',
+                'reference_id'   => $refId,
+                'reference_no'   => $refNo,
+                'movement_type'  => 'KREDIT',
+                'nominal'        => $nominal,
+                'remarks'        => "Transfer {$ket}",
+            ]);
+        });
+
+        return $refId;
     }
 
     /*
@@ -1520,7 +2094,15 @@ class TreasuryService
             return false;
         }
 
-        if (\App\Models\Gaji::where('account_kas_id', $coa->id)->exists()) {
+        if (Gaji::where('account_kas_id', $coa->id)->orWhere('coa_beban_id', $coa->id)->exists()) {
+            return false;
+        }
+
+        if (PayrollBorongan::where('account_kas_id', $coa->id)->orWhere('coa_beban_id', $coa->id)->exists()) {
+            return false;
+        }
+
+        if (PengPinjaman::where('account_kas_id', $coa->id)->exists() || PembPinjaman::where('account_kas_id', $coa->id)->exists()) {
             return false;
         }
 

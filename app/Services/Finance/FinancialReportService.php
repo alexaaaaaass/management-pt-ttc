@@ -3,9 +3,11 @@
 namespace App\Services\Finance;
 
 use App\Models\CoaMovement;
+use App\Models\Invoice;
 use App\Models\MasterCOA;
 use App\Models\MasterPrinting;
 use App\Models\OperasionalPay;
+use App\Models\PoBilling;
 use App\Models\Printing;
 use Carbon\Carbon;
 
@@ -487,19 +489,31 @@ class FinancialReportService
         ?string $startDate = null,
         ?string $endDate = null,
         ?string $coaId = null,
-        ?string $refType = null
+        ?string $refType = null,
+        ?string $search = null
     ): array {
-        $start = $startDate ?: '2026-01-01';
+        $start = $startDate ?: '2025-01-01';
         $end = $endDate ?: '2026-12-31';
 
-        $allMovementsInPeriod = CoaMovement::with(['coa', 'user'])
+        $allMovementsInPeriod = CoaMovement::with('coa')
             ->whereDate('tanggal', '>=', $start)
             ->whereDate('tanggal', '<=', $end)
             ->orderBy('tanggal', 'asc')
             ->orderBy('id', 'asc')
             ->get();
 
+        $activeCoaIds = $allMovementsInPeriod->pluck('coa_id')->unique()->values()->all();
+        $priorByCoa = empty($activeCoaIds)
+            ? collect()
+            : CoaMovement::whereIn('coa_id', $activeCoaIds)
+                ->whereDate('tanggal', '<', $start)
+                ->selectRaw('coa_id, COALESCE(SUM(debit),0) as d, COALESCE(SUM(kredit),0) as k')
+                ->groupBy('coa_id')
+                ->get()
+                ->keyBy('coa_id');
+
         $runningByCoa = [];
+        $endingRunningByCoa = [];
         foreach ($allMovementsInPeriod->groupBy('coa_id') as $cId => $group) {
             $coa = $group->first()?->coa;
             $code = trim((string) ($coa?->kode_akun ?? ''));
@@ -508,10 +522,7 @@ class FinancialReportService
             $openDebit = (float) ($coa?->saldo_debit ?? 0);
             $openKredit = (float) ($coa?->saldo_kredit ?? 0);
 
-            $prior = CoaMovement::where('coa_id', $cId)
-                ->whereDate('tanggal', '<', $start)
-                ->selectRaw('COALESCE(SUM(debit),0) as d, COALESCE(SUM(kredit),0) as k')
-                ->first();
+            $prior = $priorByCoa->get($cId);
 
             $running = $isCreditNormal
                 ? (($openKredit - $openDebit) + ((float) ($prior->k ?? 0) - (float) ($prior->d ?? 0)))
@@ -523,14 +534,28 @@ class FinancialReportService
                 $running += $isCreditNormal ? ($k - $d) : ($d - $k);
                 $runningByCoa[$m->id] = round($running, 2);
             }
+            $endingRunningByCoa[$cId] = round($running, 2);
         }
 
-        $filtered = $allMovementsInPeriod->filter(function (CoaMovement $m) use ($coaId, $refType) {
+        $trimmedSearch = trim((string) ($search ?? ''));
+        $filtered = $allMovementsInPeriod->filter(function (CoaMovement $m) use ($coaId, $refType, $trimmedSearch) {
             if ($coaId !== null && $coaId !== '' && (string) $m->coa_id !== (string) $coaId) {
                 return false;
             }
             if ($refType !== null && $refType !== '' && (string) $m->reference_type !== (string) $refType) {
                 return false;
+            }
+            if ($trimmedSearch !== '') {
+                $q = mb_strtolower($trimmedSearch);
+                $haystack = mb_strtolower(
+                    ($m->reference_no ?? '') . ' ' .
+                    ($m->remarks ?? '') . ' ' .
+                    ($m->coa?->kode_akun ?? '') . ' ' .
+                    ($m->coa?->nama_akun ?? '')
+                );
+                if (! str_contains($haystack, $q)) {
+                    return false;
+                }
             }
             return true;
         })->values();
@@ -542,11 +567,15 @@ class FinancialReportService
                 'INVOICE'          => ['label' => 'Invoice Penjualan'],
                 'INV_PAYMENT'      => ['label' => 'Pembayaran Bon/Invoice'],
                 'OPERASIONAL_PAY'  => ['label' => 'Operasional / Komisi'],
-                'JOURNAL_MEMORIAL' => ['label' => 'Jurnal Memorial / HPP'],
+                'JOURNAL_MEMORIAL' => ['label' => 'Jurnal Memorial / Non-Kas'],
                 'TRANS_KAS'        => ['label' => 'Kas Masuk/Keluar'],
                 'TRANS_BANK'       => ['label' => 'Bank Masuk/Keluar'],
                 'PO_BILLING'       => ['label' => 'Tagihan PO'],
                 'PO_BILL_PAY'      => ['label' => 'Pembayaran PO'],
+                'NPB_DISBURSEMENT' => ['label' => 'Pencairan NPB'],
+                'NPB_SETTLEMENT'   => ['label' => 'Penyelesaian NPB (LPJ)'],
+                'PAYROLL'          => ['label' => 'Penggajian (Payroll)'],
+                'PAYROLL_BORONGAN' => ['label' => 'Payroll Borongan'],
                 default            => ['label' => $m->reference_type ?: '-'],
             };
 
@@ -571,21 +600,323 @@ class FinancialReportService
         $selisih = round(abs($totalDebit - $totalKredit), 2);
 
         $selectedAccount = null;
+        $filteredNet = null;
+        $accountEndingBalance = null;
         if ($coaId) {
             $selectedAccount = MasterCOA::find($coaId);
+            if ($selectedAccount) {
+                $selCode = trim((string) $selectedAccount->kode_akun);
+                $selCreditNormal = str_starts_with($selCode, '2') || str_starts_with($selCode, '3') || str_starts_with($selCode, '4');
+                $filteredNet = $selCreditNormal
+                    ? round($totalKredit - $totalDebit, 2)
+                    : round($totalDebit - $totalKredit, 2);
+                $accountEndingBalance = $endingRunningByCoa[(int) $coaId] ?? $filteredNet;
+            }
         }
 
         return [
-            'start_date'        => $start,
-            'end_date'          => $end,
-            'rows'              => $rows,
-            'total_debit'       => $totalDebit,
-            'total_kredit'      => $totalKredit,
-            'selisih'           => $selisih,
-            'is_balanced'       => $selisih < 1.0,
-            'total_rows'        => count($rows),
-            'selected_account'  => $selectedAccount,
-            'selected_ref_type' => $refType,
+            'start_date'             => $start,
+            'end_date'               => $end,
+            'rows'                   => $rows,
+            'total_debit'            => $totalDebit,
+            'total_kredit'           => $totalKredit,
+            'selisih'                => $selisih,
+            'is_balanced'            => $selisih < 1.0,
+            'total_rows'             => count($rows),
+            'selected_account'       => $selectedAccount,
+            'selected_ref_type'      => $refType,
+            'search_query'           => $trimmedSearch,
+            'filtered_net'           => $filteredNet,
+            'account_ending_balance' => $accountEndingBalance,
+        ];
+    }
+
+    /**
+     * Hitung Laporan Kartu Hutang, Piutang & Pinjaman PT Indigama (Buku Besar + Monitoring Operasional)
+     */
+    public function getDebtReceivableReport(?string $asOfDate = null): array
+    {
+        $end = $asOfDate ? Carbon::parse($asOfDate)->toDateString() : now()->toDateString();
+
+        $targetCoas = MasterCOA::query()
+            ->where(function ($q) {
+                $q->where('kode_akun', 'like', '2%')
+                    ->orWhere('kode_akun', 'like', '112%')
+                    ->orWhere('kode_akun', 'like', '113%');
+            })
+            ->orderBy('kode_akun')
+            ->get();
+
+        $targetCoaIds = $targetCoas->pluck('id')->all();
+
+        $movements = empty($targetCoaIds)
+            ? collect()
+            : CoaMovement::with('coa')
+                ->whereIn('coa_id', $targetCoaIds)
+                ->whereDate('tanggal', '<=', $end)
+                ->orderBy('tanggal', 'asc')
+                ->orderBy('id', 'asc')
+                ->get();
+
+        $movsByCoa = $movements->groupBy('coa_id');
+
+        $refLabel = fn (?string $rt) => match ($rt) {
+            'INVOICE'          => 'Invoice Penjualan',
+            'INV_PAYMENT'      => 'Pembayaran Invoice',
+            'OPERASIONAL_PAY'  => 'Operasional / Komisi',
+            'JOURNAL_MEMORIAL' => 'Jurnal Memorial (Non-Kas)',
+            'TRANS_KAS'        => 'Kas Masuk/Keluar',
+            'TRANS_BANK'       => 'Bank Masuk/Keluar',
+            'PO_BILLING'       => 'Tagihan Supplier (PO)',
+            'PO_BILL_PAY'      => 'Pembayaran Supplier',
+            'PAYROLL'          => 'Payroll Karyawan (HRD)',
+            'PAYROLL_BORONGAN' => 'Payroll Borongan (HRD)',
+            'PINJAMAN_CAIR'    => 'Pencairan Kasbon Karyawan',
+            'PINJAMAN_BAYAR'   => 'Cicilan Kasbon Manual',
+            'BPJS_REMITTANCE'  => 'Penyetoran BPJS',
+            'NPB_DISBURSEMENT' => 'Pencairan Dana NPB',
+            'NPB_SETTLEMENT'   => 'Penyelesaian NPB (LPJ)',
+            default            => $rt ?: '-',
+        };
+
+        $pinjamanItems = [];
+        $pinjamanLedgerRows = [];
+        $hutangOpsItems = [];
+        $hutangOpsRows = [];
+        $piutangItems = [];
+        $piutangLedgerRows = [];
+        $anomalies = [];
+
+        foreach ($targetCoas as $coa) {
+            $code = trim((string) $coa->kode_akun);
+            $group = $movsByCoa->get($coa->id, collect());
+            $openD = round((float) ($coa->saldo_debit ?? 0), 2);
+            $openK = round((float) ($coa->saldo_kredit ?? 0), 2);
+            $mutD = round((float) $group->sum('debit'), 2);
+            $mutK = round((float) $group->sum('kredit'), 2);
+
+            $hasActivity = $group->isNotEmpty() || abs($openD) >= 0.01 || abs($openK) >= 0.01;
+            if (! $hasActivity && $code !== '2144') {
+                continue;
+            }
+
+            if (str_starts_with($code, '2')) {
+                $totalKredit = round($openK + $mutK, 2);
+                $totalDebit = round($openD + $mutD, 2);
+                $sisa = round($totalKredit - $totalDebit, 2);
+
+                $isLoan = str_starts_with($code, '214') || str_starts_with($code, '22');
+
+                $running = round($openK - $openD, 2);
+                foreach ($group as $m) {
+                    $pinjam = round((float) $m->kredit, 2);
+                    $bayar = round((float) $m->debit, 2);
+                    $running = round($running + $pinjam - $bayar, 2);
+                    $row = [
+                        'id'             => $m->id,
+                        'tanggal'        => Carbon::parse($m->tanggal)->format('d/m/Y'),
+                        'coa_id'         => $coa->id,
+                        'kode_akun'      => $code,
+                        'nama_akun'      => $coa->nama_akun,
+                        'ref_type'       => $m->reference_type,
+                        'ref_label'      => $refLabel($m->reference_type),
+                        'reference_no'   => $m->reference_no ?: '-',
+                        'remarks'        => $m->remarks ?: '-',
+                        'tambah_hutang'  => $pinjam,
+                        'bayar_hutang'   => $bayar,
+                        'saldo_berjalan' => $running,
+                    ];
+                    if ($isLoan) {
+                        $pinjamanLedgerRows[] = $row;
+                    } else {
+                        $hutangOpsRows[] = $row;
+                    }
+                }
+
+                if ($isLoan) {
+                    $pinjamanItems[] = [
+                        'coa_id'      => $coa->id,
+                        'kode_akun'   => $code,
+                        'nama_akun'   => $coa->nama_akun,
+                        'tx_count'    => $group->count(),
+                        'total_pinjam'=> $totalKredit,
+                        'total_bayar' => $totalDebit,
+                        'sisa_hutang' => $sisa,
+                        'is_indigama' => str_contains(strtoupper($coa->nama_akun), 'INDIGAMA') || $code === '2144',
+                    ];
+                } else {
+                    $kategori = match (true) {
+                        str_starts_with($code, '211') => 'Utang Usaha / Supplier',
+                        str_starts_with($code, '212') => 'Hutang Pajak',
+                        str_starts_with($code, '213') => 'Biaya Terutang / Accrued',
+                        str_starts_with($code, '215') => 'Uang Muka Penjualan',
+                        default                       => 'Kewajiban Lainnya',
+                    };
+                    $isAnomaly = $sisa < -0.01;
+                    $hutangOpsItems[] = [
+                        'coa_id'      => $coa->id,
+                        'kode_akun'   => $code,
+                        'nama_akun'   => $coa->nama_akun,
+                        'kategori'    => $kategori,
+                        'tx_count'    => $group->count(),
+                        'total_hutang'=> $totalKredit,
+                        'total_bayar' => $totalDebit,
+                        'sisa_hutang' => $sisa,
+                        'is_anomaly'  => $isAnomaly,
+                    ];
+                    if ($isAnomaly) {
+                        $anomalies[] = [
+                            'kode_akun' => $code,
+                            'nama_akun' => $coa->nama_akun,
+                            'saldo'     => $sisa,
+                            'pesan'     => "Akun {$code} ({$coa->nama_akun}) bersaldo minus karena terdapat pencatatan pembayaran hutang tanpa saldo awal/jurnal pengakuan hutang di sisi Kredit sebelumnya.",
+                        ];
+                    }
+                }
+            } else {
+                // Kelompok Piutang: 112x (Piutang Usaha) & 113x (Piutang Karyawan / Lainnya)
+                $totalDebit = round($openD + $mutD, 2);
+                $totalKredit = round($openK + $mutK, 2);
+                $sisa = round($totalDebit - $totalKredit, 2);
+
+                $running = round($openD - $openK, 2);
+                foreach ($group as $m) {
+                    $tambah = round((float) $m->debit, 2);
+                    $lunas = round((float) $m->kredit, 2);
+                    $running = round($running + $tambah - $lunas, 2);
+                    $piutangLedgerRows[] = [
+                        'id'             => $m->id,
+                        'tanggal'        => Carbon::parse($m->tanggal)->format('d/m/Y'),
+                        'coa_id'         => $coa->id,
+                        'kode_akun'      => $code,
+                        'nama_akun'      => $coa->nama_akun,
+                        'ref_type'       => $m->reference_type,
+                        'ref_label'      => $refLabel($m->reference_type),
+                        'reference_no'   => $m->reference_no ?: '-',
+                        'remarks'        => $m->remarks ?: '-',
+                        'tambah_piutang' => $tambah,
+                        'lunas_piutang'  => $lunas,
+                        'saldo_berjalan' => $running,
+                    ];
+                }
+
+                $piutangItems[] = [
+                    'coa_id'        => $coa->id,
+                    'kode_akun'     => $code,
+                    'nama_akun'     => $coa->nama_akun,
+                    'kategori'      => str_starts_with($code, '112') ? 'Piutang Usaha (Customer)' : 'Piutang Karyawan / Kasbon',
+                    'tx_count'      => $group->count(),
+                    'total_piutang' => $totalDebit,
+                    'total_lunas'   => $totalKredit,
+                    'sisa_piutang'  => $sisa,
+                ];
+            }
+        }
+
+        // Monitoring Dokumen Operasional: Invoice Belum Lunas (AR) & PO Billing Belum Lunas (AP)
+        $openInvoices = Invoice::with(['customer', 'suratJalan.salesOrder.customer'])
+            ->where('sisa_tagihan', '>', 0.01)
+            ->orderBy('tanggal_invoice', 'desc')
+            ->get()
+            ->map(function (Invoice $inv) {
+                $cust = $inv->customer?->nama_customer
+                    ?? $inv->suratJalan?->salesOrder?->customer?->nama_customer
+                    ?? ($inv->kepada ?: '-');
+                return [
+                    'id'                 => $inv->id,
+                    'kode_invoice'       => $inv->kode_invoice,
+                    'customer'           => $cust,
+                    'tanggal_invoice'    => $inv->tanggal_invoice ? Carbon::parse($inv->tanggal_invoice)->format('d/m/Y') : '-',
+                    'tanggal_jatuh_tempo'=> $inv->tanggal_jatuh_tempo ? Carbon::parse($inv->tanggal_jatuh_tempo)->format('d/m/Y') : '-',
+                    'grand_total'        => round((float) $inv->grand_total, 2),
+                    'total_payment'      => round((float) $inv->total_payment, 2),
+                    'sisa_tagihan'       => round((float) $inv->sisa_tagihan, 2),
+                    'status'             => $inv->status ?: 'Unpaid',
+                ];
+            })
+            ->values()
+            ->all();
+
+        $openPoBillings = PoBilling::with(['supplier', 'purchaseOrder'])
+            ->withSum('payments', 'total_pembayaran')
+            ->orderByDesc('tanggal_transaksi')
+            ->get()
+            ->map(function (PoBilling $bill) {
+                $paid = round((float) ($bill->payments_sum_total_pembayaran ?? 0), 2);
+                $grand = round((float) $bill->grand_total, 2);
+                $sisa = max(0.0, round($grand - $paid, 2));
+                return [
+                    'id'                 => $bill->id,
+                    'kode_tagihan'       => $bill->kode_tagihan,
+                    'supplier'           => $bill->supplier?->nama_supplier ?? '-',
+                    'no_po'              => $bill->purchaseOrder?->no_po ?? '-',
+                    'tanggal_transaksi'  => $bill->tanggal_transaksi ? Carbon::parse($bill->tanggal_transaksi)->format('d/m/Y') : '-',
+                    'tanggal_jatuh_tempo'=> $bill->tanggal_jatuh_tempo ? Carbon::parse($bill->tanggal_jatuh_tempo)->format('d/m/Y') : '-',
+                    'grand_total'        => $grand,
+                    'total_payment'      => $paid,
+                    'sisa_tagihan'       => $sisa,
+                    'status'             => $sisa <= 0 ? 'Paid' : ($paid > 0 ? 'Partial' : 'Unpaid'),
+                ];
+            })
+            ->filter(fn ($b) => $b['sisa_tagihan'] > 0.01)
+            ->values()
+            ->all();
+
+        // Monitoring Pinjaman / Kasbon Karyawan Aktif dari HRD
+        $openEmployeeLoans = \App\Models\PengPinjaman::with(['karyawan', 'pembayaran'])
+            ->where(function ($q) {
+                $q->whereNull('status')->orWhere('status', '!=', 'Rejected');
+            })
+            ->orderByDesc('tanggal_pengajuan')
+            ->get()
+            ->map(function (\App\Models\PengPinjaman $p) {
+                $paid = round((float) $p->pembayaran->sum('nominal_pembayaran'), 2);
+                $nilai = round((float) $p->nilai_pinjaman, 2);
+                $sisa = max(0.0, round($nilai - $paid, 2));
+                return [
+                    'id'              => $p->id,
+                    'nomor_bukti'     => $p->nomor_bukti,
+                    'karyawan'        => $p->karyawan?->nama ?? '-',
+                    'tanggal'         => $p->tanggal_pengajuan ? Carbon::parse($p->tanggal_pengajuan)->format('d/m/Y') : '-',
+                    'nilai_pinjaman'  => $nilai,
+                    'total_terbayar'  => $paid,
+                    'sisa_pinjaman'   => $sisa,
+                    'cicilan'         => round((float) $p->cicilan_per_bulan, 2),
+                    'status'          => $p->status,
+                    'is_disbursed'    => (bool) $p->is_disbursed,
+                ];
+            })
+            ->filter(fn ($l) => $l['sisa_pinjaman'] > 0.01)
+            ->values()
+            ->all();
+
+        $totalPinjaman = round(collect($pinjamanItems)->sum('sisa_hutang'), 2);
+        $totalHutangOps = round(collect($hutangOpsItems)->sum('sisa_hutang'), 2);
+        $totalKewajibanLedger = round($totalPinjaman + $totalHutangOps, 2);
+        $totalPiutangLedger = round(collect($piutangItems)->sum('sisa_piutang'), 2);
+        $totalOpenInvoiceAr = round(collect($openInvoices)->sum('sisa_tagihan'), 2);
+        $totalOpenPoAp = round(collect($openPoBillings)->sum('sisa_tagihan'), 2);
+        $totalOpenEmployeeLoans = round(collect($openEmployeeLoans)->sum('sisa_pinjaman'), 2);
+
+        return [
+            'as_of_date'                => $end,
+            'pinjaman_items'            => $pinjamanItems,
+            'pinjaman_ledger_rows'      => $pinjamanLedgerRows,
+            'hutang_ops_items'          => $hutangOpsItems,
+            'hutang_ops_rows'           => $hutangOpsRows,
+            'piutang_items'             => $piutangItems,
+            'piutang_ledger_rows'       => $piutangLedgerRows,
+            'anomalies'                 => $anomalies,
+            'open_invoices'             => $openInvoices,
+            'open_po_billings'          => $openPoBillings,
+            'open_employee_loans'       => $openEmployeeLoans,
+            'total_pinjaman'            => $totalPinjaman,
+            'total_hutang_ops'          => $totalHutangOps,
+            'total_kewajiban_ledger'    => $totalKewajibanLedger,
+            'total_piutang_ledger'      => $totalPiutangLedger,
+            'total_open_invoice_ar'     => $totalOpenInvoiceAr,
+            'total_open_po_ap'          => $totalOpenPoAp,
+            'total_open_employee_loans' => $totalOpenEmployeeLoans,
         ];
     }
 

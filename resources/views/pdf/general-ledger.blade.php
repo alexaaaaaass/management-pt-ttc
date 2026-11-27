@@ -73,6 +73,7 @@
 
         table.gl-table {
             width: 100%;
+            table-layout: fixed;
             border-collapse: collapse;
             margin-bottom: 10px;
         }
@@ -90,8 +91,9 @@
             border: 1px solid #cbd5e1;
             font-size: 8px;
             vertical-align: top;
+            word-wrap: break-word;
         }
-        table.gl-table tbody tr:nth-child(even) td {
+        tr.row-even td {
             background-color: #f8fafc;
         }
         table.gl-table tfoot td {
@@ -151,9 +153,14 @@
                     Periode: {{ \Carbon\Carbon::parse($data['start_date'])->format('d/m/Y') }} s/d {{ \Carbon\Carbon::parse($data['end_date'])->format('d/m/Y') }}
                     @if(!empty($data['selected_account']))
                         | Akun: <strong>{{ $data['selected_account']->kode_akun }} - {{ $data['selected_account']->nama_akun }}</strong>
+                    @else
+                        | Akun: <strong>Semua Akun COA</strong>
                     @endif
                     @if(!empty($data['selected_ref_type']))
                         | Modul: <strong>{{ $data['selected_ref_type'] }}</strong>
+                    @endif
+                    @if(!empty($data['search_query']))
+                        | Cari: <strong>"{{ $data['search_query'] }}"</strong>
                     @endif
                 </div>
             </td>
@@ -175,12 +182,21 @@
                 <div class="kpi-label">Total Mutasi Kredit</div>
                 <div class="kpi-val text-kredit">{{ $fmt($data['total_kredit']) }}</div>
             </td>
-            <td class="kpi-card" style="border-left-color: {{ $data['is_balanced'] ? '#059669' : '#e11d48' }};">
-                <div class="kpi-label">Status Neraca (Balance)</div>
-                <div class="kpi-val" style="color: {{ $data['is_balanced'] ? '#047857' : '#be123c' }};">
-                    {{ $data['is_balanced'] ? 'SEIMBANG (BALANCE)' : 'SELISIH ' . $fmt($data['selisih']) }}
-                </div>
-            </td>
+            @if(!empty($data['selected_account']))
+                <td class="kpi-card" style="border-left-color: #059669;">
+                    <div class="kpi-label">Saldo Akhir Akun ({{ $data['selected_account']->kode_akun }})</div>
+                    <div class="kpi-val" style="color: #047857;">
+                        {{ $fmt($data['account_ending_balance'] ?? $data['filtered_net'] ?? 0) }}
+                    </div>
+                </td>
+            @else
+                <td class="kpi-card" style="border-left-color: {{ $data['is_balanced'] ? '#059669' : '#e11d48' }};">
+                    <div class="kpi-label">Status Neraca (Balance)</div>
+                    <div class="kpi-val" style="color: {{ $data['is_balanced'] ? '#047857' : '#be123c' }};">
+                        {{ $data['is_balanced'] ? 'SEIMBANG (BALANCE)' : 'SELISIH ' . $fmt($data['selisih']) }}
+                    </div>
+                </td>
+            @endif
         </tr>
     </table>
 
@@ -200,7 +216,7 @@
         </thead>
         <tbody>
             @forelse($data['rows'] as $idx => $row)
-                <tr>
+                <tr class="{{ $idx % 2 === 1 ? 'row-even' : '' }}">
                     <td class="text-center nowrap">{{ $idx + 1 }}</td>
                     <td class="text-center nowrap">{{ $row['tanggal'] }}</td>
                     <td>
@@ -233,7 +249,13 @@
                 <td colspan="6" style="text-align: left;">TOTAL MUTASI JURNAL ({{ number_format($data['total_rows'], 0, ',', '.') }} BARIS)</td>
                 <td class="text-right text-debit">{{ $fmt($data['total_debit']) }}</td>
                 <td class="text-right text-kredit">{{ $fmt($data['total_kredit']) }}</td>
-                <td class="text-right text-saldo">{{ $data['is_balanced'] ? 'BALANCE' : 'FILTER AKUN' }}</td>
+                <td class="text-right text-saldo">
+                    @if(!empty($data['selected_account']))
+                        Netto: {{ $fmt($data['filtered_net'] ?? 0) }}
+                    @else
+                        {{ $data['is_balanced'] ? 'BALANCE' : 'SELISIH' }}
+                    @endif
+                </td>
             </tr>
         </tfoot>
     </table>

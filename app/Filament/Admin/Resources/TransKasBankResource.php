@@ -27,14 +27,14 @@ class TransKasBankResource extends Resource
 {
     protected static ?string $model = TransKasBank::class;
     protected static ?string $navigationGroup = 'Finance';
-    protected static ?int $navigationSort = 9;
+    protected static ?int $navigationSort = 5;
     protected static ?string $navigationIcon = 'heroicon-o-building-library';
     protected static ?string $modelLabel = 'Transaksi Bank';
-    protected static ?string $pluralModelLabel = 'Transaksi Bank Masuk & Bank Keluar';
+    protected static ?string $pluralModelLabel = 'Transaksi Bank';
 
     public static function getNavigationLabel(): string
     {
-        return 'Bank Masuk & Bank Keluar';
+        return 'Bank (Masuk & Keluar)';
     }
 
     public static function extractBankLabel(MasterCOA $coa): string
@@ -45,28 +45,6 @@ class TransKasBankResource extends Resource
         }
 
         return $name;
-    }
-
-    public static function getNavigationItems(): array
-    {
-        if (! static::canAccess()) {
-            return [];
-        }
-
-        return [
-            \Filament\Navigation\NavigationItem::make('Bank Masuk')
-                ->group(static::getNavigationGroup())
-                ->icon('heroicon-o-arrow-down-circle')
-                ->isActiveWhen(fn (): bool => request()->routeIs(static::getRouteBaseName() . '.*') && (request()->query('activeTab') === 'BANK_MASUK' || request()->query('type') === 'BANK_MASUK'))
-                ->sort(9)
-                ->url(static::getUrl('index', ['activeTab' => 'BANK_MASUK'])),
-            \Filament\Navigation\NavigationItem::make('Bank Keluar')
-                ->group(static::getNavigationGroup())
-                ->icon('heroicon-o-arrow-up-circle')
-                ->isActiveWhen(fn (): bool => request()->routeIs(static::getRouteBaseName() . '.*') && (request()->query('activeTab') === 'BANK_KELUAR' || request()->query('type') === 'BANK_KELUAR'))
-                ->sort(10)
-                ->url(static::getUrl('index', ['activeTab' => 'BANK_KELUAR'])),
-        ];
     }
 
     public static function form(Form $form): Form
@@ -127,9 +105,9 @@ class TransKasBankResource extends Resource
 
                                 TextInput::make('gudang')
                                     ->label('Gudang')
-                                    ->default('UGRMS')
-                                    ->datalist(['UGRMS', 'TTC'])
-                                    ->placeholder('Contoh: UGRMS / TTC'),
+                                    ->default('TTC')
+                                    ->datalist(['TTC', 'UGRMS'])
+                                    ->placeholder('Contoh: TTC'),
                             ]),
 
                         Grid::make(2)

@@ -3,6 +3,7 @@
 namespace App\Filament\Admin\Resources;
 
 use App\Filament\Admin\Resources\PoBillingResource\Pages;
+use App\Filament\Admin\Resources\PoBillingResource\RelationManagers;
 use App\Models\PoBilling;
 use Filament\Forms;
 use Filament\Forms\Form;
@@ -29,9 +30,9 @@ use App\Support\MoneyHelper;
 class PoBillingResource extends Resource
 {
     protected static ?string $model = PoBilling::class;
-     protected static ?string $navigationGroup = 'Finance';
-     protected static ?int $navigationSort = 11;
-    protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
+    protected static ?string $navigationGroup = 'Finance';
+    protected static ?int $navigationSort = 2;
+    protected static ?string $navigationIcon = 'heroicon-o-document-check';
 
    public static function form(Form $form): Form
 {
@@ -356,18 +357,18 @@ class PoBillingResource extends Resource
     }
 
     public static function getNavigationLabel(): string
-{
-    return 'Billing of Purchase Order / Penagihan';
-}
+    {
+        return 'Tagihan & Pembayaran PO';
+    }
 
     public static function getModelLabel(): string
     {
-        return 'Billing of Purchase Order / Penagihan';
+        return 'Tagihan PO';
     }
 
     public static function getPluralModelLabel(): string
     {
-        return 'Billing of Purchase Order / Penagihan';
+        return 'Tagihan PO';
     }
 
     public static function table(Table $table): Table
@@ -471,7 +472,7 @@ class PoBillingResource extends Resource
     public static function getRelations(): array
     {
         return [
-            //
+            RelationManagers\PaymentsRelationManager::class,
         ];
     }
 

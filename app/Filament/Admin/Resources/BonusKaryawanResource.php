@@ -18,7 +18,8 @@ class BonusKaryawanResource extends Resource
 {
     protected static ?string $model = BonusKaryawan::class;
     protected static ?string $navigationGroup = 'HRD';
-    protected static ?int $navigationSort = 9;
+    protected static ?int $navigationSort = 5;
+    protected static bool $shouldRegisterNavigation = false;
     protected static ?string $navigationIcon = 'heroicon-o-gift';
 
     public static function getNavigationLabel(): string
@@ -32,7 +33,7 @@ class BonusKaryawanResource extends Resource
             ->schema([
                 TextInput::make('kode_gudang')
                     ->label('Kode Gudang')
-                    ->default('UGRMS')
+                    ->default('TTC')
                     ->required(),
 
                 Select::make('karyawan_id')
@@ -88,7 +89,10 @@ class BonusKaryawanResource extends Resource
 
                 TextColumn::make('nilai_bonus')
                     ->label('Nilai Bonus')
-                    ->money('IDR')
+                    ->formatStateUsing(fn ($state) => 'Rp ' . number_format((float) $state, 0, ',', '.'))
+                    ->alignRight()
+                    ->weight('bold')
+                    ->color('success')
                     ->sortable(),
 
                 TextColumn::make('kode_gudang')

@@ -3,6 +3,8 @@
 namespace App\Filament\Admin\Resources;
 
 use App\Filament\Admin\Resources\InvoiceResource\Pages;
+use App\Filament\Admin\Resources\InvoiceResource\RelationManagers;
+use App\Filament\Admin\Resources\InvPaymentResource;
 use App\Models\Invoice;
 use App\Models\SuratJalan;
 use Filament\Forms;
@@ -454,7 +456,7 @@ class InvoiceResource extends Resource
 
     public static function getNavigationLabel(): string
     {
-        return 'Invoice';
+        return 'Invoice & Piutang';
     }
 
     public static function table(Table $table): Table
@@ -605,6 +607,13 @@ class InvoiceResource extends Resource
                         ->color('success')
                         ->url(fn ($record) => route('invoice.download', $record)),
 
+                    Tables\Actions\Action::make('bayar_cicil')
+                        ->label('Catat Pembayaran / Cicilan')
+                        ->icon('heroicon-o-banknotes')
+                        ->color('success')
+                        ->visible(fn ($record) => (float) ($record->sisa_tagihan ?? 0) > 0)
+                        ->url(fn ($record) => InvPaymentResource::getUrl('create', ['invoice' => $record->id])),
+
                     Tables\Actions\Action::make('detail')
                         ->label('Detail Invoice')
                         ->icon('heroicon-o-eye')
@@ -654,7 +663,9 @@ class InvoiceResource extends Resource
 
     public static function getRelations(): array
     {
-        return [];
+        return [
+            RelationManagers\PaymentsRelationManager::class,
+        ];
     }
 
     public static function getEloquentQuery(): Builder

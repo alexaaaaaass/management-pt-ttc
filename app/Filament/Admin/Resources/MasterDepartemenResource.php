@@ -19,7 +19,8 @@ class MasterDepartemenResource extends Resource
 {
     protected static ?string $navigationGroup = 'HRD';
     protected static ?string $navigationLabel = 'Departemen';
-    protected static ?int $navigationSort = 1;
+    protected static ?int $navigationSort = 2;
+    protected static bool $shouldRegisterNavigation = false;
     protected static ?string $model = MasterDepartemen::class;
     protected static ?string $navigationIcon = 'heroicon-o-building-office';
 

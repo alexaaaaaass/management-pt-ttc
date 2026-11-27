@@ -14,7 +14,27 @@ class Cuti extends Model
         'jenis_cuti',
         'lampiran',
         'keterangan',
+        'status',
+        'approved_by',
+        'approved_at',
+        'catatan_approval',
     ];
+
+    protected $casts = [
+        'tanggal_mulai'   => 'date',
+        'tanggal_selesai' => 'date',
+        'jumlah_hari'     => 'integer',
+        'approved_at'     => 'datetime',
+    ];
+
+    protected static function booted(): void
+    {
+        static::creating(function ($model) {
+            if (empty($model->status)) {
+                $model->status = 'Pending';
+            }
+        });
+    }
 
     public function karyawan()
     {

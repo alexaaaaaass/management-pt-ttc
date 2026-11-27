@@ -20,14 +20,14 @@ class OperasionalPayResource extends Resource
 {
     protected static ?string $model = OperasionalPay::class;
     protected static ?string $navigationGroup = 'Finance';
-    protected static ?int $navigationSort = 4;
+    protected static ?int $navigationSort = 6;
     protected static ?string $navigationIcon = 'heroicon-o-credit-card';
     protected static ?string $modelLabel = 'Transaksi Operasional Keluar';
     protected static ?string $pluralModelLabel = 'Transaksi Operasional Keluar';
 
     public static function getNavigationLabel(): string
     {
-        return 'Operasional Keluar';
+        return 'Operasional & Komisi';
     }
 
     public static function form(Form $form): Form
@@ -47,7 +47,7 @@ class OperasionalPayResource extends Resource
                                     ->default('AUTO'),
 
                                 TextInput::make('gudang')
-                                    ->default('UGRMS'),
+                                    ->default('TTC'),
                             ]),
 
                         Grid::make(2)

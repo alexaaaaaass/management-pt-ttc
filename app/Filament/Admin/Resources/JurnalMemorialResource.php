@@ -27,7 +27,7 @@ class JurnalMemorialResource extends Resource
     protected static ?string $model = JournalEntry::class;
 
     protected static ?string $navigationGroup = 'Finance';
-    protected static ?int $navigationSort = 5;
+    protected static ?int $navigationSort = 7;
     protected static ?string $navigationIcon = 'heroicon-o-book-open';
     protected static ?string $navigationLabel = 'Jurnal Memorial';
     protected static ?string $modelLabel = 'Memorial Adjust';

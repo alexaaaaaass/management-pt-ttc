@@ -535,16 +535,28 @@
                         General Ledger (Buku Besar Akun &amp; Mutasi Jurnal Umum)
                     </div>
                 </div>
+                @php
+                    $pdfScopeLabel = ! empty($data['account_filter_meta'])
+                        ? $data['account_filter_meta']['kode_akun']
+                        : 'Semua Akun';
+                    $pdfParams = [
+                        'start_date' => $this->startDate,
+                        'end_date'   => $this->endDate,
+                        'coa_id'     => $this->selectedCoaId,
+                        'ref_type'   => $this->selectedRefType,
+                        'search'     => $this->searchQuery,
+                    ];
+                @endphp
                 <div class="ttc-btn-group">
-                    <a href="{{ route('finance.report.general-ledger.preview', ['start_date' => $this->startDate, 'end_date' => $this->endDate, 'coa_id' => $this->selectedCoaId, 'ref_type' => $this->selectedRefType]) }}"
+                    <a href="{{ route('finance.report.general-ledger.preview', $pdfParams) }}"
                        target="_blank"
                        class="ttc-btn ttc-btn-blue">
-                        🖨️ Cetak / Preview PDF
+                        🖨️ Preview PDF ({{ $pdfScopeLabel }})
                     </a>
-                    <a href="{{ route('finance.report.general-ledger.download', ['start_date' => $this->startDate, 'end_date' => $this->endDate, 'coa_id' => $this->selectedCoaId, 'ref_type' => $this->selectedRefType]) }}"
+                    <a href="{{ route('finance.report.general-ledger.download', $pdfParams) }}"
                        target="_blank"
                        class="ttc-btn ttc-btn-emerald">
-                        ⬇️ Simpan PDF
+                        ⬇️ Simpan PDF ({{ $pdfScopeLabel }})
                     </a>
                     <a href="{{ url('/admin/jurnal-memorials/create') }}" class="ttc-btn ttc-btn-indigo">
                         + Input Jurnal Memorial
@@ -706,12 +718,19 @@
                                 <td style="text-align: right; font-weight: 800; color: #059669;">
                                     {{ $fmt($acc['saldo_akhir'], 2) }}
                                 </td>
-                                <td style="text-align: center;" class="ttc-hide-print">
+                                <td style="text-align: center; white-space: nowrap;" class="ttc-hide-print">
                                     <button type="button"
                                             wire:click="filterByAccount({{ $acc['coa_id'] }})"
                                             class="ttc-gl-filter-btn {{ $isSelected ? 'ttc-gl-filter-btn-selected' : '' }}">
                                         {{ $isSelected ? '✓ Sedang Difilter' : 'Lihat Mutasi Akun' }}
                                     </button>
+                                    <a href="{{ route('finance.report.general-ledger.preview', ['start_date' => $this->startDate, 'end_date' => $this->endDate, 'coa_id' => $acc['coa_id']]) }}"
+                                       target="_blank"
+                                       class="ttc-gl-filter-btn"
+                                       style="display: inline-block; text-decoration: none; margin-left: 4px;"
+                                       title="Cetak PDF khusus akun {{ $acc['kode_akun'] }}">
+                                        🖨️ PDF
+                                    </a>
                                 </td>
                             </tr>
                         @endforeach

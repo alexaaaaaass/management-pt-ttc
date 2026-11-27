@@ -38,6 +38,9 @@ class ListCoaLedgers extends Page
         $this->endDate = $maxDate
             ? Carbon::parse($maxDate)->endOfMonth()->toDateString()
             : now()->endOfMonth()->toDateString();
+
+        $this->selectedCoaId = (string) request()->query('coa_id', '');
+        $this->selectedRefType = (string) request()->query('ref_type', '');
     }
 
     public function setPreset(string $preset): void
@@ -84,12 +87,23 @@ class ListCoaLedgers extends Page
         $start = $this->startDate ?: '2026-01-01';
         $end = $this->endDate ?: '2026-12-31';
 
-        $allMovementsInPeriod = CoaMovement::with(['coa', 'user'])
+        $allMovementsInPeriod = CoaMovement::with('coa')
             ->whereDate('tanggal', '>=', $start)
             ->whereDate('tanggal', '<=', $end)
             ->orderBy('tanggal', 'asc')
             ->orderBy('id', 'asc')
             ->get();
+
+        // Ambil total mutasi sebelum periode dalam 1 query (hindari N+1 query per akun)
+        $activeCoaIds = $allMovementsInPeriod->pluck('coa_id')->unique()->values()->all();
+        $priorByCoa = empty($activeCoaIds)
+            ? collect()
+            : CoaMovement::whereIn('coa_id', $activeCoaIds)
+                ->whereDate('tanggal', '<', $start)
+                ->selectRaw('coa_id, COALESCE(SUM(debit),0) as d, COALESCE(SUM(kredit),0) as k')
+                ->groupBy('coa_id')
+                ->get()
+                ->keyBy('coa_id');
 
         // Hitung saldo berjalan per akun secara akurat
         $runningByCoa = [];
@@ -103,10 +117,7 @@ class ListCoaLedgers extends Page
             $openDebit = (float) ($coa?->saldo_debit ?? 0);
             $openKredit = (float) ($coa?->saldo_kredit ?? 0);
 
-            $prior = CoaMovement::where('coa_id', $coaId)
-                ->whereDate('tanggal', '<', $start)
-                ->selectRaw('COALESCE(SUM(debit),0) as d, COALESCE(SUM(kredit),0) as k')
-                ->first();
+            $prior = $priorByCoa->get($coaId);
 
             $running = $isCreditNormal
                 ? (($openKredit - $openDebit) + ((float) ($prior->k ?? 0) - (float) ($prior->d ?? 0)))
@@ -181,6 +192,10 @@ class ListCoaLedgers extends Page
             'TRANS_BANK'       => 'Bank Masuk/Keluar',
             'PO_BILLING'       => 'Tagihan PO',
             'PO_BILL_PAY'      => 'Pembayaran PO',
+            'NPB_DISBURSEMENT' => 'Pencairan NPB',
+            'NPB_SETTLEMENT'   => 'Penyelesaian NPB (LPJ)',
+            'PAYROLL'          => 'Penggajian (Payroll)',
+            'PAYROLL_BORONGAN' => 'Payroll Borongan',
         ];
 
         $rows = [];
@@ -195,6 +210,10 @@ class ListCoaLedgers extends Page
                 'TRANS_BANK'       => ['label' => 'Bank Masuk/Keluar',      'bg' => '#e0e7ff', 'fg' => '#3730a3'],
                 'PO_BILLING'       => ['label' => 'Tagihan PO',             'bg' => '#fee2e2', 'fg' => '#b91c1c'],
                 'PO_BILL_PAY'      => ['label' => 'Pembayaran PO',          'bg' => '#ffedd5', 'fg' => '#c2410c'],
+                'NPB_DISBURSEMENT' => ['label' => 'Pencairan NPB',          'bg' => '#fce7f3', 'fg' => '#be185d'],
+                'NPB_SETTLEMENT'   => ['label' => 'Penyelesaian NPB (LPJ)', 'bg' => '#ccfbf1', 'fg' => '#0f766e'],
+                'PAYROLL'          => ['label' => 'Penggajian (Payroll)',   'bg' => '#e0e7ff', 'fg' => '#3730a3'],
+                'PAYROLL_BORONGAN' => ['label' => 'Payroll Borongan',       'bg' => '#fef3c7', 'fg' => '#b45309'],
                 default            => ['label' => $m->reference_type ?: '-', 'bg' => '#f1f5f9', 'fg' => '#475569'],
             };
 

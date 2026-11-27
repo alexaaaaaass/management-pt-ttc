@@ -15,14 +15,19 @@ class PembPinjaman extends Model
         'no_bukti',
         'peng_pinjaman_id',
         'karyawan_id',
+        'gaji_id',
         'tahap_cicilan',
         'tanggal_pembayaran',
         'nominal_pembayaran',
         'keterangan',
+        'account_kas_id',
+        'post_to_ledger',
     ];
 
     protected $casts = [
         'tanggal_pembayaran' => 'date',
+        'nominal_pembayaran' => 'float',
+        'post_to_ledger'     => 'boolean',
     ];
 
     protected static function booted(): void
@@ -48,17 +53,24 @@ class PembPinjaman extends Model
         });
 
         static::creating(function ($pembayaran) {
-
-            $count = self::whereYear('created_at', now()->year)
-                ->whereMonth('created_at', now()->month)
-                ->count() + 1;
-
-            $pembayaran->no_bukti =
-                'BYR/' .
-                now()->format('Y') . '/' .
-                now()->format('m') . '/' .
-                str_pad($count, 4, '0', STR_PAD_LEFT);
+            if (empty($pembayaran->no_bukti) || strtoupper(trim($pembayaran->no_bukti)) === 'AUTO') {
+                $prefix = 'BYR/' . now()->format('Y') . '/' . now()->format('m') . '/';
+                $seq = 1;
+                $last = self::where('no_bukti', 'like', "{$prefix}%")->orderByDesc('id')->value('no_bukti');
+                if ($last && preg_match('/\/(\d+)$/', $last, $m)) {
+                    $seq = ((int) $m[1]) + 1;
+                }
+                while (self::where('no_bukti', $prefix . str_pad((string) $seq, 4, '0', STR_PAD_LEFT))->exists()) {
+                    $seq++;
+                }
+                $pembayaran->no_bukti = $prefix . str_pad((string) $seq, 4, '0', STR_PAD_LEFT);
+            }
         });
+    }
+
+    public function gaji()
+    {
+        return $this->belongsTo(Gaji::class, 'gaji_id');
     }
 
     public function pengPinjaman()
@@ -69,5 +81,10 @@ class PembPinjaman extends Model
     public function karyawan()
     {
         return $this->belongsTo(Karyawan::class);
+    }
+
+    public function accountKas()
+    {
+        return $this->belongsTo(MasterCOA::class, 'account_kas_id');
     }
 }
